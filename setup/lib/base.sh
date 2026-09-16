@@ -2,7 +2,9 @@
 # shellcheck disable=SC2034  # variáveis usadas pelas telas e pelo comando asimov
 # Caminhos, versão, sudo e bibliotecas. Carregado por setup/instalar.sh e setup/asimov.sh.
 
-VERSAO="0.3.0"
+VERSAO="0.3.1"
+# O instalador da main aponta sempre para a última versão marcada.
+URL_INSTALL="https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh"
 
 # Contagem de caracteres (alinhamento com acentos) depende de locale UTF-8.
 if locale -a 2>/dev/null | grep -qi '^c\.utf-\?8$'; then

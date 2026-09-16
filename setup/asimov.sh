@@ -33,7 +33,11 @@ case "${1:-ajuda}" in
     lista_agentes
     ;;
   atualizar)
-    ASIMOV_ATUALIZAR=1 exec bash "$RAIZ_PROJETO/setup/install.sh"
+    # O install.sh local tem fixa a versão já instalada: baixa o da main.
+    mkdir -p "$DIR_ESTADO"
+    curl -fsSL "$URL_INSTALL" -o "$DIR_ESTADO/install.sh" \
+      || erro_fatal "Não consegui baixar o instalador" "Confira a internet da VPS e rode asimov atualizar de novo."
+    ASIMOV_ATUALIZAR=1 exec bash "$DIR_ESTADO/install.sh"
     ;;
   *)
     ajuda
