@@ -23,6 +23,7 @@ dependencies = [
 openai = ["pydantic-ai-slim[openai]>=1.0"]
 anthropic = ["pydantic-ai-slim[anthropic]>=1.0"]
 gemini = ["pydantic-ai-slim[google]>=1.0"]
+groq = ["pydantic-ai-slim[groq]>=1.0"]
 
 [dependency-groups]
 dev = [

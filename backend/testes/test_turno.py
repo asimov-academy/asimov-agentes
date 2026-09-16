@@ -55,7 +55,7 @@ def test_divisao_nunca_passa_do_maximo() -> None:
 async def test_tres_mensagens_no_buffer_geram_um_turno(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     recebidas: list[str] = []
     monkeypatch.setattr(
-        "app.ia.agente.construir_modelo", lambda nome: modelo_que_responde(["Oi Maria!"], recebidas)
+        "app.ia.provedores.construir_modelo", lambda nome: modelo_que_responde(["Oi Maria!"], recebidas)
     )
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     for i, texto in enumerate(["oi", "quero saber", "quanto eu devo"], start=1):
@@ -78,7 +78,7 @@ async def test_tres_mensagens_no_buffer_geram_um_turno(http, canal, fila, sessao
 
 async def test_resposta_dividida_respeita_maximo_e_registra_turno(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(
-        "app.ia.agente.construir_modelo",
+        "app.ia.provedores.construir_modelo",
         lambda nome: modelo_que_responde(["um", "dois", "três", "quatro", "cinco"]),
     )
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", max_mensagens_por_resposta=2)
@@ -99,7 +99,7 @@ async def test_resposta_dividida_respeita_maximo_e_registra_turno(http, canal, f
 
 
 async def test_humano_conduzindo_o_agente_nao_responde(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr("app.ia.agente.construir_modelo", lambda nome: modelo_que_responde(["oi"]))
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: modelo_que_responde(["oi"]))
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     await envia_webhook(http, agente["token"], payload_chatwoot())
     conversa = await _conversa(sessao)
@@ -116,7 +116,7 @@ async def test_modelo_fora_do_ar_registra_turno_com_erro_e_nao_responde(http, ca
     def quebra(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         raise RuntimeError("provedor fora do ar")
 
-    monkeypatch.setattr("app.ia.agente.construir_modelo", lambda nome: FunctionModel(quebra))
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(quebra))
     monkeypatch.setattr(turno, "_espera", _sem_sono)
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     await envia_webhook(http, agente["token"], payload_chatwoot())
@@ -145,3 +145,37 @@ async def test_turno_de_outro_cliente_nao_acha_conversa(http, canal, fila, sessa
 
 async def _sem_sono(segundos: float) -> None:
     return None
+
+
+async def test_fallback_responde_quando_o_principal_falha(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    def fora_do_ar(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        raise ModelHTTPError(status_code=503, model_name="gpt-5.5", body="indisponível")
+
+    monkeypatch.setattr(
+        "app.ia.provedores.construir_modelo",
+        lambda nome: FunctionModel(fora_do_ar) if nome.startswith("openai:") else modelo_que_responde(["Respondi pelo fallback"]),
+    )
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    assert agente["modelo_fallback"] == "groq:llama-3.3-70b-versatile"
+    await envia_webhook(http, agente["token"], payload_chatwoot())
+    conversa = await _conversa(sessao)
+    token = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+
+    resultado = await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), token)
+
+    assert resultado == "respondido"
+    assert [t for _, t in canal.enviadas] == ["Respondi pelo fallback"]
+
+
+def test_constroi_modelo_de_cada_provedor() -> None:
+    from pydantic_ai.models.fallback import FallbackModel
+    from pydantic_ai.models.groq import GroqModel
+    from pydantic_ai.models.openai import OpenAIChatModel
+
+    from app.ia.provedores import construir_modelo, modelo_de_resposta
+
+    assert isinstance(construir_modelo("groq:whisper-large-v3-turbo"), GroqModel)
+    assert isinstance(modelo_de_resposta("openai:gpt-5.5", None), OpenAIChatModel)
+    assert isinstance(modelo_de_resposta("openai:gpt-5.5", "groq:llama-3.3-70b-versatile"), FallbackModel)

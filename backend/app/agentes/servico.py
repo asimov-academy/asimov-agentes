@@ -53,7 +53,7 @@ async def criar_agente(
     nome: str,
     canal: str,
     conexao: dict[str, Any],
-    modelos: dict[str, str] | None = None,
+    modelos: dict[str, str | None] | None = None,
     **opcoes: Any,
 ) -> tuple[Agente, str]:
     """Conecta o canal ao webhook do agente e grava o agente.

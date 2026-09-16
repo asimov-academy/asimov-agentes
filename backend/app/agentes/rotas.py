@@ -18,6 +18,7 @@ router = APIRouter(prefix="/admin", dependencies=[Depends(exige_admin)])
 
 class Modelos(BaseModel):
     modelo_conversa: str | None = None
+    modelo_fallback: str | None = None
     modelo_auxiliar: str | None = None
     modelo_visao: str | None = None
     modelo_transcricao: str | None = None
@@ -47,6 +48,7 @@ class AgenteSaida(BaseModel):
     credenciais: dict[str, Any]
     arquivo_prompt: str
     modelo_conversa: str
+    modelo_fallback: str | None
     modelo_auxiliar: str
     modelo_visao: str
     modelo_transcricao: str

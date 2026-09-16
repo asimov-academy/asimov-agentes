@@ -14,9 +14,10 @@ Configuração única da VPS. Não fica no banco: segredos em `.env` com permiss
 | subdominio_bot | texto, `bot.<dominio_base>` | sim |
 | email_ssl | e-mail | sim |
 | agente_codigo | `claude_code` ou `codex` | sim |
-| provedor_ia | `openai`, `anthropic` ou `gemini` | sim |
-| provedor_apoio | `openai` ou `gemini`, para áudio e embeddings quando provedor_ia é `anthropic` | não |
-| chaves de IA (OpenAI, Anthropic, Gemini) | segredo | as dos provedores escolhidos |
+| modo_instalacao | `empresa` ou `revenda` | sim |
+| modelo_conversa, modelo_fallback, modelo_visao, modelo_transcricao | `provedor:modelo`; padrões para agentes novos; fallback opcional | sim, exceto fallback |
+| provedores | provedores usados pelos modelos, para instalar os SDKs | sim |
+| chaves de IA (OpenAI, Anthropic, Gemini, Groq) | segredo | as dos provedores escolhidos |
 | modelo_embeddings | texto; único na instalação, porque define a dimensão do vetor | sim |
 | chave_criptografia | segredo gerado pelo setup, para as credenciais de canal | sim |
 | chave_api_admin | segredo gerado pelo setup, para as rotas administrativas | sim |
@@ -49,6 +50,7 @@ A empresa atendida pelo operador.
 | arquivo_prompt | caminho do prompt da persona no repositório | sim |
 | arquivo_prompt_handoff | caminho do prompt de resumo de handoff | sim |
 | modelo_conversa | texto (provedor e modelo) | sim |
+| modelo_fallback | texto (provedor e modelo); usado se modelo_conversa falhar | não |
 | modelo_auxiliar | texto (resumo de handoff, classificação) | sim |
 | modelo_visao | texto | sim |
 | modelo_transcricao | texto | sim |
@@ -218,6 +220,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 | arquivo_prompt | `loja-exemplo/ana/persona.md` |
 | arquivo_prompt_handoff | `loja-exemplo/ana/resumo_handoff.md` |
 | modelo_conversa | `openai:gpt-5.5` |
+| modelo_fallback | `groq:llama-3.3-70b-versatile` |
 | modelo_auxiliar | `openai:gpt-5-mini` |
 | modelo_visao | `openai:gpt-5-mini` |
 | modelo_transcricao | `openai:whisper-1` |

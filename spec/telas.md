@@ -12,6 +12,13 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Ações: `Y` aceita e segue; `N` sai sem alterar nada.
 - Licença: MIT, arquivo `LICENSE` na raiz, copyright Asimov Academy.
 
+### 1b. Uso
+
+- Objetivo: definir antes de instalar se a instalação atende só a empresa do operador ou empresas clientes (revenda).
+- Quem acessa: operador.
+- Ações: escolher "Só para a minha empresa" ou "Para empresas clientes".
+- Efeito: modo empresa cria uma empresa só no primeiro agente e todo agente novo vai para ela; modo revenda pergunta, a cada agente novo, empresa existente ou nova. Internamente a plataforma é sempre multitenant.
+
 ### 2. Iniciando
 
 - Objetivo: preparar a VPS vazia sem perguntar nada.
@@ -20,18 +27,17 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Passos: conferir Ubuntu 24.04, conferir memória e disco mínimos, update, upgrade, instalar sudo, apt-utils, dialog, jq, git, python3, Docker e demais utilitários do setup.
 - Ações: nenhuma; só acompanhar.
 
-### 3. Dados da instalação
+### 3. Configuração e modelos de IA
 
-- Objetivo: coletar tudo que a instalação precisa de uma vez.
+- Objetivo: coletar domínio, e-mail do SSL, agente de código e os modelos de IA padrão da instalação.
 - Quem acessa: operador.
-- Mostra: uma pergunta por vez.
 - Ações:
-  - Informar o domínio base (o setup usa `bot.<dominio>`).
-  - Informar o e-mail para o SSL.
+  - Informar o domínio (aceita colar com `https://`, `bot.` ou barra) e o e-mail do SSL.
   - Escolher o agente de código: Claude Code ou Codex.
-  - Escolher o provedor de IA: OpenAI, Anthropic ou Gemini. O setup mostra os modelos padrão que vão ser usados em conversa, auxiliar, visão, transcrição e embeddings.
-  - Colar a chave do provedor escolhido. Se for Anthropic, colar também a chave de OpenAI ou Gemini para áudio e embeddings. Cada chave é testada na hora; chave inválida é pedida de novo com o motivo.
-  - Revisar o resumo das respostas e confirmar ou corrigir antes de seguir.
+  - Para cada função, escolher provedor e modelo: resposta ao contato, fallback (opcional, usado se a resposta falhar), visão (imagens e PDF) e transcrição de áudio. Provedores: OpenAI, Anthropic, Gemini e Groq (transcrição: OpenAI, Groq ou Gemini).
+  - A chave de cada provedor é pedida uma vez e testada na hora.
+  - Os modelos aparecem num menu listado pela API do próprio provedor, com sugestões primeiro e opção de digitar outro.
+  - Conferir o resumo dos modelos e confirmar.
 
 ### 4. Checagem do domínio
 
@@ -47,17 +53,17 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Mostra: passos numerados `N/T - [ OK ] - descrição` (firewall, Node, Python e uv, agente de código escolhido, SDK do provedor de IA escolhido, banco, proxy com SSL, projeto base, serviços no ar, health check da API em `https://bot.<dominio>`).
 - Ações: nenhuma; só acompanhar.
 
-### 6. Primeiro agente
+### 6. Agente no Chatwoot (primeiro agente e `asimov novo-agente`)
 
-- Objetivo: deixar um agente funcionando num canal ao final da primeira execução.
+- Objetivo: deixar um agente respondendo numa caixa do Chatwoot.
 - Quem acessa: operador.
-- Ações:
-  - Informar o cliente (empresa) e o nome do agente.
-  - Escolher o canal: WhatsApp oficial, Telegram ou Chatwoot.
-  - Chatwoot: colar a URL do Chatwoot e o token de acesso de um administrador; escolher a conta e a caixa de entrada num menu. O setup cria o Agent Bot já com a URL do webhook e liga o bot na caixa. O token do administrador não é guardado.
-  - WhatsApp ou Telegram direto (fase 5): colar as credenciais do canal (testadas na hora) e informar o número ou grupo que recebe o handoff.
-  - Opcional: informar a pasta na VPS com documentos da base de conhecimento (assumido: arquivos enviados antes para a VPS). Pode pular e subir depois pelo menu.
-- Mostra ao final: confirmação de que o canal foi conectado. Chatwoot e Telegram não exigem colar nada; no WhatsApp oficial, a URL do webhook e onde colar na Meta.
+- Ações, nesta ordem:
+  - URL do Chatwoot (lembrada da última vez) e token de acesso de um administrador (não é guardado).
+  - Conta e caixa de entrada em menu; com uma opção só, escolhe sozinho.
+  - Nome do agente.
+  - Empresa: no modo empresa, a primeira vez pede o nome da empresa (sugere o nome da conta do Chatwoot) e depois usa sempre a mesma; no modo revenda, menu com as empresas existentes e "nova empresa".
+- Mostra ao final: uma linha confirmando o agente no ar, a caixa e a empresa. A API cria o Agent Bot já com a URL do webhook e liga na caixa.
+- WhatsApp e Telegram diretos entram na fase 5.
 
 ### 7. Resumo final
 
@@ -67,11 +73,12 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Mostra: o que foi instalado, provedor de IA e modelos, URL da API, agentes criados com canal e webhook, caminho do projeto, caminho do log e os próximos passos (entrar na pasta do projeto e abrir Claude Code ou Codex, que já leem o `CLAUDE.md` ou `AGENTS.md`).
 - Ações: nenhuma.
 
-### 8. Menu (ao rodar o setup de novo com a instalação concluída)
+### 8. Comando `asimov` e setup rodado de novo
 
 - Objetivo: operar os agentes sem front.
 - Quem acessa: operador.
-- Mostra: banner com o nome e a versão, e as opções numeradas.
+- Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo, modelos), reconstrói se o código mudou e mostra o resumo.
+- `asimov novo-agente` e `asimov agentes` existem desde a v0.2.0; as ações abaixo que ainda não existem entram como subcomandos do `asimov`.
 - Ações:
   - Criar agente (mesmo fluxo da tela 6).
   - Listar agentes: cliente, nome, canal, destino do handoff, URL do webhook e status.

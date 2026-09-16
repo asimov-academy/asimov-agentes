@@ -26,6 +26,7 @@ class Agente(ComId, ComCriacao, Base):
     arquivo_prompt_handoff: Mapped[str] = mapped_column(String(500))
 
     modelo_conversa: Mapped[str] = mapped_column(String(100))
+    modelo_fallback: Mapped[str | None] = mapped_column(String(100))
     modelo_auxiliar: Mapped[str] = mapped_column(String(100))
     modelo_visao: Mapped[str] = mapped_column(String(100))
     modelo_transcricao: Mapped[str] = mapped_column(String(100))

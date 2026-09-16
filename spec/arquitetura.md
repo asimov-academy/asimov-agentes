@@ -55,15 +55,13 @@ asimov-agentes/
 | Agente de código | Claude Code (instalador oficial) ou Codex (npm, com Node LTS) | escolha do operador |
 | Testes | pytest + pytest-asyncio; `shellcheck` no Bash | cobre regras e isolamento; pega erro comum de script |
 
-Provedores de IA na tela 3 (assumido):
+Modelos de IA:
 
-| Escolha | Conversa | Auxiliar | Visão | Transcrição | Embeddings |
-|---|---|---|---|---|---|
-| OpenAI | `gpt-5.5` | `gpt-5-mini` | `gpt-5-mini` | `whisper-1` | `text-embedding-3-small` |
-| Gemini | `gemini-2.5-pro` | `gemini-2.5-flash` | `gemini-2.5-flash` | `gemini-2.5-flash` | `gemini-embedding-001` |
-| Anthropic + apoio | `claude-sonnet-5` | `claude-haiku-4-5` | `claude-sonnet-5` | do apoio | do apoio |
-
-Os padrões são sugestão gravada em cada Agente e podem ser trocados por agente, exceto embeddings.
+- Um modelo por função, cada um com provedor próprio: resposta, fallback opcional, visão e transcrição. Provedores: OpenAI, Anthropic, Gemini e Groq (PydanticAI com `OpenAIChatModel`, `AnthropicModel`, `GoogleModel` e `GroqModel`).
+- Fallback com `FallbackModel` da PydanticAI: erro de API do principal (fora do ar, limite, chave) passa para o segundo.
+- Padrões da instalação no `.env` (`MODELO_*`), escolhidos no setup a partir da lista de modelos da API de cada provedor; cada agente grava os seus e pode trocar.
+- Imagem Docker instala só os SDKs dos provedores usados (`PROVEDORES`).
+- Embeddings (fase 6) ficam na Instalação, com OpenAI ou Gemini.
 
 ## 3. Autenticação e autorização
 
@@ -133,6 +131,7 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Ver agente | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}` | ids | agente | agente pertence ao cliente |
 | Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | campos alterados | agente | agente pertence ao cliente; credencial alterada é testada antes |
 | Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmação com o slug | ok | agente pertence ao cliente; remove webhook no Telegram; apaga credenciais |
+| Listar empresas | `GET /admin/clientes` | nada | lista | usada pelo `asimov novo-agente` no modo revenda |
 | Descobrir no canal | `POST /admin/canais/{canal}/descobrir` | acesso do operador (Chatwoot: url e token de administrador) | contas e caixas de entrada | não grava nada; acesso não é guardado |
 | Enviar documento | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/documentos` | caminho do arquivo na VPS ou upload multipart | documento com status `processando` | formato aceito (PDF, DOCX, TXT, MD); hash repetido no mesmo agente é recusado; enfileira ingestão |
 | Listar documentos | `GET .../agentes/{agente_id}/documentos` | ids | lista com status e trechos | agente pertence ao cliente |

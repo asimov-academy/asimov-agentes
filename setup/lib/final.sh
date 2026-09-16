@@ -8,13 +8,13 @@ gera_arquivos_de_contexto() {
     echo "pasta spec/ encontrada; AGENTS.md e CLAUDE.md de desenvolvimento preservados"
     return 0
   fi
-  local agente_codigo provedor
+  local agente_codigo modelos
   agente_codigo=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo "Claude Code")
-  provedor="$(env_get PROVEDOR_IA)"
-  [ -n "$(env_get PROVEDOR_APOIO)" ] && provedor="$provedor (apoio: $(env_get PROVEDOR_APOIO))"
+  modelos="resposta $(env_get MODELO_CONVERSA), fallback $(env_get MODELO_FALLBACK || true), visão $(env_get MODELO_VISAO), áudio $(env_get MODELO_TRANSCRICAO)"
 
   sed -e "s|{{AGENTE_CODIGO}}|$agente_codigo|g" \
-    -e "s|{{PROVEDOR_IA}}|$provedor|g" \
+    -e "s|{{MODELOS}}|$modelos|g" \
+    -e "s|{{MODO}}|$(env_get MODO_INSTALACAO)|g" \
     -e "s|{{CANAIS}}|Chatwoot|g" \
     -e "s|{{CAMINHO_LOG}}|$LOG|g" \
     "$RAIZ_PROJETO/modelos/AGENTS.md.tmpl" >"$RAIZ_PROJETO/AGENTS.md"
@@ -30,42 +30,45 @@ primeiro_commit() {
     commit -m "Instalação inicial pelo setup Asimov Academy $VERSAO"
 }
 
+instala_comando() {
+  $SUDO ln -sf "$RAIZ_PROJETO/setup/asimov.sh" /usr/local/bin/asimov
+}
+
 mostra_resumo() {
-  local sub comando
+  local sub comando fallback
   sub=$(env_get SUBDOMINIO_BOT)
+  fallback=$(env_get MODELO_FALLBACK)
   comando=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo codex || echo claude)
 
-  titulo "Instalação concluída"
-  info "Plataforma:        https://$sub/health"
-  local apoio
-  apoio=$(env_get PROVEDOR_APOIO)
-  info "Provedor de IA:    $(env_get PROVEDOR_IA)${apoio:+ (apoio: $apoio)}"
-  info "Projeto:           $RAIZ_PROJETO"
-  info "Log do setup:      $LOG"
-  echo
+  secao "Pronto"
   if [ -n "$(estado_get agente_id)" ]; then
-    info "Agente:            $(estado_get agente_nome) ($(estado_get cliente_nome), Chatwoot)"
-    info "Caixa de entrada:  $(estado_get agente_caixa) (bot criado e ligado no Chatwoot)"
-    info "Prompt do agente:  prompts/ (edite e a mudança vale na próxima mensagem)"
+    ok "$(destaque "$(estado_get agente_nome)") no ar na caixa $(destaque "$(estado_get agente_caixa)") ${CINZA}· $(estado_get agente_conta)${NORMAL}"
     echo
   fi
-  aviso "Guarde uma cópia do arquivo .env fora da VPS. Sem a CHAVE_CRIPTOGRAFIA dele,"
-  aviso "as credenciais dos canais gravadas no banco não podem ser lidas."
+  campo "Plataforma" "https://$sub/health"
+  campo "Projeto" "$RAIZ_PROJETO"
+  campo "Uso" "$([ "$(env_get MODO_INSTALACAO)" = revenda ] && echo 'revenda para empresas clientes' || echo 'só a minha empresa')"
+  campo "Resposta" "$(env_get MODELO_CONVERSA)${fallback:+ ${CINZA}→ $fallback${NORMAL}}"
+  campo "Visão" "$(env_get MODELO_VISAO)"
+  campo "Áudio" "$(env_get MODELO_TRANSCRICAO)"
   echo
-  printf '  %sPróximos passos%s\n' "$NEGRITO" "$NORMAL"
-  info "1. Mande uma mensagem na caixa de entrada do Chatwoot e veja o agente responder."
-  info "2. cd $RAIZ_PROJETO && $comando"
-  info "3. Depois de mudar o projeto: ./deploy/publicar.sh"
+  aviso "Guarde uma cópia do .env fora da VPS: sem ele as credenciais dos canais não abrem."
+  echo
+  printf '  %sComandos%s\n' "$NEGRITO" "$NORMAL"
+  printf '    %sasimov novo-agente%s   %soutro agente, para empresa nova ou existente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %sasimov agentes%s       %slista agentes e empresas%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
   echo
 }
 
 tela_final() {
   if ! estado_tem instalacao_concluida; then
-    titulo "Finalizando"
+    secao "Finalizando"
     PASSO_ATUAL=0
-    PASSO_TOTAL=2
-    passo contexto "Gerando AGENTS.md e CLAUDE.md do projeto" "veja o log" --sem-repetir gera_arquivos_de_contexto
-    passo commit "Criando o primeiro commit do projeto" "veja o log" --sem-repetir primeiro_commit
+    PASSO_TOTAL=3
+    passo contexto "AGENTS.md e CLAUDE.md do projeto" "Veja o log." --sem-repetir gera_arquivos_de_contexto
+    passo comando "Comando asimov" "Veja o log." --sem-repetir instala_comando
+    passo commit "Primeiro commit do projeto" "Veja o log." --sem-repetir primeiro_commit
     estado_set instalacao_concluida "$(date -Is)"
   fi
   mostra_resumo

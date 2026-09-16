@@ -16,11 +16,16 @@ class Config(BaseSettings):
     chave_api_admin: str
     chave_criptografia: str
 
-    provedor_ia: str
-    provedor_apoio: str = ""
+    # Modelos padrão da instalação, no formato provedor:modelo, escolhidos no setup.
+    modelo_conversa: str
+    modelo_fallback: str = ""
+    modelo_visao: str
+    modelo_transcricao: str
+
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
+    groq_api_key: str = ""
 
     diretorio_prompts: Path = Path("/app/prompts")
     diretorio_modelos: Path = Path("/app/modelos")
@@ -34,6 +39,7 @@ class Config(BaseSettings):
             "openai": self.openai_api_key,
             "anthropic": self.anthropic_api_key,
             "gemini": self.gemini_api_key,
+            "groq": self.groq_api_key,
         }.get(provedor, "")
 
     def url_webhook(self, canal: str, token: str) -> str:

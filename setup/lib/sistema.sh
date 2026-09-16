@@ -12,23 +12,16 @@ APT_OPCOES=(-y -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o 
 tela_boas_vindas() {
   estado_tem aceite && return 0
   banner_asimov
-  moldura
-  cat <<'TEXTO'
-  Este instalador prepara esta VPS para rodar agentes de IA de atendimento
-  no Chatwoot, com a estrutura pronta para você evoluir em vibecoding com
-  Claude Code ou Codex. Ele atualiza o sistema, instala Docker, banco de
-  dados, HTTPS e a plataforma dos agentes.
-
-  Licença MIT. Você pode usar, copiar, modificar e distribuir, mantendo o
-  crédito à Asimov Academy (asimov.academy).
-TEXTO
-  moldura
+  info "Prepara esta VPS para agentes de IA de atendimento no Chatwoot,"
+  info "prontos para evoluir com Claude Code ou Codex."
+  dica "Instala Docker, banco, HTTPS e a plataforma. Licença MIT, crédito à Asimov Academy."
   echo
-  local resposta
-  printf 'Ao digitar Y você aceita e concorda com as orientações acima (Y/N): '
-  IFS= read -r resposta </dev/tty || true
+  local resposta=""
+  _prompt "Continuar?"
+  printf ' %s(Y/N)%s: ' "$CINZA" "$NORMAL"
+  ler resposta
   if [[ ! "$resposta" =~ ^[YySs]$ ]]; then
-    echo "Instalação cancelada. Nada foi alterado."
+    dica "Cancelado. Nada foi alterado."
     exit 0
   fi
   estado_set aceite "$(date -Is)"
@@ -66,19 +59,19 @@ tela_iniciando() {
   banner_iniciando
   PASSO_ATUAL=0
   PASSO_TOTAL=9
-  passo ubuntu "Verificando Ubuntu 24.04" \
-    "este setup só roda em Ubuntu 24.04. Reinstale a VPS com essa imagem." \
+  passo ubuntu "Ubuntu 24.04" \
+    "Este setup só roda em Ubuntu 24.04. Reinstale a VPS com essa imagem." \
     --sem-repetir verifica_ubuntu
-  passo recursos "Verificando memória e disco" \
-    "a VPS precisa de pelo menos 2 GB de RAM e 20 GB livres. Aumente o plano." \
+  passo recursos "Memória e disco" \
+    "A VPS precisa de 2 GB de RAM e 20 GB livres. Aumente o plano." \
     --sem-repetir verifica_recursos
-  passo update "Fazendo Update" "confira a internet da VPS com: ping -c 3 archive.ubuntu.com" apt_update
-  passo upgrade "Fazendo Upgrade" "rode 'apt-get upgrade' manualmente para ver o erro" apt_upgrade
-  passo base "Verificando/Instalando sudo, apt-utils e dialog" "veja o log" apt_instala sudo apt-utils dialog
-  passo ferramentas "Verificando/Instalando jq, curl e dnsutils" "veja o log" \
+  passo update "Lista de pacotes" "Confira a internet da VPS: ping -c 3 archive.ubuntu.com" apt_update
+  passo upgrade "Atualização do sistema" "Rode apt-get upgrade para ver o erro." apt_upgrade
+  passo base "sudo, apt-utils e dialog" "Veja o log." apt_instala sudo apt-utils dialog
+  passo ferramentas "jq, curl e dnsutils" "Veja o log." \
     apt_instala jq curl ca-certificates gnupg dnsutils openssl
-  passo git "Verificando/Instalando Git" "veja o log" apt_instala git
-  passo python "Verificando/Instalando python3 e ufw" "veja o log" apt_instala python3 ufw
-  passo docker "Verificando/Instalando Docker" \
-    "confira se a VPS alcança https://get.docker.com e rode de novo" instala_docker
+  passo git "Git" "Veja o log." apt_instala git
+  passo python "python3 e ufw" "Veja o log." apt_instala python3 ufw
+  passo docker "Docker" \
+    "Confira se a VPS alcança https://get.docker.com." instala_docker
 }
