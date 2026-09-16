@@ -2,6 +2,11 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: `asimov atualizar` baixa o instalador da main (v0.3.1)
+
+- **`asimov atualizar` não atualizava**: rodava o `install.sh` da própria VPS, que tem fixa a versão já instalada, e baixava de novo a mesma versão. Agora baixa o `install.sh` da `main`, que aponta para a última tag. Resumo final mostra a versão instalada.
+- **Repositório continua público**: com ele privado, o download do pacote sem login devolve 404.
+
 ## 2026-09-16: Áudio, imagem e documento (fase 2, v0.3.0)
 
 - **Download no turno, não no webhook**, pelo contrato do canal (`baixar_midia` em `canais/base.py`). O webhook grava o anexo como dado estruturado na Mensagem. Mensagem com vários anexos vira uma Mensagem por anexo; a partir da segunda, `id_externo` recebe o sufixo `:n` para a deduplicação continuar valendo. Mensagem só com anexo agora gera turno.

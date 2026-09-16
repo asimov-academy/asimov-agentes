@@ -45,6 +45,7 @@ mostra_resumo() {
     ok "$(destaque "$(estado_get agente_nome)") no ar na caixa $(destaque "$(estado_get agente_caixa)") ${CINZA}· $(estado_get agente_conta)${NORMAL}"
     echo
   fi
+  campo "Versão" "$VERSAO"
   campo "Plataforma" "https://$sub/health"
   campo "Projeto" "$RAIZ_PROJETO"
   campo "Uso" "$([ "$(env_get MODO_INSTALACAO)" = revenda ] && echo 'revenda para empresas clientes' || echo 'só a minha empresa')"
