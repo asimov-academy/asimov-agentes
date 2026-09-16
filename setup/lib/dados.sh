@@ -10,15 +10,15 @@ testa_chave() {
   case "$provedor" in
     openai)
       codigo=$(printf 'Authorization: Bearer %s\n' "$chave" |
-        curl -s -o /dev/null -w '%{http_code}' -H @- https://api.openai.com/v1/models)
+        curl -s -o /dev/null -w '%{http_code}' -H @- https://api.openai.com/v1/models || true)
       ;;
     anthropic)
       codigo=$(printf 'x-api-key: %s\nanthropic-version: 2023-06-01\n' "$chave" |
-        curl -s -o /dev/null -w '%{http_code}' -H @- https://api.anthropic.com/v1/models)
+        curl -s -o /dev/null -w '%{http_code}' -H @- https://api.anthropic.com/v1/models || true)
       ;;
     gemini)
       codigo=$(printf 'x-goog-api-key: %s\n' "$chave" |
-        curl -s -o /dev/null -w '%{http_code}' -H @- https://generativelanguage.googleapis.com/v1beta/models)
+        curl -s -o /dev/null -w '%{http_code}' -H @- https://generativelanguage.googleapis.com/v1beta/models || true)
       ;;
   esac
   [ "$codigo" = "200" ]

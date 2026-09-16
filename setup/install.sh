@@ -2,17 +2,19 @@
 # Uso na VPS:
 #   bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)
 # Para testar o que está na main em vez da versão marcada: ASIMOV_VERSAO=main antes do bash.
+# Para atualizar o código de uma instalação existente (mantém .env, prompts e o progresso):
+#   ASIMOV_ATUALIZAR=1 antes do bash.
 #
 # Baixa a versão da plataforma para ~/asimov-agentes e roda o setup.
 # Se o projeto já existe, só roda o setup (retomada ou resumo).
 set -euo pipefail
 
-VERSAO="${ASIMOV_VERSAO:-v0.1.0}"
+VERSAO="${ASIMOV_VERSAO:-v0.1.1}"
 PACOTE="${ASIMOV_PACOTE:-https://codeload.github.com/asimov-academy/asimov-agentes/tar.gz/$VERSAO}"
 SHA256="${ASIMOV_SHA256:-}"
 DESTINO="${ASIMOV_DIR:-$HOME/asimov-agentes}"
 
-if [ -x "$DESTINO/setup/instalar.sh" ] || [ -f "$DESTINO/setup/instalar.sh" ]; then
+if [ -f "$DESTINO/setup/instalar.sh" ] && [ -z "${ASIMOV_ATUALIZAR:-}" ]; then
   exec bash "$DESTINO/setup/instalar.sh"
 fi
 
@@ -31,6 +33,7 @@ if [ -n "$SHA256" ]; then
   }
 fi
 
+[ -f "$DESTINO/setup/instalar.sh" ] && echo "Atualizando o código em $DESTINO (.env, prompts e progresso ficam)."
 mkdir -p "$DESTINO"
 tar -xzf "$temp/pacote.tar.gz" -C "$DESTINO" --strip-components=1
 exec bash "$DESTINO/setup/instalar.sh"
