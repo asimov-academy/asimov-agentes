@@ -2,6 +2,11 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Setup cria o bot do Chatwoot sozinho (v0.1.3)
+
+- **O onboarding do Chatwoot estava complexo demais**: criar o bot à mão com URL provisória, copiar secret, token de usuário, ID de conta e de caixa, e trocar a URL no fim. Agora o operador cola só a URL do Chatwoot e o token de um administrador, escolhe conta e caixa num menu e digita o nome do agente. A API cria o Agent Bot já com a URL do webhook e liga o bot na caixa.
+- **Em operação usa o token do próprio bot**, não o de usuário. Conferido no código do Chatwoot (`BOT_ACCESSIBLE_ENDPOINTS`): o bot vê a conversa, muda status, envia digitando, atribui e cria mensagem. O token do administrador não é guardado. Substitui a decisão de "Agent Bot criado antes com URL provisória". Atualizados spec/telas.md, spec/dados.md e spec/arquitetura.md.
+
 ## 2026-09-16: Checagem de DNS nos servidores oficiais do domínio (v0.1.2)
 
 - **A checagem consultava só o 1.1.1.1**, que seguiu respondendo "domínio não existe" por mais de 10 minutos depois de o registro existir, enquanto Google e Quad9 já viam o IP. Agora consulta primeiro os servidores oficiais do domínio (onde o registro aparece na hora e onde o Let's Encrypt confere) e, se não houver resposta, 8.8.8.8, 1.1.1.1 e 9.9.9.9.

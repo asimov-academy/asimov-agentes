@@ -7,7 +7,7 @@ from app.canais.chatwoot.assinatura import assinatura_confere, timestamp_recente
 from app.consumo.modelos import Falha
 from app.conversas.modelos import Mensagem
 from app.main import app
-from testes.conftest import BOT_SECRET, USER_ID, FilaFalsa, cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import BOT_ID, BOT_SECRET, FilaFalsa, cria_cliente_e_agente, envia_webhook, payload_chatwoot
 
 
 async def _conta(sessao, modelo) -> int:  # type: ignore[no-untyped-def]
@@ -81,7 +81,7 @@ async def test_mensagem_do_proprio_agente_e_ignorada(http, canal, fila, sessao) 
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=1))
 
-    propria = payload_chatwoot(mensagem_id=2, tipo="outgoing", remetente={"id": USER_ID, "type": "user"})
+    propria = payload_chatwoot(mensagem_id=2, tipo="outgoing", remetente={"id": BOT_ID, "type": "agent_bot"})
     await envia_webhook(http, agente["token"], propria)
 
     assert await _conta(sessao, Mensagem) == 1

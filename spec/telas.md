@@ -54,10 +54,10 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Ações:
   - Informar o cliente (empresa) e o nome do agente.
   - Escolher o canal: WhatsApp oficial, Telegram ou Chatwoot.
-  - Colar as credenciais do canal escolhido (testadas na hora).
-  - Informar o destino do handoff: no WhatsApp ou Telegram direto, número ou grupo da empresa; no Chatwoot, time ou caixa para onde a conversa é transferida.
+  - Chatwoot: colar a URL do Chatwoot e o token de acesso de um administrador; escolher a conta e a caixa de entrada num menu. O setup cria o Agent Bot já com a URL do webhook e liga o bot na caixa. O token do administrador não é guardado.
+  - WhatsApp ou Telegram direto (fase 5): colar as credenciais do canal (testadas na hora) e informar o número ou grupo que recebe o handoff.
   - Opcional: informar a pasta na VPS com documentos da base de conhecimento (assumido: arquivos enviados antes para a VPS). Pode pular e subir depois pelo menu.
-- Mostra ao final: a URL do webhook do agente e, conforme o canal, onde colar. No Telegram o setup registra o webhook sozinho (derivado).
+- Mostra ao final: confirmação de que o canal foi conectado. Chatwoot e Telegram não exigem colar nada; no WhatsApp oficial, a URL do webhook e onde colar na Meta.
 
 ### 7. Resumo final
 
@@ -143,7 +143,8 @@ Um aluno parte de uma VPS Ubuntu 24.04 vazia com domínio e, em menos de 1 hora 
   - verificar saúde da API
   - criar cliente; listar clientes
   - criar agente; listar agentes; ver agente com URL de webhook; editar agente; remover agente
-  - testar credenciais de canal
+  - descobrir o que o acesso do operador enxerga no canal (contas e caixas de entrada no Chatwoot)
+  - conectar o canal ao criar o agente (criar e ligar o Agent Bot no Chatwoot)
   - registrar webhook no Telegram
   - enviar documento para a base de conhecimento; listar documentos; remover documento
   - ver consumo e falhas por cliente e agente

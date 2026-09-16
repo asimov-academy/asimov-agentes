@@ -1,6 +1,8 @@
 from sqlalchemy import text
 
-from testes.conftest import ADMIN, BOT_SECRET, CREDENCIAIS_EXEMPLO, TOKEN_CHATWOOT, cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from app.plataforma.cripto import decifra
+
+from testes.conftest import ADMIN, BOT_SECRET, CONEXAO_EXEMPLO, TOKEN_ADMIN, TOKEN_BOT, cria_cliente_e_agente, envia_webhook, payload_chatwoot
 
 
 async def test_admin_exige_chave(http) -> None:  # type: ignore[no-untyped-def]
@@ -21,7 +23,7 @@ async def test_agente_com_modelo_sem_chave_devolve_422(http, canal) -> None:  # 
         json={
             "nome": "Ana",
             "canal": "chatwoot",
-            "credenciais": CREDENCIAIS_EXEMPLO,
+            "conexao": CONEXAO_EXEMPLO,
             "modelos": {"modelo_conversa": "anthropic:claude-sonnet-5"},
         },
         headers=ADMIN,
@@ -47,10 +49,32 @@ async def test_credenciais_nunca_saem_em_claro(http, canal, fila, sessao, capsys
     listagem = await http.get("/admin/agentes", headers=ADMIN)
 
     for texto in (listagem.text, str(agente), capsys.readouterr().out):
-        assert TOKEN_CHATWOOT not in texto
-        assert BOT_SECRET not in texto
+        for segredo in (TOKEN_BOT, BOT_SECRET, TOKEN_ADMIN):
+            assert segredo not in texto
 
     async with sessao() as s:
         linha = (await s.execute(text("select credenciais_cifradas, token_webhook_hash from agente"))).one()
-    assert TOKEN_CHATWOOT not in linha[0] and BOT_SECRET not in linha[0]
+    for segredo in (TOKEN_BOT, BOT_SECRET, TOKEN_ADMIN):
+        assert segredo not in linha[0]
     assert agente["token"] not in linha[1]
+    assert TOKEN_ADMIN not in str(decifra(linha[0])), "token do administrador não pode ser guardado"
+
+
+async def test_falha_ao_gravar_desfaz_conexao_no_canal(http, canal, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from app.agentes import servico
+
+    def quebra(*args, **kwargs):  # type: ignore[no-untyped-def]
+        raise OSError("disco cheio")
+
+    monkeypatch.setattr(servico, "_cria_prompts", quebra)
+    cliente = (await http.post("/admin/clientes", json={"nome": "Loja"}, headers=ADMIN)).json()
+    try:
+        await http.post(
+            f"/admin/clientes/{cliente['id']}/agentes",
+            json={"nome": "Ana", "canal": "chatwoot", "conexao": CONEXAO_EXEMPLO},
+            headers=ADMIN,
+        )
+    except OSError:
+        pass
+    assert canal.desconectados == [42]
+    assert (await http.get("/admin/agentes", headers=ADMIN)).json() == []
