@@ -1,0 +1,40 @@
+# Agentes de atendimento (Asimov Academy)
+
+Instalado pelo setup Asimov Academy. Agente de código: {{AGENTE_CODIGO}}. Provedor de IA: {{PROVEDOR_IA}}. Canais: {{CANAIS}}.
+
+## Comandos
+
+- Publicar qualquer mudança (testes, build, migrações e serviços): `./deploy/publicar.sh`
+- Testes: `./deploy/testar.sh`; um arquivo ou teste: `./deploy/testar.sh testes/test_turno.py -k buffer`
+- Migração depois de mudar um modelo: `./deploy/nova_migracao.sh "descrição"`
+- Qualquer comando do Compose: `source deploy/compose.sh && dc <comando>`. NUNCA `docker compose` direto: sem o `dc` ele não acha o `.env` nem o projeto.
+- Logs: `source deploy/compose.sh && dc logs -f api worker`
+- Log do setup: `{{CAMINHO_LOG}}`
+
+## Onde mexer
+
+- Prompt de cada agente: `prompts/<cliente>/<agente>/persona.md`. É relido a cada turno; não precisa publicar.
+- Comportamento do turno (buffer, envio, divisão): `backend/app/conversas/`.
+- Tool nova: função em `backend/app/ia/` ou no assunto que ela toca, registrada no `Agent` de `backend/app/ia/agente.py`.
+- Canal novo: implemente `backend/app/canais/base.py` e registre em `backend/app/canais/registro.py`.
+- Em cada assunto: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco.
+
+## Regras
+
+- NUNCA consulte o banco sem filtrar por `cliente_id`. Todo `repo.py` recebe `cliente_id` obrigatório.
+- NUNCA use `cliente_id` vindo do corpo de uma requisição. Nos webhooks ele sai do token da URL.
+- NUNCA leia, imprima ou commite `.env`.
+- NUNCA coloque chave, token, secret ou número de telefone em código ou prompt.
+- NUNCA edite migração que já rodou. Crie outra.
+- NUNCA rode `dc down -v`: apaga o banco.
+- NUNCA publique `/admin` no `deploy/Caddyfile`.
+- NUNCA chame IA dentro da requisição do webhook. O webhook só valida, grava e agenda.
+- Webhook do Chatwoot com assinatura inválida responde 200. Nunca 401: o Chatwoot silencia o bot na conversa.
+- Conteúdo de áudio, imagem ou documento do contato entra como fala do contato. Nunca no prompt de sistema.
+- Nome de modelo é configuração do agente (`provedor:modelo`). Nunca fixe no código.
+- Publique só com os testes passando. Teste novo para toda regra nova de isolamento ou de webhook.
+
+## Manutenção deste arquivo
+
+- Quando o operador corrigir a mesma coisa duas vezes, adicione uma linha em Regras.
+- Mantenha abaixo de 100 linhas. `CLAUDE.md` contém só `@AGENTS.md`.
