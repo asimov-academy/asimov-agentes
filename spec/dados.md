@@ -64,7 +64,7 @@ Credenciais por canal:
 
 - WhatsApp oficial: phone_number_id, business_account_id, access_token, app_secret, verify_token.
 - Telegram: bot_token, secret_token (gerado pelo setup).
-- Chatwoot: url, account_id, inbox_ids, api_access_token (token de usuário), user_id, bot_secret.
+- Chatwoot: url, account_id, inbox_ids, api_access_token (token do Agent Bot), bot_id, bot_secret. O token do administrador usado para criar o bot não é guardado.
 
 ### Contato
 
@@ -214,7 +214,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 | nome | Ana |
 | slug | ana |
 | canal | chatwoot (inbox com WhatsApp Cloud API ligada no Chatwoot) |
-| credenciais_canal | url `https://chatwoot.exemplo.com.br` (informada pelo operador no setup), account_id `1`, inbox_ids `3`, api_access_token `xxx`, user_id `xxx`, bot_secret `xxx` |
+| credenciais_canal | url `https://chatwoot.exemplo.com.br` (informada pelo operador no setup), account_id `1`, inbox_ids `3`, api_access_token `xxx` (do bot), bot_id `42`, bot_secret `xxx` |
 | arquivo_prompt | `loja-exemplo/ana/persona.md` |
 | arquivo_prompt_handoff | `loja-exemplo/ana/resumo_handoff.md` |
 | modelo_conversa | `openai:gpt-5.5` |

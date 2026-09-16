@@ -128,12 +128,12 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Verificar saúde | `GET /health` (pública) | nada | status de api, banco e redis | não expõe versões nem dados |
 | Criar cliente | `POST /admin/clientes` | nome | cliente | slug único |
 | Listar clientes | `GET /admin/clientes` | nada | lista | só não removidos |
-| Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, credenciais, handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; credenciais testadas no canal antes de gravar; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; no Telegram registra o webhook |
+| Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, token de administrador, conta, caixas), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook e liga nas caixas; se a gravação falhar, apaga o bot); guarda só o token e o secret do bot; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; no Telegram registra o webhook |
 | Listar agentes | `GET /admin/agentes?cliente_id=` | filtro opcional | lista com canal, destino de handoff, URL do webhook, ativo | credenciais nunca devolvidas |
 | Ver agente | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}` | ids | agente | agente pertence ao cliente |
 | Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | campos alterados | agente | agente pertence ao cliente; credencial alterada é testada antes |
 | Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmação com o slug | ok | agente pertence ao cliente; remove webhook no Telegram; apaga credenciais |
-| Testar credenciais | `POST /admin/canais/{canal}/testar` | credenciais | ok ou motivo | não grava nada |
+| Descobrir no canal | `POST /admin/canais/{canal}/descobrir` | acesso do operador (Chatwoot: url e token de administrador) | contas e caixas de entrada | não grava nada; acesso não é guardado |
 | Enviar documento | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/documentos` | caminho do arquivo na VPS ou upload multipart | documento com status `processando` | formato aceito (PDF, DOCX, TXT, MD); hash repetido no mesmo agente é recusado; enfileira ingestão |
 | Listar documentos | `GET .../agentes/{agente_id}/documentos` | ids | lista com status e trechos | agente pertence ao cliente |
 | Remover documento | `DELETE .../documentos/{documento_id}` | ids | ok | documento pertence ao agente e ao cliente; apaga trechos |

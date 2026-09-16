@@ -26,7 +26,9 @@ class Modelos(BaseModel):
 class NovoAgente(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     canal: str
-    credenciais: dict[str, Any]
+    conexao: dict[str, Any] = Field(
+        description="Acesso do operador ao canal. Usado para conectar e descartado; nunca é guardado."
+    )
     modelos: Modelos = Modelos()
     handoff_destino: dict[str, Any] | None = None
     handoff_template: str | None = None
@@ -64,19 +66,19 @@ def _saida(agente: Agente) -> AgenteSaida:
     return AgenteSaida(**dados)
 
 
-class Credenciais(BaseModel):
-    credenciais: dict[str, Any]
+class Acesso(BaseModel):
+    conexao: dict[str, Any]
 
 
-@router.post("/canais/{canal}/testar")
-async def testar_credenciais(canal: str, dados: Credenciais) -> dict[str, Any]:
+@router.post("/canais/{canal}/descobrir")
+async def descobrir(canal: str, dados: Acesso) -> dict[str, Any]:
+    """Lista o que o acesso do operador enxerga no canal. Não grava nada."""
     if canal not in CANAIS:
         raise HTTPException(status_code=404, detail="canal não suportado")
     try:
-        normalizadas = await obter_canal(canal).testar(dados.credenciais)
+        return await obter_canal(canal).descobrir(dados.conexao)
     except CredencialInvalida as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
-    return {"ok": True, "credenciais": credenciais_visiveis(obter_canal(canal), normalizadas)}
 
 
 @router.post("/clientes/{cliente_id}/agentes", status_code=201, response_model=AgenteSaida)
@@ -91,7 +93,7 @@ async def criar(
             cliente_id,
             nome=dados.nome,
             canal=dados.canal,
-            credenciais=dados.credenciais,
+            conexao=dados.conexao,
             modelos=dados.modelos.model_dump(exclude_none=True),
             handoff_destino=dados.handoff_destino,
             handoff_template=dados.handoff_template,

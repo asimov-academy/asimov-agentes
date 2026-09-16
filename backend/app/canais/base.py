@@ -45,8 +45,21 @@ class Canal(Protocol):
     responde_200_em_assinatura_invalida: bool
     """True quando o canal pune resposta de erro (Chatwoot silencia o bot na conversa)."""
 
-    async def testar(self, credenciais: dict[str, Any]) -> dict[str, Any]:
-        """Confere as credenciais no próprio canal e devolve a versão normalizada."""
+    async def descobrir(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Com o acesso do operador, lista o que dá para conectar (contas, caixas, números)."""
+        ...
+
+    async def conectar(
+        self, dados: dict[str, Any], url_webhook: str, nome_agente: str
+    ) -> dict[str, Any]:
+        """Configura o canal para chamar o webhook e devolve as credenciais de operação.
+
+        O acesso do operador usado aqui nunca é guardado; só o que for devolvido.
+        """
+        ...
+
+    async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
+        """Desfaz `conectar` quando o agente não chega a ser gravado."""
         ...
 
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool: ...

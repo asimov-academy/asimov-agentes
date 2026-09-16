@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Tela 6: primeiro agente. Tudo passa pela API; o setup nunca toca no banco.
+# O token de administrador do Chatwoot só vive nesta tela: a API cria o bot e o descarta.
 
 API_LOCAL="http://127.0.0.1:8000"
 
@@ -43,58 +44,76 @@ cria_cliente() {
   done
 }
 
-cria_agente() {
-  local nome url conta inboxes token segredo handoff corpo inbox_json handoff_json
-  local sub
-  sub=$(env_get SUBDOMINIO_BOT)
-
+# Preenche CHATWOOT_URL, CHATWOOT_TOKEN e CHATWOOT_CONTAS (JSON devolvido pela API).
+acessa_chatwoot() {
+  local corpo
   echo
-  info "Canal: Chatwoot. WhatsApp oficial e Telegram diretos chegam numa próxima versão."
+  info "Canal: Chatwoot. O setup cria o bot e liga na caixa de entrada para você."
+  info "Precisa do token de um administrador: no Chatwoot, clique no seu avatar >"
+  info "Configurações do perfil > Token de acesso."
   echo
-  info "Antes de continuar, no Chatwoot:"
-  info "  1. Configurações > Bots > Adicionar bot."
-  info "     Em URL do webhook, coloque https://$sub/aguardando (vamos trocar no fim)."
-  info "  2. Copie o secret que o Chatwoot mostra ao criar o bot."
-  info "  3. Perfil > Token de acesso: copie o token do seu usuário."
-  echo
-
-  pergunta nome "Nome do agente" "$(estado_get agente_nome)"
   while true; do
-    pergunta url "URL do Chatwoot (ex: https://chat.minhaempresa.com.br)" "$(estado_get chatwoot_url)"
-    url=${url%/}
-    pergunta conta "ID da conta no Chatwoot (número na URL: /app/accounts/NÚMERO)" "$(estado_get chatwoot_conta)"
-    pergunta inboxes "ID das caixas de entrada que o agente atende, separados por vírgula" "$(estado_get chatwoot_inboxes)"
-    pergunta_secreta token "Token de acesso do usuário do Chatwoot"
-    pergunta_secreta segredo "Secret do bot do Chatwoot"
-    pergunta_opcional handoff "ID do usuário do Chatwoot que recebe as conversas transferidas"
-
-    estado_set agente_nome "$nome"
-    estado_set chatwoot_url "$url"
-    estado_set chatwoot_conta "$conta"
-    estado_set chatwoot_inboxes "$inboxes"
-
-    if ! [[ "$conta" =~ ^[0-9]+$ ]] || ! [[ "$inboxes" =~ ^[0-9]+([[:space:]]*,[[:space:]]*[0-9]+)*$ ]]; then
-      info "A conta e as caixas de entrada precisam ser números."
-      continue
+    pergunta CHATWOOT_URL "URL do Chatwoot (ex: https://chat.minhaempresa.com.br)" "$(estado_get chatwoot_url)"
+    CHATWOOT_URL=${CHATWOOT_URL%/}
+    CHATWOOT_URL=${CHATWOOT_URL%%/app*}
+    pergunta_secreta CHATWOOT_TOKEN "Token de acesso do administrador"
+    corpo=$(jq -n --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" '{conexao: {url: $url, token_admin: $token}}')
+    api POST /admin/canais/chatwoot/descobrir "$corpo"
+    if [ "$API_STATUS" = 200 ]; then
+      estado_set chatwoot_url "$CHATWOOT_URL"
+      CHATWOOT_CONTAS=$API_RESPOSTA
+      return 0
     fi
-    if [ -n "$handoff" ] && ! [[ "$handoff" =~ ^[0-9]+$ ]]; then
-      info "O ID do usuário de handoff precisa ser um número."
-      continue
-    fi
+    info "Não deu certo: $(detalhe_erro "$API_RESPOSTA")"
+    echo
+  done
+}
 
-    inbox_json=$(tr -d ' ' <<<"$inboxes" | jq -Rc 'split(",") | map(tonumber)')
-    handoff_json=$([ -n "$handoff" ] && jq -nc --argjson id "$handoff" '{tipo: "usuario", id: $id}' || echo null)
-    corpo=$(jq -n \
-      --arg nome "$nome" --arg url "$url" --argjson conta "$conta" --argjson inboxes "$inbox_json" \
-      --arg token "$token" --arg segredo "$segredo" --argjson handoff "$handoff_json" \
-      '{nome: $nome, canal: "chatwoot", handoff_destino: $handoff,
-        credenciais: {url: $url, account_id: $conta, inbox_ids: $inboxes,
-                      api_access_token: $token, bot_secret: $segredo}}')
+# escolha_da_lista VAR "texto" JSON_ARRAY_DE_NOMES -> índice (0..n-1)
+escolha_da_lista() {
+  local __var=$1 texto=$2 lista=$3 total numero
+  local -a nomes
+  mapfile -t nomes < <(jq -r '.[]' <<<"$lista")
+  total=${#nomes[@]}
+  if [ "$total" -eq 1 ]; then
+    info "$texto: ${nomes[0]}"
+    printf -v "$__var" '%s' 0
+    return 0
+  fi
+  escolha numero "$texto" "${nomes[@]}"
+  printf -v "$__var" '%s' "$((numero - 1))"
+}
 
-    printf '  Testando as credenciais no Chatwoot...'
+cria_agente() {
+  local conta_i caixa_i conta_id caixa_id caixa_nome caixas nome corpo
+  acessa_chatwoot
+
+  echo
+  escolha_da_lista conta_i "Conta do Chatwoot" "$(jq -c '[.contas[].nome]' <<<"$CHATWOOT_CONTAS")"
+  conta_id=$(jq -r ".contas[$conta_i].id" <<<"$CHATWOOT_CONTAS")
+  caixas=$(jq -c ".contas[$conta_i].caixas" <<<"$CHATWOOT_CONTAS")
+  if [ "$(jq 'length' <<<"$caixas")" -eq 0 ]; then
+    erro_fatal "A conta escolhida não tem nenhuma caixa de entrada" \
+      "crie a caixa de entrada no Chatwoot (ex: WhatsApp) e rode o mesmo comando de novo"
+  fi
+  echo
+  escolha_da_lista caixa_i "Caixa de entrada que o agente vai atender" "$(jq -c '[.[].nome]' <<<"$caixas")"
+  caixa_id=$(jq -r ".[$caixa_i].id" <<<"$caixas")
+  caixa_nome=$(jq -r ".[$caixa_i].nome" <<<"$caixas")
+
+  echo
+  pergunta nome "Nome do agente (o nome que o contato vê)" "$(estado_get agente_nome)"
+  while true; do
+    corpo=$(jq -n --arg nome "$nome" --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" \
+      --argjson conta "$conta_id" --argjson caixa "$caixa_id" \
+      '{nome: $nome, canal: "chatwoot",
+        conexao: {url: $url, token_admin: $token, account_id: $conta, inbox_ids: [$caixa]}}')
+    printf '  Criando o bot no Chatwoot e ligando na caixa %s...' "$caixa_nome"
     api POST "/admin/clientes/$(estado_get cliente_id)/agentes" "$corpo"
     if [ "$API_STATUS" = 201 ]; then
       printf ' %sok%s\n' "$VERDE" "$NORMAL"
+      estado_set agente_nome "$nome"
+      estado_set agente_caixa "$caixa_nome"
       estado_set agente_id "$(jq -r .id <<<"$API_RESPOSTA")"
       estado_set agente_webhook "$(jq -r .url_webhook <<<"$API_RESPOSTA")"
       return 0
@@ -103,8 +122,12 @@ cria_agente() {
     info "$(detalhe_erro "$API_RESPOSTA")"
     if [ "$API_STATUS" = 409 ]; then
       pergunta nome "Escolha outro nome para o agente"
+    elif [ "$API_STATUS" = 422 ]; then
+      cria_agente
+      return 0
+    else
+      erro_fatal "Não consegui criar o agente" "rode o mesmo comando de novo"
     fi
-    echo
   done
 }
 
@@ -113,16 +136,5 @@ tela_primeiro_agente() {
   titulo "Primeiro agente"
   cria_cliente
   cria_agente
-
-  titulo "Ligue o agente no Chatwoot"
-  info "1. Configurações > Bots > editar o bot que você criou."
-  info "   Troque a URL do webhook por:"
-  echo
-  printf '     %s%s%s\n' "$NEGRITO" "$(estado_get agente_webhook)" "$NORMAL"
-  echo
-  info "2. Configurações > Caixas de entrada > a caixa do agente > Bot:"
-  info "   selecione o bot e salve."
-  echo
-  printf 'Enter quando terminar: '
-  IFS= read -r _ </dev/tty || true
+  unset CHATWOOT_TOKEN
 }

@@ -45,7 +45,7 @@ mostra_resumo() {
   echo
   if [ -n "$(estado_get agente_id)" ]; then
     info "Agente:            $(estado_get agente_nome) ($(estado_get cliente_nome), Chatwoot)"
-    info "Webhook:           $(estado_get agente_webhook)"
+    info "Caixa de entrada:  $(estado_get agente_caixa) (bot criado e ligado no Chatwoot)"
     info "Prompt do agente:  prompts/ (edite e a mudança vale na próxima mensagem)"
     echo
   fi

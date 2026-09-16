@@ -44,17 +44,16 @@ from app.plataforma.banco import fabrica_sessao, motor  # noqa: E402
 
 ADMIN = {"X-Admin-Key": "chave-admin-de-teste"}
 BOT_SECRET = "segredo-do-bot-xyz123"
-TOKEN_CHATWOOT = "token-do-usuario-abc987"
-USER_ID = 42
+TOKEN_BOT = "token-do-bot-abc987"
+TOKEN_ADMIN = "token-do-administrador-qwe555"
+BOT_ID = 42
 
-# Credenciais fictícias do agente de exemplo (spec/dados.md).
-CREDENCIAIS_EXEMPLO = {
+# Acesso fictício do agente de exemplo (spec/dados.md).
+CONEXAO_EXEMPLO = {
     "url": "https://chatwoot.exemplo.com.br",
+    "token_admin": TOKEN_ADMIN,
     "account_id": 1,
     "inbox_ids": [3],
-    "api_access_token": TOKEN_CHATWOOT,
-    "user_id": USER_ID,
-    "bot_secret": BOT_SECRET,
 }
 
 
@@ -64,10 +63,21 @@ class ChatwootFalso(Chatwoot):
     def __init__(self) -> None:
         self.enviadas: list[tuple[str, str]] = []
         self.digitando_chamadas: list[bool] = []
+        self.desconectados: list[int] = []
         self.status = "pending"
 
-    async def testar(self, credenciais: dict[str, Any]) -> dict[str, Any]:
-        return {**credenciais, "user_id": credenciais.get("user_id") or USER_ID}
+    async def conectar(self, dados: dict[str, Any], url_webhook: str, nome_agente: str) -> dict[str, Any]:
+        return {
+            "url": dados["url"],
+            "account_id": dados["account_id"],
+            "inbox_ids": dados["inbox_ids"],
+            "api_access_token": TOKEN_BOT,
+            "bot_id": BOT_ID,
+            "bot_secret": BOT_SECRET,
+        }
+
+    async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
+        self.desconectados.append(credenciais["bot_id"])
 
     async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str) -> bool:
         return self.status == "pending"
@@ -140,7 +150,7 @@ async def cria_cliente_e_agente(http: httpx.AsyncClient, nome_cliente: str, nome
     cliente = (await http.post("/admin/clientes", json={"nome": nome_cliente}, headers=ADMIN)).json()
     resp = await http.post(
         f"/admin/clientes/{cliente['id']}/agentes",
-        json={"nome": nome_agente, "canal": "chatwoot", "credenciais": CREDENCIAIS_EXEMPLO, **extra},
+        json={"nome": nome_agente, "canal": "chatwoot", "conexao": CONEXAO_EXEMPLO, **extra},
         headers=ADMIN,
     )
     assert resp.status_code == 201, resp.text
