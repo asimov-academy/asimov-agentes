@@ -4,6 +4,8 @@ Nada de IA aqui. O `cliente_id` sai do token da URL, nunca do corpo.
 """
 
 import json
+import uuid
+from dataclasses import asdict
 from typing import Any
 
 import structlog
@@ -12,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
-from app.canais.base import Acao, EntradaWebhook
+from app.canais.base import Acao, EntradaWebhook, Evento
 from app.canais.registro import CANAIS, obter_canal
 from app.consumo.repo import registra_falha
 from app.conversas import buffer, repo
@@ -26,6 +28,29 @@ router = APIRouter()
 
 def _recusa(canal_pune_erro: bool, status: int) -> Response:
     return Response(status_code=200 if canal_pune_erro else status)
+
+
+def _mensagens(evento: Evento, cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> list[Mensagem]:
+    """Uma mensagem por anexo; o texto vai na primeira. O anexo só é baixado no turno."""
+    anexos = evento.anexos or (None,)
+    mensagens = []
+    for i, anexo in enumerate(anexos):
+        id_externo = evento.mensagem_externa
+        if i and id_externo is not None:
+            id_externo = f"{id_externo}:{i}"
+        mensagens.append(
+            Mensagem(
+                cliente_id=cliente_id,
+                conversa_id=conversa_id,
+                direcao=evento.direcao,
+                autor=evento.autor,
+                tipo=anexo.tipo if anexo else "texto",
+                texto=evento.texto if i == 0 else None,
+                anexo=asdict(anexo) if anexo else None,
+                id_externo=id_externo,
+            )
+        )
+    return mensagens
 
 
 @router.post("/webhook/{canal}/{token}")
@@ -88,18 +113,9 @@ async def receber(
             if conversa is None:
                 return Response(status_code=200)
 
-        nova = await repo.grava_mensagem(
-            s,
-            Mensagem(
-                cliente_id=agente.cliente_id,
-                conversa_id=conversa.id,
-                direcao=evento.direcao,
-                autor=evento.autor,
-                tipo=evento.tipo,
-                texto=evento.texto,
-                id_externo=evento.mensagem_externa,
-            ),
-        )
+        nova = False
+        for mensagem in _mensagens(evento, agente.cliente_id, conversa.id):
+            nova = await repo.grava_mensagem(s, mensagem) or nova
         await s.commit()
     except Exception as erro:
         log.error("webhook_gravacao_falhou", erro=repr(erro))

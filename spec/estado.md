@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.2.0` em `asimov-academy/asimov-agentes` (público). `main` tem também o README.
+- `v0.3.0` em `asimov-academy/asimov-agentes` (público). `main` tem também o README.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `ASIMOV_ATUALIZAR=1` antes do mesmo comando, ou `asimov atualizar`.
 
@@ -13,7 +13,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | Fase | Situação |
 |---|---|
 | 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real (texto respondido pelo Chatwoot com WhatsApp) |
-| 2. Áudio, imagem e documento | **Próxima.** Hoje mensagem só com anexo é gravada como `anexo sem texto` e não gera turno |
+| 2. Áudio, imagem e documento | **Construída em v0.3.0**, falta validar em VPS real (áudio, foto de documento, PDF e reenvio do mesmo áudio) |
 | 3. Handoff no Chatwoot | Não iniciada |
 | 4. Menu do operador | Parcial: `asimov novo-agente` e `asimov agentes` prontos; faltam editar, remover e consumo |
 | 5. WhatsApp oficial e Telegram diretos | Não iniciada |
@@ -23,17 +23,22 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 ## O que já existe além da fase 1
 
 - Modo de uso perguntado antes de instalar: `MODO_INSTALACAO=empresa|revenda`.
-- Modelo por função com provedor próprio: `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO` (openai, anthropic, gemini, groq). Fallback com `FallbackModel`. Visão e transcrição estão configuradas mas ainda não são usadas: é a fase 2.
+- Modelo por função com provedor próprio: `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO` (openai, anthropic, gemini, groq). Fallback com `FallbackModel`. Visão e transcrição usadas desde a v0.3.0.
 - Setup cria o Agent Bot no Chatwoot com token de administrador (não guardado) e opera com o token do bot.
 - Setup rodado de novo numa instalação concluída pede o que faltar de versões novas e reconstrói.
 
-## Para a fase 2
+## Como a fase 2 ficou
 
-- Anexo chega no payload do Chatwoot em `attachments[]` (`file_type`, `data_url`); hoje `canais/chatwoot/canal.py` só usa `file_type` para o `tipo`.
-- Download do anexo precisa entrar no contrato do canal (`canais/base.py`), não direto no turno.
-- Transcrição por provedor: OpenAI e Groq têm endpoint de áudio (não é chat); Gemini recebe áudio no próprio modelo. Visão entra como conteúdo multimodal na PydanticAI.
-- Entidade Mídia e cache por `cliente_id` + hash estão em spec/dados.md. Criar migração nova.
-- Atualizar este arquivo, spec/fases.md e o README (seção "O que vem por aí") ao terminar.
+- Webhook grava o anexo na Mensagem (uma por anexo) e agenda o turno; nada é baixado ali.
+- No turno, `midia/servico.py` baixa pelo canal (`baixar_midia`), usa o cache por `cliente_id` + hash ou lê, e grava a `situacao` no anexo. O modelo recebe o conteúdo em `<midia_do_contato>`.
+- Leitura de mídia registra Turno com `funcao` `transcricao` ou `visao`; mídia do cache não registra.
+- Arquivos em volume Docker `midia` (`/var/lib/asimov/midia`). Retenção de 90 dias fica para a fase 7.
+- Para validar na VPS: `asimov atualizar`, mandar áudio, foto de documento e PDF, reenviar o mesmo áudio e conferir que não há novo Turno de `transcricao`.
+
+## Para a fase 3
+
+- Tools que alteram estado não existem ainda. Ao criar a primeira, turno com mídia pendente roda sem elas (exceto handoff): spec/arquitetura.md, seção de segurança.
+- Arquivo acima do limite hoje só pede para o contato escrever; a spec prevê handoff.
 
 ## Fluxo de publicação combinado com o operador
 

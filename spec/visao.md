@@ -22,7 +22,7 @@ Hoje a VPS e o projeto de cada agente são montados à mão ou com um script sim
 6. Firewall, banco, SSL e projeto base instalados, junto com Node, Python (uv) e o agente de código escolhido pelo operador: Claude Code ou Codex.
 7. Criação de vários agentes, cada um ligado a um cliente (empresa), numa mesma instalação.
 8. Conexão de cada agente a um canal escolhido no script: WhatsApp (API oficial), Telegram ou Chatwoot já existente. O script pede as credenciais do canal e gera a URL de webhook do agente em `bot.<dominio>` para colar no canal (no Chatwoot, no bot criado lá).
-9. Transcrição de áudio com Whisper.
+9. Transcrição de áudio (Whisper na OpenAI ou Groq, ou o próprio Gemini).
 10. Leitura de imagens e documentos com uma IA de visão, com cache por arquivo: a mesma mídia reenviada não é processada de novo.
 11. Buffer de mensagens, efeito digitando e divisão das respostas em várias mensagens. Se o modelo de resposta falhar, o fallback responde.
 12. Base de conhecimento com RAG por agente.

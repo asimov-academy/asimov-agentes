@@ -2,6 +2,20 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Áudio, imagem e documento (fase 2, v0.3.0)
+
+- **Download no turno, não no webhook**, pelo contrato do canal (`baixar_midia` em `canais/base.py`). O webhook grava o anexo como dado estruturado na Mensagem. Mensagem com vários anexos vira uma Mensagem por anexo; a partir da segunda, `id_externo` recebe o sufixo `:n` para a deduplicação continuar valendo. Mensagem só com anexo agora gera turno.
+- **Situação da leitura gravada no anexo** (`lido`, `acima_do_limite`, `nao_suportado`, `falhou`), para o modelo saber por que um arquivo não foi lido, inclusive no histórico. spec/dados.md, Mensagem.
+- **Mídia só é gravada depois de lida com sucesso**, com `resultado` (texto) e `metadados`. Falha não entra no cache: reenviar tenta de novo.
+- **Turno ganhou `funcao`** (`resposta`, `transcricao`, `visao`): leitura de mídia registra o próprio Turno, e mídia vinda do cache não registra. É o que o critério de aceite confere. spec/dados.md, Turno.
+- **Acima do limite não faz handoff ainda**: registra Falha e o agente pede para escrever. Handoff é da fase 3.
+- **PDF com texto lido com `pypdf`** antes da visão; só PDF escaneado vai para o modelo, limitado às 10 primeiras páginas. Texto extraído cortado em 12 mil caracteres. Groq não lê PDF: escaneado com visão na Groq vira `falhou`. Vídeo e tipos desconhecidos viram `nao_suportado`, sem Falha. spec/arquitetura.md.
+- **Duração do áudio com `tinytag`** (MIT) em vez de ffmpeg na imagem. Se o cabeçalho não disser a duração, o áudio é processado; o limite de 20 MB continua valendo.
+- **Transcrição da OpenAI e da Groq por httpx** no endpoint de áudio, sem depender da assinatura do SDK; Gemini pelo próprio modelo. Anthropic recusada para transcrição também na validação da API.
+- **Link de anexo do Chatwoot baixado sem o token do bot**: o link já é assinado e o httpx repassaria o header no redirect para o armazenamento.
+- **Lock da conversa de 90 para 240 s**: leitura de mídia e resposta rodam no mesmo turno.
+- **"Turno com mídia sem tools que alteram estado"** fica para quando existir a primeira tool (fase 3): hoje o agente não tem tools. Anotado em spec/estado.md.
+
 ## 2026-09-16: Modo de uso, modelos por função e comando asimov (v0.2.0)
 
 - **Modo de uso perguntado antes de instalar**: só a própria empresa ou revenda para empresas clientes. A plataforma segue multitenant nos dois; muda só o fluxo de criação de agente. spec/telas.md, tela 1b.

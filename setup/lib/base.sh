@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034  # variáveis usadas pelas telas e pelo comando asimov
 # Caminhos, versão, sudo e bibliotecas. Carregado por setup/instalar.sh e setup/asimov.sh.
 
-VERSAO="0.2.0"
+VERSAO="0.3.0"
 
 # Contagem de caracteres (alinhamento com acentos) depende de locale UTF-8.
 if locale -a 2>/dev/null | grep -qi '^c\.utf-\?8$'; then

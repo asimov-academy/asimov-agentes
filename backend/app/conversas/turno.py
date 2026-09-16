@@ -1,7 +1,7 @@
 """Job do worker: um turno depois do buffer.
 
 Ordem: token do buffer ainda vale, lock da conversa, canal ainda deixa o agente falar,
-modelo, envio mensagem a mensagem com digitando, registro do Turno.
+leitura das mídias pendentes, modelo, envio mensagem a mensagem com digitando, registro do Turno.
 """
 
 import asyncio
@@ -20,6 +20,7 @@ from app.conversas import buffer, repo
 from app.conversas.divisao import delay_ms, limita_mensagens
 from app.conversas.modelos import Mensagem
 from app.ia.agente import ResultadoTurno, roda_turno
+from app.midia import servico as midia
 from app.plataforma.banco import fabrica_sessao
 from app.plataforma.config import config
 
@@ -90,6 +91,9 @@ async def _turno(cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> str:
             return "nada_pendente"
 
         await _digitando(canal, credenciais, conversa.id_externo, True)
+        # Grava a leitura antes do modelo: se a resposta falhar, a mídia não é lida de novo.
+        await midia.processa_pendentes(s, agente, canal, credenciais, conversa_id, pendentes)
+        await s.commit()
         inicio = time.monotonic()
         try:
             resultado = await _roda_com_tentativas(agente, anteriores, pendentes)

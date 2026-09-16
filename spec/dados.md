@@ -105,6 +105,7 @@ Credenciais por canal:
 | tipo | `texto`, `audio`, `imagem`, `documento`, `video` | sim |
 | texto | texto | não |
 | texto_extraido | texto (transcrição ou leitura da mídia) | não |
+| anexo | estruturado: tipo, referência do canal para baixar, tamanho, nome e `situacao` da leitura (`lido`, `acima_do_limite`, `nao_suportado`, `falhou`) | não |
 | midia_id | referência a Mídia | não |
 | id_externo | texto, único por agente (deduplica reentrega de webhook) | sim na entrada |
 | criado_em | data e hora | sim |
@@ -121,7 +122,8 @@ Arquivo recebido de contato, com o cache do processamento.
 | tipo_mime | texto | sim |
 | tamanho_bytes | inteiro | sim |
 | caminho_arquivo | texto | sim |
-| resultado | texto extraído e metadados do processamento | não até processar |
+| resultado | texto extraído (transcrição ou leitura) | sim; só existe registro de mídia lida com sucesso |
+| metadados | estruturado: modelo, páginas lidas, forma de leitura | sim |
 | criado_em | data e hora | sim |
 
 ### Handoff (repetido ao longo do tempo, pertence a Conversa)
@@ -177,6 +179,7 @@ Um ciclo de processamento após o buffer.
 | cliente_id | referência a Cliente | sim |
 | conversa_id | referência a Conversa | sim |
 | modelo | texto | sim |
+| funcao | `resposta`, `transcricao` ou `visao` | sim |
 | tokens_entrada, tokens_saida | inteiro | sim |
 | custo_estimado | decimal | sim |
 | latencia_ms | inteiro | sim |
@@ -259,7 +262,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 - Isolamento: toda consulta de repositório exige `cliente_id`. A busca vetorial do RAG filtra por `cliente_id` e `agente_id` antes da similaridade. O cache de Mídia é por cliente: o mesmo hash em clientes diferentes gera registros separados, para que o resultado extraído de um cliente nunca apareça em outro.
 - Resolução do dono no webhook: a URL do webhook contém o `token_webhook` do agente, que identifica agente e cliente antes de qualquer leitura; a verificação de assinatura usa a credencial desse agente.
 - Proteção de dados sensíveis: credenciais de canal criptografadas na aplicação com a chave da Instalação; segredos nunca em log; logs de mensagens sem conteúdo integral em nível informativo (derivado); `.env` com permissão 600.
-- Armazenamento de arquivos: volume local na VPS, separado por `cliente/agente`, fora do diretório servido publicamente. Limite de 20 MB por arquivo e 5 minutos de áudio (assumido); acima disso, não processa e faz handoff. Volume estimado: um agente ativo gera na ordem de 150 mensagens por dia; com 10 agentes, na ordem de 1.500 mensagens por dia e poucos GB de mídia por ano (assumido).
+- Armazenamento de arquivos: volume local na VPS, separado por `cliente/agente`, fora do diretório servido publicamente. Limite de 20 MB por arquivo e 5 minutos de áudio (assumido); acima disso, não processa, registra Falha e o agente pede para o contato escrever (handoff a partir da fase 3). Volume estimado: um agente ativo gera na ordem de 150 mensagens por dia; com 10 agentes, na ordem de 1.500 mensagens por dia e poucos GB de mídia por ano (assumido).
 - Retenção: mídia de contato guardada por 90 dias e depois apagada do disco, mantendo `texto_extraido` na mensagem (assumido).
 - Histórico: Mensagem, Handoff, Turno e Falha são somente inserção. Agente e Cliente guardam só o estado atual; o histórico dos prompts fica no git do projeto.
 - Exclusão lógica: Cliente, Agente e Documento (`removido_em`). Ao remover Documento, seus Trechos são apagados fisicamente. Ao remover Agente, o webhook deixa de responder e as credenciais são apagadas.

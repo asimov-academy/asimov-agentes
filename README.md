@@ -8,6 +8,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 
 - **Agente respondendo no Chatwoot**: o setup cria o bot e liga na caixa de entrada sozinho.
 - **Atendimento com cara de gente**: espera o contato terminar de mandar as mensagens (buffer), mostra "digitando" e responde em mensagens curtas.
+- **Entende áudio, imagem e PDF**: transcreve áudio, lê foto de documento e PDF, e não processa de novo o mesmo arquivo reenviado.
 - **Modelo por função**: resposta, fallback, visão e transcrição, cada um com seu provedor (OpenAI, Anthropic, Gemini ou Groq). Se o modelo principal cair, o fallback responde.
 - **Uma empresa ou várias**: use só para a sua empresa ou revenda agentes para empresas clientes, com os dados de cada uma isolados.
 - **Pronto para vibecoding**: projeto com testes, `AGENTS.md` e `CLAUDE.md` para o agente de código entender e evoluir.
@@ -79,7 +80,6 @@ Chatwoot ◄──────────────────── respost
 
 ## O que vem por aí
 
-- Áudio, imagens e PDFs enviados pelo contato
 - Passar a conversa para um humano no Chatwoot
 - WhatsApp oficial e Telegram direto, sem Chatwoot
 - Base de conhecimento (RAG) por agente

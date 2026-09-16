@@ -15,7 +15,9 @@ COPY pyproject.toml uv.lock ./
 RUN extras=""; for p in $PROVEDORES; do extras="$extras --extra $p"; done; \
     uv sync --frozen --no-dev --no-install-project $extras
 COPY . .
-RUN useradd --system --uid 1000 app && mkdir -p /app/prompts && chown -R app /app
+# O volume de mídia nasce com o dono desta pasta; sem isso a API (uid 1000) não grava.
+RUN useradd --system --uid 1000 app && mkdir -p /app/prompts /var/lib/asimov/midia \
+    && chown -R app /app /var/lib/asimov
 USER app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
 

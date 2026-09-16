@@ -15,9 +15,11 @@ x-backend: &backend
     REDIS_URL: redis://redis:6379/0
     DIRETORIO_PROMPTS: /app/prompts
     DIRETORIO_MODELOS: /app/modelos
+    DIRETORIO_MIDIA: /var/lib/asimov/midia
   volumes:
     - ../prompts:/app/prompts
     - ../modelos:/app/modelos:ro
+    - midia:/var/lib/asimov/midia
   depends_on:
     postgres:
       condition: service_healthy
@@ -96,6 +98,7 @@ services:
 
 volumes:
   postgres:
+  midia:
   redis:
   caddy_data:
   caddy_config:

@@ -44,8 +44,9 @@ asimov-agentes/
 | Agente | PydanticAI | tools tipadas, saída estruturada e troca de provedor (OpenAI, Anthropic, Gemini) por configuração |
 | Fila, buffer e agendamentos | arq + Redis 7 | assíncrono, cron no mesmo processo, poucas peças |
 | Banco | PostgreSQL 16 + pgvector, SQLAlchemy 2.0, Alembic | um banco só para dados e vetores do RAG; Alembic permite evoluir o schema em vibecoding sem quebrar |
-| Transcrição | Whisper (`whisper-1`) na OpenAI, ou áudio nativo do Gemini | segue o provedor de apoio escolhido |
-| Visão e documentos | modelo multimodal do provedor escolhido (Gemini 2.5 Flash, GPT com visão ou Claude) | PDF e imagem sem OCR separado |
+| Transcrição | endpoint de áudio da OpenAI ou da Groq (Whisper, `gpt-4o-transcribe`), ou áudio nativo do Gemini | segue o `modelo_transcricao` do agente; Anthropic não transcreve |
+| Visão e documentos | modelo multimodal do `modelo_visao`; PDF com texto lido antes com `pypdf`, só o escaneado vai para a visão (10 primeiras páginas) | imagem e PDF escaneado sem OCR separado; PDF com texto sem custo de IA |
+| Duração de áudio | `tinytag` (MIT), lido do cabeçalho do arquivo | confere o limite de 5 minutos sem ffmpeg na imagem |
 | Embeddings | `text-embedding-3-small` (OpenAI) ou `gemini-embedding` (Gemini) | barato e suficiente; fixo na instalação |
 | Leitura de documentos da base | `pypdf`, `python-docx`, texto puro | licenças permissivas, sem serviço externo |
 | Criptografia de credenciais | `cryptography` (Fernet) | padrão simples e auditado |
@@ -80,7 +81,7 @@ Modelos de IA:
 - **Credenciais de canal:** criptografadas com Fernet usando `CHAVE_CRIPTOGRAFIA` do `.env` antes de gravar; decifradas só na memória do processo que usa. Nunca aparecem em log, resposta da API ou tela do menu (o menu mostra só os 4 últimos caracteres).
 - **`.env`:** gerado pelo setup, permissão 600, dono root, fora do git. O setup e a API recusam iniciar se ele estiver legível por outros.
 - **Conteúdo de conversa:** logs em nível informativo registram ids e tipos, não o texto. Texto só em nível de depuração, desligado por padrão.
-- **Mídia recebida:** baixada para `/var/lib/asimov/midia/<cliente>/<agente>/<hash>` em volume Docker, fora de qualquer rota pública. Limite de 20 MB por arquivo e 5 minutos de áudio; acima disso, não processa e faz handoff.
+- **Mídia recebida:** baixada para `/var/lib/asimov/midia/<cliente>/<agente>/<hash>` em volume Docker, fora de qualquer rota pública. Limite de 20 MB por arquivo (conferido durante o download) e 5 minutos de áudio; acima disso, não processa, registra Falha e o agente pede para o contato escrever (handoff a partir da fase 3). O link do Chatwoot é baixado sem o token do bot.
 - **Conteúdo de mídia é entrada hostil:** o texto extraído entra na conversa rotulado como dado do contato, nunca no prompt de sistema, e o turno que processa mídia roda sem tools que alteram estado, exceto handoff.
 - **Documentos da base:** copiados para `/var/lib/asimov/conhecimento/<cliente>/<agente>/`.
 - **Exclusão:** lógica em Cliente, Agente e Documento. Trechos de documento removido são apagados. Remover Agente apaga as credenciais e invalida o `token_webhook`. Job diário apaga do disco mídias com mais de 90 dias, mantendo `texto_extraido`.
@@ -163,8 +164,8 @@ Worker arq, mesmo código do backend, container `worker`:
 
 | Job | Disparo | O que faz |
 |---|---|---|
-| `processar_buffer` | cada mensagem de entrada reagenda o job da conversa para `agora + buffer_segundos` (job id fixo por conversa) | ao disparar, pega lock por conversa no Redis (TTL 90 s), junta as mensagens pendentes, roda mídia, chama o agente, registra Turno |
-| `processar_midia` | chamado dentro do turno | consulta cache por `cliente_id` + hash; se não houver, transcreve ou lê e grava |
+| `processar_buffer` | cada mensagem de entrada reagenda o job da conversa para `agora + buffer_segundos` (job id fixo por conversa) | ao disparar, pega lock por conversa no Redis (TTL 240 s, cobre ler mídia e responder), junta as mensagens pendentes, roda mídia, chama o agente, registra Turno |
+| `processar_midia` | chamado dentro do turno, antes do modelo (`midia/servico.py`) | baixa pelo canal, consulta cache por `cliente_id` + hash; se não houver, confere limites, transcreve ou lê, grava arquivo, Mídia e Turno da leitura; grava a `situacao` no anexo da mensagem |
 | `enviar_resposta` | fim do turno | envia até `max_mensagens_por_resposta` mensagens com digitando antes de cada uma e espera proporcional ao tamanho (entre 1 e 4 s) |
 | `ingerir_documento` | envio de documento | extrai texto, divide em trechos de cerca de 800 tokens com sobreposição de 100, gera embeddings em lote, marca `pronto` ou `erro` |
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
