@@ -43,7 +43,7 @@ Commit: `feat: setup de ponta a ponta com agente de texto no Chatwoot`
 
 ## Fase 2: Áudio, imagem e documento
 
-Situação: próxima.
+Situação: construída (v0.3.0), falta validar o critério de aceite em VPS real.
 
 Objetivo: o agente entende áudio, imagem e PDF enviados pelo contato.
 

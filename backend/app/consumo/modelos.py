@@ -15,6 +15,8 @@ class Turno(ComId, ComCriacao, Base):
     cliente_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cliente.id"), index=True)
     conversa_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversa.id"), index=True)
     modelo: Mapped[str] = mapped_column(String(100))
+    funcao: Mapped[str] = mapped_column(String(20), default="resposta", server_default="resposta")
+    """`resposta`, `transcricao` ou `visao`: leitura de mídia também consome e aparece aqui."""
     tokens_entrada: Mapped[int] = mapped_column(default=0)
     tokens_saida: Mapped[int] = mapped_column(default=0)
     custo_estimado: Mapped[Decimal | None] = mapped_column(Numeric(12, 6))

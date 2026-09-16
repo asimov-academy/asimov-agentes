@@ -32,6 +32,7 @@ os.environ["GROQ_API_KEY"] = "gsk-teste"
 os.environ["ANTHROPIC_API_KEY"] = ""
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["DIRETORIO_PROMPTS"] = tempfile.mkdtemp(prefix="prompts-")
+os.environ["DIRETORIO_MIDIA"] = tempfile.mkdtemp(prefix="midia-")
 os.environ["DIRETORIO_MODELOS"] = os.environ.get("TESTE_DIRETORIO_MODELOS", str(RAIZ / "modelos"))
 os.environ["LOG_NIVEL"] = "DEBUG"
 
@@ -40,6 +41,7 @@ import pytest  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from app.canais import registro  # noqa: E402
+from app.canais.base import Anexo, ArquivoBaixado, ArquivoGrandeDemais  # noqa: E402
 from app.canais.chatwoot.assinatura import assina  # noqa: E402
 from app.canais.chatwoot.canal import Chatwoot  # noqa: E402
 from app.main import app  # noqa: E402
@@ -69,6 +71,8 @@ class ChatwootFalso(Chatwoot):
         self.digitando_chamadas: list[bool] = []
         self.desconectados: list[int] = []
         self.status = "pending"
+        self.arquivos: dict[str, ArquivoBaixado] = {}
+        self.baixados: list[str] = []
 
     async def conectar(self, dados: dict[str, Any], url_webhook: str, nome_agente: str) -> dict[str, Any]:
         return {
@@ -92,6 +96,13 @@ class ChatwootFalso(Chatwoot):
     async def enviar_texto(self, credenciais: dict[str, Any], conversa_externa: str, texto: str) -> str:
         self.enviadas.append((conversa_externa, texto))
         return str(900000 + len(self.enviadas))
+
+    async def baixar_midia(self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int) -> ArquivoBaixado:
+        self.baixados.append(anexo.referencia)
+        arquivo = self.arquivos[anexo.referencia]
+        if len(arquivo.conteudo) > limite_bytes:
+            raise ArquivoGrandeDemais("teste")
+        return arquivo
 
 
 class FilaFalsa:
@@ -171,8 +182,10 @@ def payload_chatwoot(
     tipo: str = "incoming",
     remetente: dict[str, Any] | None = None,
     inbox: int = 3,
+    anexos: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
+        "attachments": anexos or [],
         "event": "message_created",
         "id": mensagem_id,
         "content": conteudo,

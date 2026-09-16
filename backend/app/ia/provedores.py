@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pydantic_ai.models import Model
 
 PROVEDORES = ("openai", "anthropic", "gemini", "groq")
+PROVEDORES_TRANSCRICAO = ("openai", "gemini", "groq")
 
 
 class ModeloInvalido(ValueError):
@@ -44,6 +45,8 @@ def valida_modelos(modelos: dict[str, str | None], cfg: Config | None = None) ->
         if not nome:
             continue
         provedor = provedor_de(nome)
+        if campo == "modelo_transcricao" and provedor not in PROVEDORES_TRANSCRICAO:
+            raise ModeloInvalido(f"{provedor} não transcreve áudio; use openai, gemini ou groq")
         if not cfg.chave_do_provedor(provedor):
             raise ModeloInvalido(f"{campo} usa {provedor}, mas a instalação não tem essa chave")
 

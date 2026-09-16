@@ -29,10 +29,17 @@ class Config(BaseSettings):
 
     diretorio_prompts: Path = Path("/app/prompts")
     diretorio_modelos: Path = Path("/app/modelos")
+    diretorio_midia: Path = Path("/var/lib/asimov/midia")
 
     log_nivel: str = "INFO"
-    lock_ttl_segundos: int = 90
+    # Cobre ler mídia e responder no mesmo turno; abaixo do job_timeout do worker.
+    lock_ttl_segundos: int = 240
     tentativas_extra_modelo: int = 2
+
+    midia_limite_bytes: int = 20 * 1024 * 1024
+    midia_limite_audio_segundos: int = 5 * 60
+    midia_paginas_pdf_visao: int = 10
+    midia_caracteres_extraidos: int = 12000
 
     def chave_do_provedor(self, provedor: str) -> str:
         return {

@@ -18,6 +18,29 @@ class Acao(StrEnum):
     """Grava e agenda o buffer do turno."""
 
 
+class ArquivoGrandeDemais(ValueError):
+    """O arquivo passou do limite durante o download."""
+
+
+@dataclass(frozen=True)
+class Anexo:
+    """Arquivo que chegou com a mensagem, antes de ser baixado."""
+
+    tipo: str
+    """`audio`, `imagem`, `video` ou `documento`."""
+    referencia: str
+    """Como o canal acha o arquivo de novo (URL no Chatwoot, id da mídia na Meta)."""
+    tipo_mime: str | None = None
+    tamanho_bytes: int | None = None
+    nome: str | None = None
+
+
+@dataclass(frozen=True)
+class ArquivoBaixado:
+    conteudo: bytes
+    tipo_mime: str
+
+
 @dataclass(frozen=True)
 class EntradaWebhook:
     corpo: bytes
@@ -36,7 +59,7 @@ class Evento:
     texto: str | None = None
     autor: str = "contato"
     direcao: str = "entrada"
-    tipo: str = "texto"
+    anexos: tuple[Anexo, ...] = ()
 
 
 class Canal(Protocol):
@@ -77,3 +100,9 @@ class Canal(Protocol):
     async def enviar_texto(
         self, credenciais: dict[str, Any], conversa_externa: str, texto: str
     ) -> str | None: ...
+
+    async def baixar_midia(
+        self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int
+    ) -> ArquivoBaixado:
+        """Baixa o anexo sem passar de `limite_bytes`; acima disso levanta ArquivoGrandeDemais."""
+        ...

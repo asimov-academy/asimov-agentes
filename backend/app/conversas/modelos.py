@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.plataforma.banco import Base, ComCriacao, ComId, agora
@@ -54,4 +56,7 @@ class Mensagem(ComId, ComCriacao, Base):
     tipo: Mapped[str] = mapped_column(String(20), default="texto")
     texto: Mapped[str | None] = mapped_column(Text)
     texto_extraido: Mapped[str | None] = mapped_column(Text)
+    anexo: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    """Anexo do canal e, depois do turno, `situacao` da leitura (ver midia/servico.py)."""
+    midia_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("midia.id"))
     id_externo: Mapped[str | None] = mapped_column(String(200))

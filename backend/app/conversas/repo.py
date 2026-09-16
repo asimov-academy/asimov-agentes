@@ -1,8 +1,10 @@
 import uuid
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.conversas.modelos import Contato, Conversa, Mensagem
 from app.plataforma.banco import agora
@@ -130,3 +132,20 @@ async def ultimas_mensagens(
         .limit(limite)
     )
     return list(reversed(list(resultado)))
+
+
+async def registra_leitura_de_midia(
+    sessao: AsyncSession,
+    cliente_id: uuid.UUID,
+    mensagem: Mensagem,
+    anexo: dict[str, Any],
+    texto_extraido: str | None,
+    midia_id: uuid.UUID | None,
+) -> None:
+    await sessao.execute(
+        update(Mensagem)
+        .where(Mensagem.cliente_id == cliente_id, Mensagem.id == mensagem.id)
+        .values(anexo=anexo, texto_extraido=texto_extraido, midia_id=midia_id)
+    )
+    for campo, valor in (("anexo", anexo), ("texto_extraido", texto_extraido), ("midia_id", midia_id)):
+        set_committed_value(mensagem, campo, valor)

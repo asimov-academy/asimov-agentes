@@ -14,15 +14,26 @@ Comportamentos do Chatwoot que este arquivo respeita (conferidos no código do C
 - status `pending` é o agente conduzindo; qualquer outro é humano conduzindo.
 """
 
+import mimetypes
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
-from app.canais.base import Acao, CredencialInvalida, EntradaWebhook, Evento
+from app.canais.base import (
+    Acao,
+    Anexo,
+    ArquivoBaixado,
+    ArquivoGrandeDemais,
+    CredencialInvalida,
+    EntradaWebhook,
+    Evento,
+)
 from app.canais.chatwoot.assinatura import assinatura_confere, timestamp_recente
 
 TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+TIMEOUT_DOWNLOAD = httpx.Timeout(60.0, connect=5.0)
 EVENTOS_ACEITOS = frozenset({"message_created", "conversation_updated"})
 
 
@@ -84,13 +95,29 @@ def _id_inbox(payload: dict[str, Any]) -> int | None:
     return None
 
 
-def _tipo_anexo(payload: dict[str, Any]) -> str:
-    anexos = payload.get("attachments") or []
-    if not anexos:
-        return "texto"
-    return {"audio": "audio", "image": "imagem", "video": "video"}.get(
-        str(anexos[0].get("file_type")), "documento"
-    )
+TIPOS_ANEXO = {"audio": "audio", "image": "imagem", "video": "video", "file": "documento"}
+"""Localização, contato e cartões do Instagram não têm arquivo para baixar."""
+
+
+def _anexos(payload: dict[str, Any]) -> tuple[Anexo, ...]:
+    anexos = []
+    for item in payload.get("attachments") or []:
+        if not isinstance(item, dict):
+            continue
+        tipo = TIPOS_ANEXO.get(str(item.get("file_type")))
+        url = item.get("data_url")
+        if tipo is None or not isinstance(url, str) or not url.startswith(("https://", "http://")):
+            continue
+        tamanho = item.get("file_size")
+        anexos.append(
+            Anexo(
+                tipo=tipo,
+                referencia=url,
+                tamanho_bytes=tamanho if isinstance(tamanho, int) else None,
+                nome=urlsplit(url).path.rsplit("/", 1)[-1] or None,
+            )
+        )
+    return tuple(anexos)
 
 
 def _lista(corpo: Any) -> list[dict[str, Any]]:
@@ -245,7 +272,7 @@ class Chatwoot:
             "conversa_externa": conversa,
             "mensagem_externa": str(payload["id"]) if payload.get("id") is not None else None,
             "texto": payload.get("content"),
-            "tipo": _tipo_anexo(payload),
+            "anexos": _anexos(payload),
         }
 
         if tipo_mensagem in ("incoming", 0):
@@ -258,8 +285,8 @@ class Chatwoot:
                 return Evento(Acao.IGNORAR, "mensagem de entrada sem remetente", conversa)
             if _conversa(payload).get("status") != "pending":
                 return Evento(Acao.REGISTRAR, "humano conduz a conversa", **base, **contato)
-            if not (payload.get("content") or "").strip():
-                return Evento(Acao.REGISTRAR, "anexo sem texto", **base, **contato)
+            if not (payload.get("content") or "").strip() and not base["anexos"]:
+                return Evento(Acao.REGISTRAR, "mensagem sem conteúdo", **base, **contato)
             return Evento(Acao.PROCESSAR, "mensagem do contato", **base, **contato)
 
         if tipo_mensagem in ("outgoing", 1):
@@ -308,3 +335,27 @@ class Chatwoot:
         resp.raise_for_status()
         mensagem_id = resp.json().get("id")
         return str(mensagem_id) if mensagem_id is not None else None
+
+    async def baixar_midia(
+        self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int
+    ) -> ArquivoBaixado:
+        """`data_url` é um link assinado do Chatwoot que redireciona para o armazenamento.
+
+        Vai sem o token do bot: o link já autoriza, e o httpx repassaria o header no redirect.
+        """
+        if anexo.tamanho_bytes is not None and anexo.tamanho_bytes > limite_bytes:
+            raise ArquivoGrandeDemais(f"{anexo.tamanho_bytes} bytes")
+        partes: list[bytes] = []
+        total = 0
+        async with httpx.AsyncClient(timeout=TIMEOUT_DOWNLOAD, follow_redirects=True) as http:
+            async with http.stream("GET", anexo.referencia) as resp:
+                resp.raise_for_status()
+                async for parte in resp.aiter_bytes():
+                    total += len(parte)
+                    if total > limite_bytes:
+                        raise ArquivoGrandeDemais(f"mais de {limite_bytes} bytes")
+                    partes.append(parte)
+                mime = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+        if not mime or mime == "application/octet-stream":
+            mime = mimetypes.guess_type(anexo.nome or "")[0] or anexo.tipo_mime or mime
+        return ArquivoBaixado(conteudo=b"".join(partes), tipo_mime=mime or "application/octet-stream")
