@@ -227,3 +227,31 @@ def test_fala_de_atendente_encerra_pendencias_anteriores() -> None:
     assert [m.texto for m in pendentes] == ["contato5"]
     _, pendentes = turno.separa_pendentes(mensagens[:3], respondido_ate=None)
     assert [m.texto for m in pendentes] == ["contato2"]
+
+
+async def test_mensagem_que_chega_enquanto_o_modelo_pensa_e_respondida_junto(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    recebidas: list[str] = []
+    tokens: list[str] = []
+
+    async def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        recebidas.append(str(historico[-1].parts[-1].content))  # type: ignore[union-attr]
+        if len(recebidas) == 1:
+            await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=2, conteudo="e o frete?"))
+            tokens.append(await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Custa 50 e o frete é grátis"]})])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+    await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=1, conteudo="quanto custa?"))
+    conversa = await _conversa(sessao)
+    primeiro = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), primeiro) == "substituido"
+    assert canal.enviadas == []
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), tokens[0]) == "respondido"
+
+    assert recebidas == ["quanto custa?", "quanto custa?\ne o frete?"]
+    assert [t for _, t in canal.enviadas] == ["Custa 50 e o frete é grátis"]
+    async with sessao() as s:
+        erros = list(await s.scalars(select(Turno.erro).order_by(Turno.criado_em)))
+    assert erros[0] is not None and erros[0].startswith("descartada") and erros[1] is None

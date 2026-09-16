@@ -2,11 +2,15 @@
 
 Ordem: token do buffer ainda vale, lock da conversa, canal ainda deixa o agente falar,
 leitura das mídias pendentes, modelo, envio mensagem a mensagem com digitando, registro do Turno.
+
+Mensagem nova do contato antes do envio descarta a resposta: o turno dela responde tudo junto.
+Depois que o envio começou, o que chegar é respondido no turno seguinte.
 """
 
 import asyncio
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
@@ -79,12 +83,14 @@ async def processar_turno(ctx: dict[str, Any], cliente_id: str, conversa_id: str
         return "ocupado"
 
     try:
-        return await _turno(cid, conv_id)
+        return await _turno(cid, conv_id, lambda: buffer.token_ainda_vale(redis, conv_id, token))
     finally:
         await buffer.libera_lock(redis, conv_id, token)
 
 
-async def _turno(cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> str:
+async def _turno(
+    cliente_id: uuid.UUID, conversa_id: uuid.UUID, sem_mensagem_nova: Callable[[], Awaitable[bool]]
+) -> str:
     async with fabrica_sessao()() as s:
         conversa = await repo.obter_conversa(s, cliente_id, conversa_id)
         if conversa is None:
@@ -107,6 +113,9 @@ async def _turno(cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> str:
         # Grava a leitura antes do modelo: se a resposta falhar, a mídia não é lida de novo.
         await midia.processa_pendentes(s, agente, canal, credenciais, conversa_id, pendentes)
         await s.commit()
+        if not await sem_mensagem_nova():
+            await _digitando(canal, credenciais, conversa.id_externo, False)
+            return "substituido"
         inicio = time.monotonic()
         try:
             resultado = await _roda_com_tentativas(agente, anteriores, pendentes)
@@ -127,6 +136,24 @@ async def _turno(cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> str:
             return "falhou"
 
         latencia = int((time.monotonic() - inicio) * 1000)
+        if not await sem_mensagem_nova():
+            await grava_turno(
+                s,
+                Turno(
+                    cliente_id=cliente_id,
+                    conversa_id=conversa_id,
+                    modelo=agente.modelo_conversa,
+                    tokens_entrada=resultado.tokens_entrada,
+                    tokens_saida=resultado.tokens_saida,
+                    custo_estimado=resultado.custo_estimado,
+                    latencia_ms=latencia,
+                    erro="descartada: contato mandou mensagem nova antes do envio",
+                ),
+            )
+            await s.commit()
+            await _digitando(canal, credenciais, conversa.id_externo, False)
+            log.info("resposta_descartada")
+            return "substituido"
         enviadas = 0
         for texto in limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta):
             await _digitando(canal, credenciais, conversa.id_externo, True)
