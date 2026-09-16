@@ -11,13 +11,41 @@ ip_publico() {
     curl -4 -fsS --max-time 10 https://ifconfig.me 2>/dev/null || true
 }
 
-ip_do_dominio() {
-  { dig +short A "$1" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | tail -1; } || true
+# Primeiro os servidores oficiais do domínio (é neles que o Let's Encrypt confere e onde o
+# registro novo aparece na hora). Depois, resolvedores públicos: um só pode ficar minutos
+# preso numa resposta antiga de "domínio não existe".
+RESOLVEDORES_PUBLICOS=(8.8.8.8 1.1.1.1 9.9.9.9)
+
+_consulta() { # _consulta TIPO NOME SERVIDOR
+  { dig +short +time=3 +tries=1 "$1" "$2" "@$3" 2>/dev/null | grep -E "$4" | tail -1; } || true
 }
 
-ipv6_do_dominio() {
-  { dig +short AAAA "$1" @1.1.1.1 2>/dev/null | grep ':' | tail -1; } || true
+servidores_oficiais() {
+  local dominio=$1 resolvedor ns
+  for resolvedor in "${RESOLVEDORES_PUBLICOS[@]}"; do
+    ns=$({ dig +short +time=3 +tries=1 NS "$dominio" "@$resolvedor" 2>/dev/null | grep -E '\.$'; } || true)
+    if [ -n "$ns" ]; then
+      printf '%s\n' "$ns"
+      return 0
+    fi
+  done
 }
+
+# consulta_dns TIPO NOME DOMINIO_BASE PADRAO
+consulta_dns() {
+  local tipo=$1 nome=$2 dominio=$3 padrao=$4 servidor resposta
+  for servidor in $(servidores_oficiais "$dominio") "${RESOLVEDORES_PUBLICOS[@]}"; do
+    resposta=$(_consulta "$tipo" "$nome" "$servidor" "$padrao")
+    if [ -n "$resposta" ]; then
+      printf '%s' "$resposta"
+      return 0
+    fi
+  done
+}
+
+ip_do_dominio() { consulta_dns A "$1" "$2" '^[0-9.]+$'; }
+
+ipv6_do_dominio() { consulta_dns AAAA "$1" "$2" ':'; }
 
 ip_da_cloudflare() {
   local faixas
@@ -55,14 +83,14 @@ tela_dns() {
   ip=$(ip_publico)
   [ -n "$ip" ] || erro_fatal "Não consegui descobrir o IP público da VPS" "confira a internet da VPS"
 
-  resolvido=$(ip_do_dominio "$sub")
+  resolvido=$(ip_do_dominio "$sub" "$dominio")
   if [ "$resolvido" != "$ip" ]; then
     instrucoes_dns "$ip" "$dominio"
   fi
 
   while true; do
-    resolvido=$(ip_do_dominio "$sub")
-    ipv6=$(ipv6_do_dominio "$sub")
+    resolvido=$(ip_do_dominio "$sub" "$dominio")
+    ipv6=$(ipv6_do_dominio "$sub" "$dominio")
     info "IP desta VPS:             $ip"
     info "$sub aponta para: ${resolvido:-nenhum IP ainda}"
 
