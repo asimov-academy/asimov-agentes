@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Modo de uso, modelos por função e comando asimov (v0.2.0)
+
+- **Modo de uso perguntado antes de instalar**: só a própria empresa ou revenda para empresas clientes. A plataforma segue multitenant nos dois; muda só o fluxo de criação de agente. spec/telas.md, tela 1b.
+- **Modelo por função com provedor próprio** (resposta, fallback, visão, transcrição) e **Groq** entre os provedores. Substitui o provedor único com provedor de apoio. Modelos listados pela API do provedor em vez de nomes fixos, que envelhecem. Novo campo `modelo_fallback` no Agente. spec/telas.md, spec/dados.md, spec/arquitetura.md.
+- **Comando `asimov`** (`novo-agente`, `agentes`, `atualizar`) antecipado da fase 4, porque criar agente para empresa nova ou existente não pode depender de rodar o setup inteiro. spec/visao.md, função 15.
+- **Onboarding enxuto e colorido**: seções de uma linha, ✓ ▲ ✗, valores em destaque, espera do DNS numa linha só, nome da empresa sugerido pela conta do Chatwoot.
+- **Setup rodado de novo numa instalação concluída** pergunta o que versões novas exigem (modo, modelos) e reconstrói.
+
 ## 2026-09-16: Setup cria o bot do Chatwoot sozinho (v0.1.3)
 
 - **O onboarding do Chatwoot estava complexo demais**: criar o bot à mão com URL provisória, copiar secret, token de usuário, ID de conta e de caixa, e trocar a URL no fim. Agora o operador cola só a URL do Chatwoot e o token de um administrador, escolhe conta e caixa num menu e digita o nome do agente. A API cria o Agent Bot já com a URL do webhook e liga o bot na caixa.

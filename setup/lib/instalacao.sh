@@ -42,7 +42,7 @@ gera_segredos() {
   env_set_se_vazio CHAVE_API_ADMIN "$(openssl rand -hex 32)"
   env_set_se_vazio CHAVE_CRIPTOGRAFIA "$(openssl rand -base64 32 | tr '+/' '-_')"
   env_set_se_vazio LOG_NIVEL INFO
-  for variavel in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY; do
+  for variavel in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GROQ_API_KEY MODELO_FALLBACK; do
     env_set_se_vazio "$variavel" ""
   done
   # Os contêineres rodam com o usuário 1000 e criam os prompts de cada agente.
@@ -71,26 +71,26 @@ espera_url() {
 }
 
 tela_instalacao() {
-  titulo "Instalação"
+  secao "Instalação"
   PASSO_ATUAL=0
   PASSO_TOTAL=11
   local sub
   sub=$(env_get SUBDOMINIO_BOT)
 
-  passo firewall "Configurando firewall (SSH, 80 e 443)" "veja o log; confira com 'ufw status'" firewall
-  passo node "Verificando/Instalando Node.js LTS" "veja o log" instala_node
-  passo uv "Verificando/Instalando Python uv" "veja o log" instala_uv
-  passo agente_codigo "Verificando/Instalando $( [ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo 'Claude Code')" \
-    "veja o log" instala_agente_codigo
-  passo segredos "Gerando senhas e chaves da instalação" "veja o log" --sem-repetir gera_segredos
-  passo build "Instalando SDK de $(env_get PROVEDORES) e construindo a plataforma" \
-    "veja o log; confira espaço em disco com 'df -h'" dc build api worker
-  passo banco "Subindo banco de dados e Redis" "veja: docker compose logs postgres" sobe_banco
-  passo migracoes "Criando as tabelas do banco" "veja o log" migra
-  passo servicos "Subindo API, worker e HTTPS" "veja o log" sobe_servicos
-  passo api_local "Conferindo a API" "veja: docker compose logs api" \
+  passo firewall "Firewall (SSH, 80 e 443)" "Confira com: ufw status" firewall
+  passo node "Node.js" "Veja o log." instala_node
+  passo uv "uv" "Veja o log." instala_uv
+  passo agente_codigo "$( [ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo 'Claude Code')" \
+    "Veja o log." instala_agente_codigo
+  passo segredos "Senhas e chaves" "Veja o log." --sem-repetir gera_segredos
+  passo build "Plataforma e SDK $(env_get PROVEDORES)" \
+    "Confira o espaço em disco: df -h" dc build api worker
+  passo banco "Banco e Redis" "Veja: source deploy/compose.sh && dc logs postgres" sobe_banco
+  passo migracoes "Tabelas do banco" "Veja o log." migra
+  passo servicos "API, worker e HTTPS" "Veja o log." sobe_servicos
+  passo api_local "API respondendo" "Veja: source deploy/compose.sh && dc logs api" \
     --sem-repetir espera_url http://127.0.0.1:8000/health 24
-  passo api_https "Conferindo https://$sub (certificado SSL)" \
-    "o certificado não saiu. Confira se as portas 80 e 443 estão livres e se o domínio aponta para a VPS" \
+  passo api_https "Certificado SSL em $sub" \
+    "Confira se as portas 80 e 443 estão livres e se o domínio aponta para a VPS." \
     --sem-repetir espera_url "https://$sub/health" 36
 }

@@ -17,18 +17,18 @@ Hoje a VPS e o projeto de cada agente são montados à mão ou com um script sim
 1. Instalação com um comando só: `bash <(curl -sSL setup.dominio.art.br)`.
 2. Tela de boas-vindas com o nome do script em ASCII, versão, texto sobre o que instala, licença e aceite `Y/N`.
 3. Preparação automática da VPS vazia: confere Ubuntu 24.04, atualiza o sistema e instala o básico, com passos numerados no formato `1/15 - [ OK ] - descrição`.
-4. Onboarding guiado por perguntas no terminal: domínio, e-mail para o SSL, escolha do agente de código e escolha do provedor de IA (OpenAI, Anthropic ou Gemini), com instalação do SDK e teste da chave na hora. Se o provedor escolhido não cobre áudio e embeddings (Anthropic), o setup pede também a chave de um provedor que cubra (OpenAI ou Gemini) (assumido).
+4. Onboarding guiado por perguntas no terminal, curto e colorido: modo de uso (só a própria empresa ou revenda para empresas clientes), domínio, e-mail para o SSL, agente de código e modelo de IA por função (resposta, fallback opcional, visão e transcrição), cada um com provedor próprio entre OpenAI, Anthropic, Gemini e Groq. Chaves testadas na hora; modelos listados direto da API do provedor; SDKs instalados conforme os provedores escolhidos.
 5. Conferência de que `bot.<dominio>` aponta para a VPS antes de configurar o SSL.
 6. Firewall, banco, SSL e projeto base instalados, junto com Node, Python (uv) e o agente de código escolhido pelo operador: Claude Code ou Codex.
 7. Criação de vários agentes, cada um ligado a um cliente (empresa), numa mesma instalação.
 8. Conexão de cada agente a um canal escolhido no script: WhatsApp (API oficial), Telegram ou Chatwoot já existente. O script pede as credenciais do canal e gera a URL de webhook do agente em `bot.<dominio>` para colar no canal (no Chatwoot, no bot criado lá).
 9. Transcrição de áudio com Whisper.
 10. Leitura de imagens e documentos com uma IA de visão, com cache por arquivo: a mesma mídia reenviada não é processada de novo.
-11. Buffer de mensagens, efeito digitando e divisão das respostas em várias mensagens.
+11. Buffer de mensagens, efeito digitando e divisão das respostas em várias mensagens. Se o modelo de resposta falhar, o fallback responde.
 12. Base de conhecimento com RAG por agente.
 13. Handoff para humano: no Chatwoot, transferência da conversa; no WhatsApp e Telegram diretos, pausa do agente para o contato, aviso com resumo para o número ou grupo da empresa e retomada por comando ou por tempo.
 14. Tratamento de erro: repetição automática de falhas passageiras; se persistir, para com `[ ERRO ]`, motivo, o que fazer e log em arquivo; ao rodar de novo, retoma de onde parou.
-15. Menu ao rodar o setup de novo: criar agente, listar agentes e webhooks, editar agente, remover agente, subir base de conhecimento.
+15. Comando `asimov` na VPS: `asimov novo-agente` (para empresa nova ou existente, conforme o modo), `asimov agentes` e `asimov atualizar`. Editar e remover agente, consumo e base de conhecimento entram no mesmo comando nas fases 4 e 6.
 16. Resumo final com o que foi instalado, webhooks e próximos passos para abrir o projeto no Claude Code ou no Codex.
 17. Registro de consumo e falha por turno (modelo, tokens, custo, latência, erro), para saber o custo por cliente e depurar (assumido).
 18. Geração de `AGENTS.md` (fonte única) e `CLAUDE.md` (uma linha, `@AGENTS.md`) no projeto instalado, ao final do setup, curtos e só com o que o agente de código não descobre lendo o código, para o operador evoluir o agente em vibecoding com Claude Code ou Codex.

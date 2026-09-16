@@ -23,8 +23,12 @@ os.environ["REDIS_URL"] = os.environ.get("TESTE_REDIS_URL", "redis://localhost:6
 os.environ["SUBDOMINIO_BOT"] = "bot.teste.local"
 os.environ["CHAVE_API_ADMIN"] = "chave-admin-de-teste"
 os.environ["CHAVE_CRIPTOGRAFIA"] = Fernet.generate_key().decode()
-os.environ["PROVEDOR_IA"] = "openai"
+os.environ["MODELO_CONVERSA"] = "openai:gpt-5.5"
+os.environ["MODELO_FALLBACK"] = "groq:llama-3.3-70b-versatile"
+os.environ["MODELO_VISAO"] = "openai:gpt-5-mini"
+os.environ["MODELO_TRANSCRICAO"] = "groq:whisper-large-v3-turbo"
 os.environ["OPENAI_API_KEY"] = "sk-teste"
+os.environ["GROQ_API_KEY"] = "gsk-teste"
 os.environ["ANTHROPIC_API_KEY"] = ""
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["DIRETORIO_PROMPTS"] = tempfile.mkdtemp(prefix="prompts-")

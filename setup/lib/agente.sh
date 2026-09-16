@@ -26,115 +26,162 @@ detalhe_erro() {
   jq -r '.detail | if type == "string" then . else (map(.msg) | join("; ")) end' 2>/dev/null <<<"$1" || echo "$1"
 }
 
-cria_cliente() {
-  local nome corpo
-  if [ -n "$(estado_get cliente_id)" ]; then
+# escolhe_empresa "nome sugerido": define EMPRESA_ID e EMPRESA_NOME.
+# Modo empresa: uma empresa só, criada no primeiro agente. Modo revenda: existente ou nova.
+escolhe_empresa() {
+  local sugerido=$1 op nome corpo id
+  local -a ids nomes
+  EMPRESA_ID="" EMPRESA_NOME=""
+
+  api GET /admin/clientes
+  ids=() nomes=()
+  if [ "$API_STATUS" = 200 ]; then
+    while IFS=$'\t' read -r id nome; do ids+=("$id"); nomes+=("$nome"); done \
+      < <(jq -r '.[] | [.id, .nome] | @tsv' <<<"$API_RESPOSTA")
+  fi
+
+  if [ "$(env_get MODO_INSTALACAO)" = empresa ] && [ "${#ids[@]}" -gt 0 ]; then
+    EMPRESA_ID=${ids[0]} EMPRESA_NOME=${nomes[0]}
     return 0
   fi
+
+  if [ "$(env_get MODO_INSTALACAO)" = revenda ] && [ "${#ids[@]}" -gt 0 ]; then
+    echo
+    escolha op "Empresa" "${nomes[@]}" "${CIANO}+ nova empresa${NORMAL}"
+    if [ "$op" -le "${#ids[@]}" ]; then
+      EMPRESA_ID=${ids[$((op - 1))]} EMPRESA_NOME=${nomes[$((op - 1))]}
+      return 0
+    fi
+  fi
+
   while true; do
-    pergunta nome "Nome do cliente (a empresa atendida por este agente)"
+    pergunta nome "$([ "$(env_get MODO_INSTALACAO)" = empresa ] && echo 'Nome da sua empresa' || echo 'Nome da empresa cliente')" "$sugerido"
     corpo=$(jq -n --arg nome "$nome" '{nome: $nome}')
     api POST /admin/clientes "$corpo"
     if [ "$API_STATUS" = 201 ]; then
-      estado_set cliente_id "$(jq -r .id <<<"$API_RESPOSTA")"
-      estado_set cliente_nome "$nome"
+      EMPRESA_ID=$(jq -r .id <<<"$API_RESPOSTA") EMPRESA_NOME=$nome
       return 0
     fi
-    info "Não deu certo: $(detalhe_erro "$API_RESPOSTA")"
+    falha "$(detalhe_erro "$API_RESPOSTA")"
+    sugerido=""
   done
 }
 
 # Preenche CHATWOOT_URL, CHATWOOT_TOKEN e CHATWOOT_CONTAS (JSON devolvido pela API).
 acessa_chatwoot() {
   local corpo
-  echo
-  info "Canal: Chatwoot. O setup cria o bot e liga na caixa de entrada para você."
-  info "Precisa do token de um administrador: no Chatwoot, clique no seu avatar >"
-  info "Configurações do perfil > Token de acesso."
-  echo
+  dica "Token: no Chatwoot, avatar > Configurações do perfil > Token de acesso (administrador)."
   while true; do
-    pergunta CHATWOOT_URL "URL do Chatwoot (ex: https://chat.minhaempresa.com.br)" "$(estado_get chatwoot_url)"
-    CHATWOOT_URL=${CHATWOOT_URL%/}
+    pergunta CHATWOOT_URL "URL do Chatwoot" "$(estado_get chatwoot_url)"
     CHATWOOT_URL=${CHATWOOT_URL%%/app*}
-    pergunta_secreta CHATWOOT_TOKEN "Token de acesso do administrador"
+    CHATWOOT_URL=${CHATWOOT_URL%/}
+    pergunta_secreta CHATWOOT_TOKEN "Token de acesso"
+    printf '  %sConectando…%s' "$CINZA" "$NORMAL"
     corpo=$(jq -n --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" '{conexao: {url: $url, token_admin: $token}}')
     api POST /admin/canais/chatwoot/descobrir "$corpo"
+    printf '\r\033[K'
     if [ "$API_STATUS" = 200 ]; then
       estado_set chatwoot_url "$CHATWOOT_URL"
       CHATWOOT_CONTAS=$API_RESPOSTA
       return 0
     fi
-    info "Não deu certo: $(detalhe_erro "$API_RESPOSTA")"
-    echo
+    falha "$(detalhe_erro "$API_RESPOSTA")"
   done
 }
 
-# escolha_da_lista VAR "texto" JSON_ARRAY_DE_NOMES -> índice (0..n-1)
+# escolha_da_lista VAR "texto" JSON_ARRAY_DE_NOMES -> índice (0..n-1). Uma opção só: escolhe sozinho.
 escolha_da_lista() {
-  local __var=$1 texto=$2 lista=$3 total numero
-  local -a nomes
-  mapfile -t nomes < <(jq -r '.[]' <<<"$lista")
-  total=${#nomes[@]}
-  if [ "$total" -eq 1 ]; then
-    info "$texto: ${nomes[0]}"
+  local __var=$1 texto=$2 lista=$3 numero linha
+  local -a nomes=()
+  while IFS= read -r linha; do nomes+=("$linha"); done < <(jq -r '.[]' <<<"$lista")
+  if [ "${#nomes[@]}" -eq 1 ]; then
+    ok "$texto: $(destaque "${nomes[0]}")"
     printf -v "$__var" '%s' 0
     return 0
   fi
+  echo
   escolha numero "$texto" "${nomes[@]}"
   printf -v "$__var" '%s' "$((numero - 1))"
 }
 
-cria_agente() {
-  local conta_i caixa_i conta_id caixa_id caixa_nome caixas nome corpo
+# Chatwoot → conta → caixa → nome → empresa → cria. Define AGENTE_* para quem chamou.
+fluxo_novo_agente() {
+  local conta_i caixa_i conta_id conta_nome caixa_id caixas nome corpo
   acessa_chatwoot
 
-  echo
   escolha_da_lista conta_i "Conta do Chatwoot" "$(jq -c '[.contas[].nome]' <<<"$CHATWOOT_CONTAS")"
   conta_id=$(jq -r ".contas[$conta_i].id" <<<"$CHATWOOT_CONTAS")
+  conta_nome=$(jq -r ".contas[$conta_i].nome" <<<"$CHATWOOT_CONTAS")
   caixas=$(jq -c ".contas[$conta_i].caixas" <<<"$CHATWOOT_CONTAS")
   if [ "$(jq 'length' <<<"$caixas")" -eq 0 ]; then
-    erro_fatal "A conta escolhida não tem nenhuma caixa de entrada" \
-      "crie a caixa de entrada no Chatwoot (ex: WhatsApp) e rode o mesmo comando de novo"
+    erro_fatal "A conta $conta_nome não tem caixa de entrada" "Crie a caixa no Chatwoot e rode o comando de novo."
   fi
-  echo
-  escolha_da_lista caixa_i "Caixa de entrada que o agente vai atender" "$(jq -c '[.[].nome]' <<<"$caixas")"
+  escolha_da_lista caixa_i "Caixa de entrada" "$(jq -c '[.[].nome]' <<<"$caixas")"
   caixa_id=$(jq -r ".[$caixa_i].id" <<<"$caixas")
-  caixa_nome=$(jq -r ".[$caixa_i].nome" <<<"$caixas")
+  AGENTE_CAIXA=$(jq -r ".[$caixa_i].nome" <<<"$caixas")
 
   echo
-  pergunta nome "Nome do agente (o nome que o contato vê)" "$(estado_get agente_nome)"
+  pergunta nome "Nome do agente"
+  escolhe_empresa "$conta_nome"
+
   while true; do
     corpo=$(jq -n --arg nome "$nome" --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" \
       --argjson conta "$conta_id" --argjson caixa "$caixa_id" \
       '{nome: $nome, canal: "chatwoot",
         conexao: {url: $url, token_admin: $token, account_id: $conta, inbox_ids: [$caixa]}}')
-    printf '  Criando o bot no Chatwoot e ligando na caixa %s...' "$caixa_nome"
-    api POST "/admin/clientes/$(estado_get cliente_id)/agentes" "$corpo"
+    printf '  %sCriando o bot no Chatwoot…%s' "$CINZA" "$NORMAL"
+    api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
+    printf '\r\033[K'
     if [ "$API_STATUS" = 201 ]; then
-      printf ' %sok%s\n' "$VERDE" "$NORMAL"
-      estado_set agente_nome "$nome"
-      estado_set agente_caixa "$caixa_nome"
-      estado_set agente_id "$(jq -r .id <<<"$API_RESPOSTA")"
-      estado_set agente_webhook "$(jq -r .url_webhook <<<"$API_RESPOSTA")"
+      AGENTE_NOME=$nome
+      AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
+      ok "$(destaque "$nome") no ar na caixa $(destaque "$AGENTE_CAIXA") ${CINZA}· $EMPRESA_NOME${NORMAL}"
+      unset CHATWOOT_TOKEN
       return 0
     fi
-    printf ' %sfalhou%s\n' "$VERMELHO" "$NORMAL"
-    info "$(detalhe_erro "$API_RESPOSTA")"
+    falha "$(detalhe_erro "$API_RESPOSTA")"
     if [ "$API_STATUS" = 409 ]; then
-      pergunta nome "Escolha outro nome para o agente"
+      pergunta nome "Outro nome para o agente"
     elif [ "$API_STATUS" = 422 ]; then
-      cria_agente
+      fluxo_novo_agente
       return 0
     else
-      erro_fatal "Não consegui criar o agente" "rode o mesmo comando de novo"
+      erro_fatal "Não consegui criar o agente" "Rode o comando de novo."
     fi
   done
 }
 
 tela_primeiro_agente() {
   estado_tem agente_id && return 0
-  titulo "Primeiro agente"
-  cria_cliente
-  cria_agente
-  unset CHATWOOT_TOKEN
+  secao "Agente no Chatwoot"
+  fluxo_novo_agente
+  estado_set agente_nome "$AGENTE_NOME"
+  estado_set agente_caixa "$AGENTE_CAIXA"
+  estado_set agente_conta "$EMPRESA_NOME"
+  estado_set agente_id "$AGENTE_ID"
+}
+
+lista_agentes() {
+  local clientes
+  api GET /admin/clientes
+  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
+  clientes=$API_RESPOSTA
+  api GET /admin/agentes
+  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
+  secao "Agentes"
+  if [ "$(jq 'length' <<<"$API_RESPOSTA")" -eq 0 ]; then
+    dica "Nenhum agente ainda. Crie com: asimov novo-agente"
+    return 0
+  fi
+  jq -r --argjson clientes "$clientes" '
+    ($clientes | map({(.id): .nome}) | add) as $nomes
+    | group_by(.cliente_id)[]
+    | "\($nomes[.[0].cliente_id] // "?")\t" + (map("\(.nome)|\(.canal)|\(.modelo_conversa)") | join("\t"))
+  ' <<<"$API_RESPOSTA" | while IFS=$'\t' read -r empresa resto; do
+    printf '  %s%s%s\n' "$NEGRITO" "$empresa" "$NORMAL"
+    tr '\t' '\n' <<<"$resto" | while IFS='|' read -r nome canal modelo; do
+      printf '    %s✓%s %-16s %s%s · %s%s\n' "$VERDE" "$NORMAL" "$nome" "$CINZA" "$canal" "$modelo" "$NORMAL"
+    done
+  done
+  echo
 }

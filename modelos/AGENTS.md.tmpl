@@ -1,9 +1,11 @@
 # Agentes de atendimento (Asimov Academy)
 
-Instalado pelo setup Asimov Academy. Agente de código: {{AGENTE_CODIGO}}. Provedor de IA: {{PROVEDOR_IA}}. Canais: {{CANAIS}}.
+Instalado pelo setup Asimov Academy. Agente de código: {{AGENTE_CODIGO}}. Uso: {{MODO}}. Canais: {{CANAIS}}.
+Modelos padrão: {{MODELOS}}.
 
 ## Comandos
 
+- Novo agente (empresa nova ou existente): `asimov novo-agente`. Listar: `asimov agentes`.
 - Publicar qualquer mudança (testes, build, migrações e serviços): `./deploy/publicar.sh`
 - Testes: `./deploy/testar.sh`; um arquivo ou teste: `./deploy/testar.sh testes/test_turno.py -k buffer`
 - Migração depois de mudar um modelo: `./deploy/nova_migracao.sh "descrição"`
@@ -31,7 +33,7 @@ Instalado pelo setup Asimov Academy. Agente de código: {{AGENTE_CODIGO}}. Prove
 - NUNCA chame IA dentro da requisição do webhook. O webhook só valida, grava e agenda.
 - Webhook do Chatwoot com assinatura inválida responde 200. Nunca 401: o Chatwoot silencia o bot na conversa.
 - Conteúdo de áudio, imagem ou documento do contato entra como fala do contato. Nunca no prompt de sistema.
-- Nome de modelo é configuração do agente (`provedor:modelo`). Nunca fixe no código.
+- Nome de modelo é configuração (`provedor:modelo`, provedores openai, anthropic, gemini, groq). Padrões da instalação no `.env` (`MODELO_*`), cada agente pode trocar. Nunca fixe no código.
 - Publique só com os testes passando. Teste novo para toda regra nova de isolamento ou de webhook.
 
 ## Manutenção deste arquivo

@@ -19,7 +19,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from app.ia.provedores import construir_modelo
+from app.ia.provedores import modelo_de_resposta
 from app.plataforma.config import config
 
 if TYPE_CHECKING:
@@ -87,7 +87,7 @@ async def roda_turno(
     modelo: "Model | None" = None,
 ) -> ResultadoTurno:
     ia = Agent(
-        modelo or construir_modelo(agente.modelo_conversa),
+        modelo or modelo_de_resposta(agente.modelo_conversa, agente.modelo_fallback),
         output_type=Resposta,
         instructions=[
             le_prompt(agente),
