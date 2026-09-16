@@ -179,3 +179,79 @@ def test_constroi_modelo_de_cada_provedor() -> None:
     assert isinstance(construir_modelo("groq:whisper-large-v3-turbo"), GroqModel)
     assert isinstance(modelo_de_resposta("openai:gpt-5.5", None), OpenAIChatModel)
     assert isinstance(modelo_de_resposta("openai:gpt-5.5", "groq:llama-3.3-70b-versatile"), FallbackModel)
+
+
+async def test_mensagem_que_chega_durante_o_turno_e_respondida_no_seguinte(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    recebidas: list[str] = []
+    chegou_durante: list[bool] = []
+
+    def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        recebidas.append(str(historico[-1].parts[-1].content))  # type: ignore[union-attr]
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["ok"]})])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+    enviar_original = canal.enviar_texto
+
+    async def envia_e_contato_escreve(credenciais, conversa_externa, texto):  # type: ignore[no-untyped-def]
+        if not chegou_durante:
+            chegou_durante.append(True)
+            await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=2, conteudo="e o frete?"))
+        return await enviar_original(credenciais, conversa_externa, texto)
+
+    monkeypatch.setattr(canal, "enviar_texto", envia_e_contato_escreve)
+    await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=1, conteudo="quanto custa?"))
+    conversa = await _conversa(sessao)
+
+    primeiro = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), primeiro) == "respondido"
+    segundo = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), segundo) == "respondido"
+
+    assert recebidas == ["quanto custa?", "e o frete?"]
+
+
+def test_fala_de_atendente_encerra_pendencias_anteriores() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    base = datetime(2026, 9, 16, tzinfo=UTC)
+
+    def fala(autor: str, minuto: int) -> Mensagem:
+        return Mensagem(id=uuid.uuid4(), autor=autor, texto=f"{autor}{minuto}", criado_em=base + timedelta(minutes=minuto))
+
+    mensagens = [fala("contato", 1), fala("agente", 3), fala("contato", 2), fala("humano", 4), fala("contato", 5)]
+
+    _, pendentes = turno.separa_pendentes(mensagens[:3], respondido_ate=base + timedelta(minutes=1))
+    assert [m.texto for m in pendentes] == ["contato2"]
+    _, pendentes = turno.separa_pendentes(mensagens, respondido_ate=base + timedelta(minutes=1))
+    assert [m.texto for m in pendentes] == ["contato5"]
+    _, pendentes = turno.separa_pendentes(mensagens[:3], respondido_ate=None)
+    assert [m.texto for m in pendentes] == ["contato2"]
+
+
+async def test_mensagem_que_chega_enquanto_o_modelo_pensa_e_respondida_junto(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    recebidas: list[str] = []
+    tokens: list[str] = []
+
+    async def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        recebidas.append(str(historico[-1].parts[-1].content))  # type: ignore[union-attr]
+        if len(recebidas) == 1:
+            await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=2, conteudo="e o frete?"))
+            tokens.append(await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Custa 50 e o frete é grátis"]})])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+    await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=1, conteudo="quanto custa?"))
+    conversa = await _conversa(sessao)
+    primeiro = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), primeiro) == "substituido"
+    assert canal.enviadas == []
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), tokens[0]) == "respondido"
+
+    assert recebidas == ["quanto custa?", "quanto custa?\ne o frete?"]
+    assert [t for _, t in canal.enviadas] == ["Custa 50 e o frete é grátis"]
+    async with sessao() as s:
+        erros = list(await s.scalars(select(Turno.erro).order_by(Turno.criado_em)))
+    assert erros[0] is not None and erros[0].startswith("descartada") and erros[1] is None

@@ -91,6 +91,7 @@ Credenciais por canal:
 | contato_id | referência a Contato | sim |
 | id_externo | texto (display_id no Chatwoot, chat id no Telegram, telefone no WhatsApp) | sim |
 | status | `agente` ou `humano` | sim |
+| respondido_ate | data e hora da última mensagem do contato respondida por um turno | não |
 | criado_em, atualizado_em | data e hora | sim |
 
 ### Mensagem (repetida ao longo do tempo, pertence a Conversa)

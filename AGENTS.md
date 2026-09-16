@@ -65,6 +65,7 @@ Fale com o operador em português, curto e direto.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.
 - Chatwoot: conversa Aberta é humano conduzindo, o agente fica calado; só Pendente gera turno.
+- Pendência do turno vem de `conversa.respondido_ate`, não da posição da resposta: a resposta é gravada no fim do turno, depois do que chegou durante ele.
 
 ## Regras de trabalho
 

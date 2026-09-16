@@ -30,6 +30,8 @@ class Conversa(ComId, ComCriacao, Base):
     contato_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contato.id"))
     id_externo: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(20), default="agente")
+    respondido_ate: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """Hora da última mensagem do contato que um turno respondeu. O que chega durante o turno fica depois."""
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=agora, onupdate=agora
     )
