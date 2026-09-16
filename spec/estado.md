@@ -13,8 +13,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | Fase | Situação |
 |---|---|
 | 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real (texto respondido pelo Chatwoot com WhatsApp) |
-| 2. Áudio, imagem e documento | **Construída em v0.3.0**, falta validar em VPS real (áudio, foto de documento, PDF e reenvio do mesmo áudio) |
-| 3. Handoff no Chatwoot | Não iniciada |
+| 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2): áudio, imagem e PDF respondidos; 4 áudios seguidos numa resposta só; reenvio dos mesmos áudios sem nova transcrição |
+| 3. Handoff no Chatwoot | **Próxima** |
 | 4. Menu do operador | Parcial: `asimov novo-agente` e `asimov agentes` prontos; faltam editar, remover e consumo |
 | 5. WhatsApp oficial e Telegram diretos | Não iniciada |
 | 6. Base de conhecimento | Não iniciada |
@@ -33,7 +33,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - No turno, `midia/servico.py` baixa pelo canal (`baixar_midia`), usa o cache por `cliente_id` + hash ou lê, e grava a `situacao` no anexo. O modelo recebe o conteúdo em `<midia_do_contato>`.
 - Leitura de mídia registra Turno com `funcao` `transcricao` ou `visao`; mídia do cache não registra.
 - Arquivos em volume Docker `midia` (`/var/lib/asimov/midia`). Retenção de 90 dias fica para a fase 7.
-- Para validar na VPS: `asimov atualizar`, mandar áudio, foto de documento e PDF, reenviar o mesmo áudio e conferir que não há novo Turno de `transcricao`.
+- Validada na VPS em 2026-09-16. O teste achou a mensagem perdida durante o turno, corrigida na v0.3.2 (spec/decisoes.md).
+- O agente às vezes cita a mecânica ("recebi as transcrições"): ajustar `INSTRUCAO_DE_MIDIA` em `ia/agente.py` para responder como quem ouviu e viu.
 
 ## Para a fase 3
 
