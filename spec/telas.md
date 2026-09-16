@@ -10,7 +10,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Quem acessa: operador.
 - Mostra: nome "Asimov Academy" em ASCII grande, versão do script, moldura com texto curto sobre o que o setup instala, licença e crédito à Asimov Academy.
 - Ações: `Y` aceita e segue; `N` sai sem alterar nada.
-- Licença: MIT com crédito obrigatório à Asimov Academy (assumido; texto a revisar pelo dono do projeto).
+- Licença: MIT, arquivo `LICENSE` na raiz, copyright Asimov Academy.
 
 ### 2. Iniciando
 
@@ -38,7 +38,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Objetivo: garantir que `bot.<dominio>` aponta para a VPS antes de emitir o SSL.
 - Quem acessa: operador.
 - Mostra: IP público da VPS, IP para o qual o domínio resolve hoje e o status.
-- Ações: se não aponta, mostra o registro DNS a criar e oferece verificar de novo ou sair (a retomada volta para esta tela).
+- Ações: se não aponta, mostra antes de tudo o registro a criar (tipo A, nome bot, valor IP da VPS, TTL 300) e onde fica no painel dos registradores mais comuns; verifica sozinho a cada 15 s, com Enter para verificar na hora e S para sair (a retomada volta para esta tela). Avisa quando o registro aponta para outro IP, quando passa pelo proxy da Cloudflare e quando existe AAAA (IPv6), que atrapalha o certificado.
 
 ### 5. Instalação
 

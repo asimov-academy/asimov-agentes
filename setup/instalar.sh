@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Setup Asimov Academy: prepara uma VPS Ubuntu 24.04 vazia e sobe a plataforma de agentes.
 # Pode ser rodado de novo a qualquer momento: continua de onde parou.
-set -euo pipefail
+set -Eeuo pipefail
 
-VERSAO="0.1.0"
+VERSAO="0.1.1"
 RAIZ_PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR_ESTADO="$HOME/.asimov"
 ARQ_ESTADO="$DIR_ESTADO/estado"
@@ -38,6 +38,15 @@ source "$DIR_LIB/agente.sh"
 source "$DIR_LIB/final.sh"
 # shellcheck source=deploy/compose.sh
 source "$RAIZ_PROJETO/deploy/compose.sh"
+
+# Nenhuma queda silenciosa: qualquer erro não tratado mostra onde parou e o caminho do log.
+erro_inesperado() {
+  local codigo=$? linha=$1 arquivo=$2
+  trap - ERR
+  erro_fatal "Erro inesperado (código $codigo) em ${arquivo#"$RAIZ_PROJETO"/}, linha $linha" \
+    "rode o mesmo comando de novo; se repetir, envie as últimas linhas do log"
+}
+trap 'erro_inesperado "$LINENO" "${BASH_SOURCE[0]:-instalar.sh}"' ERR
 
 principal() {
   estado_iniciar

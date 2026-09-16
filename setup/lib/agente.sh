@@ -12,13 +12,17 @@ api() {
   saida=$(mktemp)
   API_STATUS=$(printf 'X-Admin-Key: %s\n' "$(env_get CHAVE_API_ADMIN)" |
     curl -s -o "$saida" -w '%{http_code}' -X "$metodo" -H @- \
-      -H 'Content-Type: application/json' "${dados[@]}" "$API_LOCAL$caminho")
+      -H 'Content-Type: application/json' "${dados[@]}" "$API_LOCAL$caminho" || true)
   API_RESPOSTA=$(cat "$saida")
   rm -f "$saida"
 }
 
 detalhe_erro() {
-  jq -r '.detail | if type == "string" then . else (map(.msg) | join("; ")) end' 2>/dev/null <<<"$1"
+  if [ "$API_STATUS" = "000" ] || [ -z "$1" ]; then
+    echo "a API não respondeu em $API_LOCAL. Veja: source deploy/compose.sh && dc logs api"
+    return 0
+  fi
+  jq -r '.detail | if type == "string" then . else (map(.msg) | join("; ")) end' 2>/dev/null <<<"$1" || echo "$1"
 }
 
 cria_cliente() {
