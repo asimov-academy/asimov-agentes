@@ -1,0 +1,130 @@
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.agentes import repo, servico
+from app.agentes.modelos import Agente
+from app.canais.base import CredencialInvalida
+from app.canais.registro import CANAIS, credenciais_visiveis, obter_canal
+from app.ia.provedores import ModeloInvalido
+from app.plataforma.admin import exige_admin
+from app.plataforma.banco import sessao
+
+router = APIRouter(prefix="/admin", dependencies=[Depends(exige_admin)])
+
+
+class Modelos(BaseModel):
+    modelo_conversa: str | None = None
+    modelo_auxiliar: str | None = None
+    modelo_visao: str | None = None
+    modelo_transcricao: str | None = None
+
+
+class NovoAgente(BaseModel):
+    nome: str = Field(min_length=1, max_length=200)
+    canal: str
+    credenciais: dict[str, Any]
+    modelos: Modelos = Modelos()
+    handoff_destino: dict[str, Any] | None = None
+    handoff_template: str | None = None
+    buffer_segundos: int = Field(default=8, ge=1, le=60)
+    max_mensagens_por_resposta: int = Field(default=3, ge=1, le=10)
+    retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
+
+
+class AgenteSaida(BaseModel):
+    id: uuid.UUID
+    cliente_id: uuid.UUID
+    nome: str
+    slug: str
+    canal: str
+    url_webhook: str
+    credenciais: dict[str, Any]
+    arquivo_prompt: str
+    modelo_conversa: str
+    modelo_auxiliar: str
+    modelo_visao: str
+    modelo_transcricao: str
+    buffer_segundos: int
+    max_mensagens_por_resposta: int
+    handoff_destino: dict[str, Any] | None
+    retomada_automatica_horas: int | None
+    ativo: bool
+
+
+def _saida(agente: Agente) -> AgenteSaida:
+    dados = {c: getattr(agente, c) for c in AgenteSaida.model_fields if hasattr(agente, c)}
+    dados["url_webhook"] = servico.url_webhook(agente)
+    dados["credenciais"] = credenciais_visiveis(
+        obter_canal(agente.canal), servico.credenciais(agente)
+    )
+    return AgenteSaida(**dados)
+
+
+class Credenciais(BaseModel):
+    credenciais: dict[str, Any]
+
+
+@router.post("/canais/{canal}/testar")
+async def testar_credenciais(canal: str, dados: Credenciais) -> dict[str, Any]:
+    if canal not in CANAIS:
+        raise HTTPException(status_code=404, detail="canal não suportado")
+    try:
+        normalizadas = await obter_canal(canal).testar(dados.credenciais)
+    except CredencialInvalida as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
+    return {"ok": True, "credenciais": credenciais_visiveis(obter_canal(canal), normalizadas)}
+
+
+@router.post("/clientes/{cliente_id}/agentes", status_code=201, response_model=AgenteSaida)
+async def criar(
+    cliente_id: uuid.UUID, dados: NovoAgente, s: AsyncSession = Depends(sessao)
+) -> AgenteSaida:
+    if dados.canal not in CANAIS:
+        raise HTTPException(status_code=422, detail=f"canal não suportado: {dados.canal}")
+    try:
+        agente, _ = await servico.criar_agente(
+            s,
+            cliente_id,
+            nome=dados.nome,
+            canal=dados.canal,
+            credenciais=dados.credenciais,
+            modelos=dados.modelos.model_dump(exclude_none=True),
+            handoff_destino=dados.handoff_destino,
+            handoff_template=dados.handoff_template,
+            buffer_segundos=dados.buffer_segundos,
+            max_mensagens_por_resposta=dados.max_mensagens_por_resposta,
+            retomada_automatica_horas=dados.retomada_automatica_horas,
+        )
+    except servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except servico.Conflito as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except (CredencialInvalida, ModeloInvalido) as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
+    return _saida(agente)
+
+
+@router.get("/agentes", response_model=list[AgenteSaida])
+async def listar(
+    cliente_id: uuid.UUID | None = Query(default=None), s: AsyncSession = Depends(sessao)
+) -> list[AgenteSaida]:
+    agentes = (
+        await repo.listar(s, cliente_id)
+        if cliente_id
+        else await repo.listar_de_todos_os_clientes(s)
+    )
+    return [_saida(a) for a in agentes]
+
+
+@router.get("/clientes/{cliente_id}/agentes/{agente_id}", response_model=AgenteSaida)
+async def ver(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)
+) -> AgenteSaida:
+    agente = await repo.obter(s, cliente_id, agente_id)
+    if agente is None:
+        raise HTTPException(status_code=404, detail="agente não encontrado")
+    return _saida(agente)
