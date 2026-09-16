@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import FastAPI
+import structlog
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
@@ -24,6 +25,18 @@ async def ciclo(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Asimov Agentes", lifespan=ciclo, docs_url=None, redoc_url=None)
+log = structlog.get_logger()
+
+
+@app.exception_handler(Exception)
+async def erro_interno(request: Request, erro: Exception) -> JSONResponse:
+    """Nas rotas /admin (só localhost, chamadas pelo setup) o motivo vai na resposta."""
+    log.error("erro_interno", caminho=request.url.path, erro=repr(erro)[:500])
+    if request.url.path.startswith("/admin"):
+        return JSONResponse({"detail": f"erro interno: {type(erro).__name__}: {erro}"}, status_code=500)
+    return JSONResponse({"detail": "erro interno"}, status_code=500)
+
+
 app.include_router(clientes)
 app.include_router(agentes)
 app.include_router(webhook)

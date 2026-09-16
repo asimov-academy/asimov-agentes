@@ -3,7 +3,7 @@
 # Pode ser rodado de novo a qualquer momento: continua de onde parou.
 set -Eeuo pipefail
 
-VERSAO="0.1.4"
+VERSAO="0.1.5"
 RAIZ_PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR_ESTADO="$HOME/.asimov"
 ARQ_ESTADO="$DIR_ESTADO/estado"
@@ -66,6 +66,7 @@ principal() {
   tela_dados
   tela_dns
   tela_instalacao
+  ajusta_permissoes
   tela_primeiro_agente
   tela_final
 }

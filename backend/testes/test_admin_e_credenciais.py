@@ -1,4 +1,7 @@
+import httpx
 from sqlalchemy import text
+
+from app.main import app
 
 from app.plataforma.cripto import decifra
 
@@ -68,13 +71,14 @@ async def test_falha_ao_gravar_desfaz_conexao_no_canal(http, canal, monkeypatch)
 
     monkeypatch.setattr(servico, "_cria_prompts", quebra)
     cliente = (await http.post("/admin/clientes", json={"nome": "Loja"}, headers=ADMIN)).json()
-    try:
-        await http.post(
+    transporte = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    async with httpx.AsyncClient(transport=transporte, base_url="http://teste") as sem_excecao:
+        resp = await sem_excecao.post(
             f"/admin/clientes/{cliente['id']}/agentes",
             json={"nome": "Ana", "canal": "chatwoot", "conexao": CONEXAO_EXEMPLO},
             headers=ADMIN,
         )
-    except OSError:
-        pass
+    assert resp.status_code == 500
+    assert "OSError: disco cheio" in resp.json()["detail"]
     assert canal.desconectados == [42]
     assert (await http.get("/admin/agentes", headers=ADMIN)).json() == []

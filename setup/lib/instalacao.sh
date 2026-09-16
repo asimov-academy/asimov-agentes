@@ -50,6 +50,13 @@ gera_segredos() {
   $SUDO chown -R 1000:1000 "$RAIZ_PROJETO/prompts"
 }
 
+# Roda em toda execução: extrair uma atualização como root devolve prompts/ ao root, e a API
+# (usuário 1000 no contêiner) deixaria de conseguir criar o prompt de um agente novo.
+ajusta_permissoes() {
+  mkdir -p "$RAIZ_PROJETO/prompts"
+  $SUDO chown -R 1000:1000 "$RAIZ_PROJETO/prompts"
+}
+
 sobe_banco() { dc up -d --wait postgres redis; }
 migra() { dc run --rm api alembic upgrade head; }
 sobe_servicos() { dc up -d api worker caddy; }
