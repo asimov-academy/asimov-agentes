@@ -9,7 +9,7 @@
 # Se o projeto já existe, só roda o setup (retomada ou resumo).
 set -euo pipefail
 
-VERSAO="${ASIMOV_VERSAO:-v0.1.4}"
+VERSAO="${ASIMOV_VERSAO:-v0.1.5}"
 PACOTE="${ASIMOV_PACOTE:-https://codeload.github.com/asimov-academy/asimov-agentes/tar.gz/$VERSAO}"
 SHA256="${ASIMOV_SHA256:-}"
 DESTINO="${ASIMOV_DIR:-$HOME/asimov-agentes}"
@@ -35,5 +35,5 @@ fi
 
 [ -f "$DESTINO/setup/instalar.sh" ] && echo "Atualizando o código em $DESTINO (.env, prompts e progresso ficam)."
 mkdir -p "$DESTINO"
-tar -xzf "$temp/pacote.tar.gz" -C "$DESTINO" --strip-components=1
+tar -xzf "$temp/pacote.tar.gz" -C "$DESTINO" --strip-components=1 --no-same-owner
 exec bash "$DESTINO/setup/instalar.sh"
