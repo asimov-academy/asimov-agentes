@@ -3,7 +3,7 @@
 # Pode ser rodado de novo a qualquer momento: continua de onde parou.
 set -Eeuo pipefail
 
-VERSAO="0.1.3"
+VERSAO="0.1.4"
 RAIZ_PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR_ESTADO="$HOME/.asimov"
 ARQ_ESTADO="$DIR_ESTADO/estado"
@@ -50,6 +50,7 @@ trap 'erro_inesperado "$LINENO" "${BASH_SOURCE[0]:-instalar.sh}"' ERR
 
 principal() {
   estado_iniciar
+  estado_nova_versao
   printf '\n===== setup %s iniciado em %s =====\n' "$VERSAO" "$(date -Is)" >>"$LOG"
 
   if estado_tem instalacao_concluida; then

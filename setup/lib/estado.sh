@@ -24,6 +24,30 @@ estado_set() {
   chmod 600 "$ARQ_ESTADO"
 }
 
+estado_remove() {
+  local temp chave
+  temp=$(mktemp)
+  cp "$ARQ_ESTADO" "$temp"
+  for chave in "$@"; do
+    grep -v "^$chave=" "$temp" >"$temp.novo" || true
+    mv "$temp.novo" "$temp"
+  done
+  mv "$temp" "$ARQ_ESTADO"
+  chmod 600 "$ARQ_ESTADO"
+}
+
+# Código novo baixado com ASIMOV_ATUALIZAR=1: a plataforma precisa ser reconstruída e
+# migrada, mesmo que esses passos já tenham rodado na versão anterior.
+estado_nova_versao() {
+  local anterior
+  anterior=$(estado_get versao)
+  # Sem versão gravada e com build feito: instalação de antes da v0.1.4, também reconstrói.
+  if [ "$anterior" != "$VERSAO" ] && estado_tem passo_build; then
+    estado_remove passo_build passo_migracoes passo_servicos passo_api_local passo_api_https
+  fi
+  estado_set versao "$VERSAO"
+}
+
 estado_tem() {
   grep -q "^$1=" "$ARQ_ESTADO" 2>/dev/null
 }
