@@ -8,6 +8,8 @@ Ambiente de teste de todas as fases: uma VPS Ubuntu 24.04 descartável (com snap
 
 ## Fase 1: Setup de ponta a ponta com um agente de texto no Chatwoot
 
+Situação: concluída e validada em VPS real (v0.2.0).
+
 Objetivo: rodar um comando numa VPS vazia e terminar com um agente respondendo texto numa inbox do Chatwoot.
 
 O que entra:
@@ -40,6 +42,8 @@ O que o operador precisa fazer:
 Commit: `feat: setup de ponta a ponta com agente de texto no Chatwoot`
 
 ## Fase 2: Áudio, imagem e documento
+
+Situação: próxima.
 
 Objetivo: o agente entende áudio, imagem e PDF enviados pelo contato.
 
@@ -88,6 +92,8 @@ O que o operador precisa fazer:
 Commit: `feat: handoff para humano no Chatwoot`
 
 ## Fase 4: Menu do operador
+
+Situação: parcial, `asimov novo-agente` e `asimov agentes` prontos.
 
 Objetivo: rodar o setup de novo abre um menu para operar agentes e ver consumo.
 
@@ -161,6 +167,8 @@ O que o operador precisa fazer:
 Commit: `feat: base de conhecimento com RAG por agente`
 
 ## Fase 7: Polimento e distribuição
+
+Situação: parcial, repositório público, README e licença prontos.
 
 Objetivo: qualquer aluno instala pelo comando público e o critério de sucesso é verificado.
 
