@@ -7,6 +7,7 @@ leitura das mídias pendentes, modelo, envio mensagem a mensagem com digitando, 
 import asyncio
 import time
 import uuid
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -30,13 +31,25 @@ REENFILEIRA_EM_SEGUNDOS = 5
 _espera = asyncio.sleep
 
 
-def separa_pendentes(mensagens: list[Mensagem]) -> tuple[list[Mensagem], list[Mensagem]]:
-    """Pendentes são as falas do contato depois da última fala do nosso lado."""
-    corte = 0
-    for i, m in enumerate(mensagens):
-        if m.autor != "contato":
-            corte = i + 1
-    return mensagens[:corte], [m for m in mensagens[corte:] if m.autor == "contato"]
+def separa_pendentes(
+    mensagens: list[Mensagem], respondido_ate: datetime | None
+) -> tuple[list[Mensagem], list[Mensagem]]:
+    """Pendentes são as falas do contato ainda não respondidas por um turno.
+
+    Não basta "depois da última resposta do agente": a resposta é gravada no fim do turno, e o
+    que o contato mandou durante o turno ficaria antes dela, sem resposta nunca. Fala de atendente
+    humano encerra as pendências anteriores. Conversa sem `respondido_ate` (anterior à v0.3.2)
+    usa a regra antiga.
+    """
+    pendentes: list[Mensagem] = []
+    for m in mensagens:
+        if m.autor == "contato":
+            if respondido_ate is None or m.criado_em > respondido_ate:
+                pendentes.append(m)
+        elif m.autor == "humano" or respondido_ate is None:
+            pendentes = []
+    ids = {m.id for m in pendentes}
+    return [m for m in mensagens if m.id not in ids], pendentes
 
 
 async def _roda_com_tentativas(agente: Any, anteriores: list[Mensagem], pendentes: list[Mensagem]) -> ResultadoTurno:
@@ -86,7 +99,7 @@ async def _turno(cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> str:
             return "humano_conduz"
 
         mensagens = await repo.ultimas_mensagens(s, cliente_id, conversa_id)
-        anteriores, pendentes = separa_pendentes(mensagens)
+        anteriores, pendentes = separa_pendentes(mensagens, conversa.respondido_ate)
         if not pendentes:
             return "nada_pendente"
 
@@ -136,6 +149,7 @@ async def _turno(cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> str:
             )
             enviadas += 1
         await _digitando(canal, credenciais, conversa.id_externo, False)
+        await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
 
         await grava_turno(
             s,

@@ -2,6 +2,11 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Mensagem enviada durante o turno ficava sem resposta (v0.3.2)
+
+- **Achado no teste da fase 2 em VPS**: dois áudios com 10 s de diferença; o segundo chegou enquanto o primeiro era transcrito e respondido e nunca teve turno. Pendente era "fala do contato depois da última fala do agente", e a resposta é gravada no fim do turno, depois da mensagem nova. Existia desde a fase 1; leitura de mídia deixou o turno longo o bastante para acontecer.
+- **Conversa ganhou `respondido_ate`**: hora da última mensagem do contato que um turno respondeu. Pendente é fala do contato depois dela; fala de atendente humano encerra as anteriores. Turno com erro no modelo não avança, como antes. spec/dados.md, Conversa.
+
 ## 2026-09-16: `asimov atualizar` baixa o instalador da main (v0.3.1)
 
 - **`asimov atualizar` não atualizava**: rodava o `install.sh` da própria VPS, que tem fixa a versão já instalada, e baixava de novo a mesma versão. Agora baixa o `install.sh` da `main`, que aponta para a última tag. Resumo final mostra a versão instalada.

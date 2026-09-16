@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
@@ -120,6 +121,16 @@ async def grava_mensagem(sessao: AsyncSession, mensagem: Mensagem) -> bool:
         .returning(Mensagem.id)
     )
     return await sessao.scalar(instrucao) is not None
+
+
+async def marca_respondido(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID, ate: datetime
+) -> None:
+    await sessao.execute(
+        update(Conversa)
+        .where(Conversa.cliente_id == cliente_id, Conversa.id == conversa_id)
+        .values(respondido_ate=func.greatest(func.coalesce(Conversa.respondido_ate, ate), ate))
+    )
 
 
 async def ultimas_mensagens(
