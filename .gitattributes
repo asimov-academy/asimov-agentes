@@ -1,0 +1,5 @@
+# Fora do pacote que o setup baixa: a spec e os arquivos de contexto do desenvolvimento
+# da plataforma. O projeto instalado recebe AGENTS.md e CLAUDE.md gerados pelo setup.
+spec/ export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
