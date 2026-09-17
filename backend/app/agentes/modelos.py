@@ -8,6 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.plataforma.banco import Base, ComCriacao, ComId, agora
 
+PADRAO_FERRAMENTAS = ("calculadora", "busca_web")
+
 
 class Agente(ComId, ComCriacao, Base):
     __tablename__ = "agente"
@@ -33,6 +35,13 @@ class Agente(ComId, ComCriacao, Base):
 
     buffer_segundos: Mapped[int] = mapped_column(default=8)
     max_mensagens_por_resposta: Mapped[int] = mapped_column(default=3)
+    digitacao_caracteres_por_segundo: Mapped[int] = mapped_column(default=6, server_default="6")
+    """Velocidade com que o agente "digita": define quanto o digitando dura antes de cada mensagem."""
+    digitacao_maximo_segundos: Mapped[int] = mapped_column(default=20, server_default="20")
+    ferramentas: Mapped[list[str]] = mapped_column(
+        JSONB, default=lambda: list(PADRAO_FERRAMENTAS), server_default='["calculadora", "busca_web"]'
+    )
+    """Nomes de `ia/ferramentas.py` ligados neste agente."""
 
     handoff_destino: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     handoff_template: Mapped[str | None] = mapped_column(String(200))

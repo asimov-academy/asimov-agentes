@@ -41,7 +41,7 @@ class ModeloQueTransfere:
 
 @pytest.fixture(autouse=True)
 def sem_espera(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(turno, "delay_ms", lambda texto: 0)
+    monkeypatch.setattr(turno, "tempos_de_digitacao", lambda textos, *a, **k: [0] * len(textos))
 
 
 @pytest.fixture

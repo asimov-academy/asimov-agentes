@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Digitação humanizada, ferramentas por agente e consumo por empresa (v0.7.0)
+
+- **Digitando pelo ritmo de uma pessoa**, pedido do operador: caracteres / velocidade do agente (padrão 6 por segundo, editável de 1 a 30), variação de 15%, entre 1 s e o teto por mensagem (padrão 20 s). O tempo que o turno já levou (mídia, modelo) conta como digitação da primeira mensagem. A soma fica em até 90 s, abaixo do lock de 240 s que também cobre mídia e modelo. Substitui o atraso fixo de 1 a 4 s. spec/dados.md, spec/arquitetura.md.
+- **Ferramentas por agente** (`Agente.ferramentas`, catálogo em `ia/ferramentas.py`), lista de marcar no menu, com calculadora e busca na web por padrão, inclusive nos agentes existentes (padrão da migração). `transferir_para_humano` continua em todo agente, fora da lista.
+- **Calculadora sem `eval`**: árvore sintática com números, operadores e parênteses; expoente até 100.
+- **Busca na web: nativa do provedor, com DuckDuckGo quando o modelo não tem**, decisão do operador (ele também citou Firecrawl instalado na VPS: pesado para 4 GB junto do resto; SearXNG fica como opção futura de busca própria). Capability `WebSearch` da PydanticAI escolhe por modelo, inclusive dentro do fallback. OpenAI passou para `OpenAIResponsesModel` (só nela há busca nativa). O perfil da Groq anuncia busca nativa em todo modelo, mas só os `compound` têm: nos outros o setup tira do perfil para cair na local. Busca nativa cobra por uso na conta do provedor.
+- **Consumo pergunta a empresa** (ou todas) quando há mais de uma. spec/telas.md.
+
 ## 2026-09-17: Enter duplo do terminal no navegador (v0.6.3)
 
 - **Causa do bot na caixa errada**: o terminal do navegador da Hostinger manda Enter como `\r\n`. O Enter da URL do Chatwoot sobrava e escolhia sozinho a primeira caixa da lista seguinte. Conferido no Chatwoot do operador: o bot novo estava na caixa 1 e a do Instagram (2) sem bot. Reproduzido num pty.

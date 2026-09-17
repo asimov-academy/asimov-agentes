@@ -57,10 +57,11 @@ def construir_modelo(nome_modelo: str) -> "Model":
     chave = config().chave_do_provedor(provedor)
 
     if provedor == "openai":
-        from pydantic_ai.models.openai import OpenAIChatModel
+        # Responses, não Chat Completions: só nela a OpenAI tem busca na web nativa.
+        from pydantic_ai.models.openai import OpenAIResponsesModel
         from pydantic_ai.providers.openai import OpenAIProvider
 
-        return OpenAIChatModel(modelo, provider=OpenAIProvider(api_key=chave))
+        return OpenAIResponsesModel(modelo, provider=OpenAIProvider(api_key=chave))
     if provedor == "anthropic":
         from pydantic_ai.models.anthropic import AnthropicModel
         from pydantic_ai.providers.anthropic import AnthropicProvider
@@ -70,7 +71,19 @@ def construir_modelo(nome_modelo: str) -> "Model":
         from pydantic_ai.models.groq import GroqModel
         from pydantic_ai.providers.groq import GroqProvider
 
-        return GroqModel(modelo, provider=GroqProvider(api_key=chave))
+        groq = GroqModel(modelo, provider=GroqProvider(api_key=chave))
+        if groq.profile.get("groq_always_has_web_search_builtin_tool"):
+            return groq
+        # O perfil da Groq anuncia busca nativa em todo modelo, mas só os `compound` têm: nos outros
+        # a busca tem de cair na local, e não num erro na hora da resposta.
+        from pydantic_ai.native_tools import WebSearchTool
+
+        nativas = groq.profile.get("supported_native_tools", frozenset()) - {WebSearchTool}
+        return GroqModel(
+            modelo,
+            provider=GroqProvider(api_key=chave),
+            profile={**groq.profile, "supported_native_tools": nativas},
+        )
 
     from pydantic_ai.models.google import GoogleModel
     from pydantic_ai.providers.google import GoogleProvider

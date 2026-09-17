@@ -12,6 +12,7 @@ from app.agentes import repo, servico
 from app.agentes.modelos import Agente
 from app.canais.base import CredencialInvalida, DestinoInvalido
 from app.canais.registro import CANAIS, credenciais_visiveis, obter_canal
+from app.ia import ferramentas
 from app.ia.provedores import ModeloInvalido
 from app.plataforma.admin import exige_admin
 from app.plataforma.banco import sessao
@@ -39,6 +40,9 @@ class NovoAgente(BaseModel):
     buffer_segundos: int = Field(default=8, ge=1, le=60)
     max_mensagens_por_resposta: int = Field(default=3, ge=1, le=10)
     retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
+    digitacao_caracteres_por_segundo: int = Field(default=6, ge=1, le=30)
+    digitacao_maximo_segundos: int = Field(default=20, ge=1, le=30)
+    ferramentas: list[str] | None = Field(default=None, description="Padrão: calculadora e busca na web.")
 
 
 class EdicaoAgente(BaseModel):
@@ -51,6 +55,9 @@ class EdicaoAgente(BaseModel):
     buffer_segundos: int | None = Field(default=None, ge=1, le=60)
     max_mensagens_por_resposta: int | None = Field(default=None, ge=1, le=10)
     retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
+    digitacao_caracteres_por_segundo: int | None = Field(default=None, ge=1, le=30)
+    digitacao_maximo_segundos: int | None = Field(default=None, ge=1, le=30)
+    ferramentas: list[str] | None = None
     modelo_conversa: str | None = None
     modelo_fallback: str | None = None
     modelo_auxiliar: str | None = None
@@ -97,6 +104,9 @@ class AgenteSaida(BaseModel):
     max_mensagens_por_resposta: int
     handoff_destino: dict[str, Any] | None
     retomada_automatica_horas: int | None
+    digitacao_caracteres_por_segundo: int
+    digitacao_maximo_segundos: int
+    ferramentas: list[str]
     ativo: bool
 
 
@@ -150,6 +160,9 @@ async def criar(
             buffer_segundos=dados.buffer_segundos,
             max_mensagens_por_resposta=dados.max_mensagens_por_resposta,
             retomada_automatica_horas=dados.retomada_automatica_horas,
+            digitacao_caracteres_por_segundo=dados.digitacao_caracteres_por_segundo,
+            digitacao_maximo_segundos=dados.digitacao_maximo_segundos,
+            ferramentas=dados.ferramentas,
         )
     except servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
@@ -240,3 +253,19 @@ async def esquecer_acesso(
 ) -> None:
     if not await acessos_servico.esquecer(s, canal, endereco.rstrip("/")):
         raise HTTPException(status_code=404, detail="nenhum acesso guardado nesse endereço")
+
+
+class FerramentaSaida(BaseModel):
+    nome: str
+    rotulo: str
+    descricao: str
+    padrao: bool
+
+
+@router.get("/ferramentas", response_model=list[FerramentaSaida])
+async def listar_ferramentas() -> list[FerramentaSaida]:
+    """Catálogo que o menu mostra para ligar e desligar por agente."""
+    return [
+        FerramentaSaida(nome=nome, rotulo=f.rotulo, descricao=f.descricao, padrao=nome in ferramentas.PADRAO)
+        for nome, f in ferramentas.CATALOGO.items()
+    ]

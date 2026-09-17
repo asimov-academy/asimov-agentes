@@ -29,7 +29,7 @@ def modelo_que_responde(mensagens: list[str], recebidas: list[str] | None = None
 
 @pytest.fixture(autouse=True)
 def sem_espera(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(turno, "delay_ms", lambda texto: 0)
+    monkeypatch.setattr(turno, "tempos_de_digitacao", lambda textos, *a, **k: [0] * len(textos))
 
 
 @pytest.fixture
@@ -178,13 +178,22 @@ async def test_fallback_responde_quando_o_principal_falha(http, canal, fila, ses
 def test_constroi_modelo_de_cada_provedor() -> None:
     from pydantic_ai.models.fallback import FallbackModel
     from pydantic_ai.models.groq import GroqModel
-    from pydantic_ai.models.openai import OpenAIChatModel
+    from pydantic_ai.models.openai import OpenAIResponsesModel
+    from pydantic_ai.native_tools import WebSearchTool
 
     from app.ia.provedores import construir_modelo, modelo_de_resposta
 
     assert isinstance(construir_modelo("groq:whisper-large-v3-turbo"), GroqModel)
-    assert isinstance(modelo_de_resposta("openai:gpt-5.5", None), OpenAIChatModel)
+    assert isinstance(modelo_de_resposta("openai:gpt-5.5", None), OpenAIResponsesModel)
     assert isinstance(modelo_de_resposta("openai:gpt-5.5", "groq:llama-3.3-70b-versatile"), FallbackModel)
+
+    def busca_nativa(nome: str) -> bool:
+        return WebSearchTool in construir_modelo(nome).profile.get("supported_native_tools", frozenset())
+
+    # OpenAI pela Responses tem busca nativa; Groq só nos compound (nos outros a busca cai na local).
+    assert busca_nativa("openai:gpt-5.5")
+    assert not busca_nativa("groq:llama-3.3-70b-versatile")
+    assert busca_nativa("groq:groq/compound")
 
 
 async def test_mensagem_que_chega_durante_o_turno_e_respondida_no_seguinte(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]

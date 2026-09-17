@@ -14,6 +14,8 @@ mostra_agente() {
   campo "Visão" "$(jq -r '.modelo_visao' <<<"$AGENTE")"
   campo "Áudio" "$(jq -r '.modelo_transcricao' <<<"$AGENTE")"
   campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
+  campo "Digitação" "$(jq -r '"\(.digitacao_caracteres_por_segundo) caracteres/s, até \(.digitacao_maximo_segundos) s por mensagem"' <<<"$AGENTE")"
+  campo "Ferramentas" "$(jq -r '(.ferramentas // []) | if length == 0 then "nenhuma" else map({calculadora: "calculadora", busca_web: "busca na web"}[.] // .) | join(", ") end' <<<"$AGENTE")"
 }
 
 # salva_agente JSON: PATCH só com os campos do JSON; atualiza AGENTE e deixa o RESULTADO para a
@@ -77,13 +79,16 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    ESC_ESCOLHE=6 escolha op "O que mudar?" "Nome" "Tempo de buffer" "Mensagens por resposta" "Modelos" "Handoff" "Voltar"
+    ESC_ESCOLHE=8 escolha op "O que mudar?" "Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" \
+      "Ferramentas" "Modelos" "Handoff" "Voltar"
     case "$op" in
       1) com_voltar edita_nome ;;
       2) com_voltar edita_buffer ;;
       3) com_voltar edita_mensagens ;;
-      4) com_voltar edita_modelo ;;
-      5) com_voltar edita_handoff ;;
+      4) com_voltar edita_digitacao ;;
+      5) com_voltar edita_ferramentas ;;
+      6) com_voltar edita_modelo ;;
+      7) com_voltar edita_handoff ;;
       *) return 0 ;;
     esac
     [ "$FALHOU" = 0 ] || pausa
@@ -114,6 +119,35 @@ edita_mensagens() {
   local valor
   pergunta_numero valor "Máximo de mensagens por resposta (1 a 10)" 1 10 "$(jq -r '.max_mensagens_por_resposta' <<<"$AGENTE")"
   salva_agente "$(jq -n --argjson v "$valor" '{max_mensagens_por_resposta: $v}')"
+}
+
+edita_digitacao() {
+  local velocidade maximo
+  dica "Antes de cada mensagem o agente fica digitando o tempo que uma pessoa levaria para escrever."
+  dica "No celular, uma pessoa digita de 4 a 8 caracteres por segundo."
+  pergunta_numero velocidade "Caracteres por segundo (1 a 30)" 1 30 "$(jq -r '.digitacao_caracteres_por_segundo' <<<"$AGENTE")"
+  dica "Teto por mensagem, para resposta longa não demorar demais."
+  pergunta_numero maximo "Máximo de segundos por mensagem (1 a 30)" 1 30 "$(jq -r '.digitacao_maximo_segundos' <<<"$AGENTE")"
+  salva_agente "$(jq -n --argjson v "$velocidade" --argjson m "$maximo" \
+    '{digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m}')"
+}
+
+edita_ferramentas() {
+  local catalogo ligadas marcadas escolhidas numero linha
+  local -a rotulos=()
+  api GET /admin/ferramentas
+  exige_api
+  catalogo=$API_RESPOSTA
+  while IFS= read -r linha; do rotulos+=("$linha"); done \
+    < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[] | "\(.rotulo)  \($cinza)\(.descricao)\($normal)"' <<<"$catalogo")
+  ligadas=$(jq -r --argjson agente "$AGENTE" '[.[] | if (.nome as $n | $agente.ferramentas | index($n)) then 1 else 0 end] | join(" ")' <<<"$catalogo")
+  echo
+  marca marcadas "Ferramentas do agente" "$ligadas" "${rotulos[@]}"
+  escolhidas="[]"
+  for numero in $marcadas; do
+    escolhidas=$(jq -c --argjson catalogo "$catalogo" --argjson i "$((numero - 1))" '. + [$catalogo[$i].nome]' <<<"$escolhidas")
+  done
+  salva_agente "$(jq -n --argjson f "$escolhidas" '{ferramentas: $f}')"
 }
 
 edita_modelo() {
@@ -175,26 +209,40 @@ fluxo_remover_agente() {
 
 # Uma linha por empresa (total) e por agente, com 7 e 30 dias lado a lado.
 mostra_consumo() {
-  local semana mes nivel nome t7 k7 c7 t30 k30 c30 marca parcial="" data tipo onde erro
-  api GET "/admin/consumo?dias=7"
+  local semana mes nivel nome t7 k7 c7 t30 k30 c30 asterisco parcial="" data tipo onde erro op linha
+  local filtro="" titulo="Consumo"
+  local -a ids=() nomes=()
+  api GET /admin/clientes
+  exige_api
+  while IFS=$'\t' read -r nome linha; do nomes+=("$nome"); ids+=("$linha"); done \
+    < <(jq -r '.[] | [.nome, .id] | @tsv' <<<"$API_RESPOSTA")
+  if [ "${#ids[@]}" -gt 1 ]; then
+    secao "Consumo"
+    escolha op "De qual empresa?" "Todas as empresas" "${nomes[@]}"
+    if [ "$op" -gt 1 ]; then
+      filtro="&cliente_id=${ids[$((op - 2))]}"
+      titulo="Consumo · ${nomes[$((op - 2))]}"
+    fi
+  fi
+  api GET "/admin/consumo?dias=7$filtro"
   exige_api
   semana=$API_RESPOSTA
-  api GET "/admin/consumo?dias=30"
+  api GET "/admin/consumo?dias=30$filtro"
   exige_api
   mes=$API_RESPOSTA
 
-  secao "Consumo"
+  secao "$titulo"
   if [ "$(jq '.agentes | length' <<<"$mes")" -eq 0 ]; then
     dica "Nenhum turno nos últimos 30 dias."
   else
     printf '  %s%s%s%s\n' "$CINZA" "$(coluna "" 22)" "$(coluna "últimos 7 dias" 28)" "últimos 30 dias$NORMAL"
     printf '  %s%s%7s %7s %9s   %7s %7s %9s%s\n' "$CINZA" "$(coluna "" 22)" turnos tokens "US\$" turnos tokens "US\$" "$NORMAL"
-    while IFS=$'\x1f' read -r nivel nome t7 k7 c7 t30 k30 c30 marca; do
-      [ -n "$marca" ] && parcial=1
+    while IFS=$'\x1f' read -r nivel nome t7 k7 c7 t30 k30 c30 asterisco; do
+      [ -n "$asterisco" ] && parcial=1
       if [ "$nivel" = empresa ]; then
-        printf '  %s%s%7s %7s %9s   %7s %7s %9s%s%s\n' "$NEGRITO" "$(coluna "$nome" 22)" "$t7" "$k7" "$c7" "$t30" "$k30" "$c30" "$marca" "$NORMAL"
+        printf '  %s%s%7s %7s %9s   %7s %7s %9s%s%s\n' "$NEGRITO" "$(coluna "$nome" 22)" "$t7" "$k7" "$c7" "$t30" "$k30" "$c30" "$asterisco" "$NORMAL"
       else
-        printf '    %s%7s %7s %9s   %7s %7s %9s%s\n' "$(coluna "$nome" 20)" "$t7" "$k7" "$c7" "$t30" "$k30" "$c30" "$marca"
+        printf '    %s%7s %7s %9s   %7s %7s %9s%s\n' "$(coluna "$nome" 20)" "$t7" "$k7" "$c7" "$t30" "$k30" "$c30" "$asterisco"
       fi
     done < <(jq -r --argjson semana "$semana" '
       def soma(lista): {
