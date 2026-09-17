@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.8.4` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso, handoff no histórico do modelo, teto de chamadas por turno e raciocínio baixo nos modelos da OpenAI que vêm sem ele.
+- `v0.8.4` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso, handoff no histórico do modelo, teto de chamadas por turno, raciocínio baixo nos modelos da OpenAI que vêm sem ele e calculadora no formato brasileiro.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
 - Verificação local na última revisão: 120 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
@@ -17,7 +17,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.3). Validado na VPS: conversa no terminal com ritmo rápido, conectar nativo ao Chatwoot com as conversas de teste separadas, handoff e devolução no Chatwoot, busca na web com raciocínio baixo (teste direto no container, v0.8.5). Falta confirmar pelo canal na v0.8.5 a cotação numa conversa devolvida, e o `/retomar` no terminal; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.3). Validado na VPS: conversa no terminal com ritmo rápido, conectar nativo ao Chatwoot com as conversas de teste separadas, handoff e devolução no Chatwoot, busca na web pelo Chatwoot numa conversa devolvida (v0.8.5), calculadora chamada só com conta de verdade. Falta confirmar as contas com ponto de milhar na v0.8.6 e o `/retomar` no terminal; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -53,7 +53,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Pendências conhecidas
 
-- Calculadora e mídia na OpenAI Responses ainda não conferidas na VPS.
+- Mídia (visão e PDF) na OpenAI Responses ainda não conferida na VPS.
 - Uma mensagem digitada no terminal da VPS chegou como "Ol�a" (byte inválido antes do "a"). Suspeita: apagar uma letra acentuada; não reproduzido local com bash 5.
 - `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0 para o agente não citar a mecânica ("recebi a transcrição"): não conferido na VPS.
 - Causa de o Chatwoot não ligar o bot: era o Enter duplo escolhendo a primeira caixa (v0.6.3). Se voltar a acontecer, a criação agora falha com mensagem clara.

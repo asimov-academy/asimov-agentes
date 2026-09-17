@@ -6,6 +6,7 @@ nome estável (é o que fica gravado no agente), rótulo e descrição para o me
 
 import ast
 import operator
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -57,13 +58,42 @@ def _avalia(no: ast.AST) -> float | int:
     raise ValueError("só números, + - * / // % ** e parênteses")
 
 
+_NUMERO = re.compile(r"\d[\d.,]*\d|\d")
+_MILHAR_BRASILEIRO = re.compile(r"[1-9]\d{0,2}(\.\d{3})+")
+_SIMBOLOS = {"×": "*", "÷": "/", "−": "-", "²": "**2", "³": "**3"}
+
+
+def _numero_brasileiro(achado: re.Match[str]) -> str:
+    """87.432 é milhar, 47,6 é decimal e 0.9 continua decimal (o modelo às vezes escreve assim)."""
+    numero = achado.group()
+    if "," in numero:
+        return numero.replace(".", "").replace(",", ".")
+    if _MILHAR_BRASILEIRO.fullmatch(numero):
+        return numero.replace(".", "")
+    return numero
+
+
+def _formato_brasileiro(valor: float | int) -> str:
+    # Com casas fixas: número grande em float não vira notação científica (1e+20).
+    texto = str(valor) if isinstance(valor, int) else f"{valor:.10f}".rstrip("0").rstrip(".")
+    inteiro, _, decimais = texto.partition(".")
+    sinal = "-" if inteiro.startswith("-") else ""
+    inteiro = f"{int(inteiro.lstrip('-')):,}".replace(",", ".")
+    return f"{sinal}{inteiro},{decimais}" if decimais else f"{sinal}{inteiro}"
+
+
 def calcular(expressao: str) -> str:
-    """Faz uma conta exata. Use para qualquer cálculo (preços, descontos, parcelas, porcentagens).
+    """Faz uma conta exata. Use quando a resposta depender de um cálculo (preços, descontos, parcelas, porcentagens).
 
     Args:
-        expressao: Conta com números, + - * / // % ** e parênteses. Ex.: (199.90 * 3) * 0.9
+        expressao: Conta com números no formato brasileiro, como o contato escreve (ponto de milhar, vírgula
+            decimal), + - * / // % ** e parênteses. Ex.: (1.299,90 * 3) * 0,9. Devolve no formato brasileiro.
     """
-    texto = expressao.replace(",", ".").strip()
+    texto = expressao.strip()
+    for simbolo, operador in _SIMBOLOS.items():
+        texto = texto.replace(simbolo, operador)
+    # Achado na VPS: "918.273 dividido por 47,6" virou 19,29 lendo o ponto como decimal.
+    texto = _NUMERO.sub(_numero_brasileiro, texto)
     if len(texto) > LIMITE_EXPRESSAO:
         return "Erro: conta longa demais."
     try:
@@ -76,7 +106,7 @@ def calcular(expressao: str) -> str:
         resultado = round(resultado, 10)
         if resultado.is_integer():
             resultado = int(resultado)
-    return str(resultado)
+    return _formato_brasileiro(resultado)
 
 
 def _busca_web() -> list[Any]:
@@ -91,7 +121,10 @@ CATALOGO: dict[str, Ferramenta] = {
         descricao="contas exatas de preço, desconto e parcela",
         instrucao=(
             "Quando a resposta depender de uma conta, use a calculadora em vez de calcular de cabeça. "
-            "Não chame a calculadora sem uma conta de verdade para fazer."
+            "Não chame a calculadora sem uma conta de verdade para fazer. Números do contato estão no formato "
+            "brasileiro: ponto separa milhar e vírgula separa decimal (87.432 é oitenta e sete mil, 47,6 é "
+            "quarenta e sete e seis décimos). Passe os números à calculadora como o contato escreveu e responda "
+            "no formato brasileiro, como a calculadora devolve."
         ),
         tools=lambda: [calcular],
     ),

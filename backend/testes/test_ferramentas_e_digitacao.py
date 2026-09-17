@@ -31,7 +31,22 @@ def test_digitando_segue_a_velocidade_com_teto_e_desconta_o_que_ja_passou() -> N
 
 @pytest.mark.parametrize(
     ("conta", "resultado"),
-    [("(199,90 * 3) * 0.9", "539.73"), ("7 // 2", "3"), ("10 / 4", "2.5"), ("2 ** 3", "8"), ("-(5 - 8)", "3")],
+    [
+        ("(199,90 * 3) * 0.9", "539,73"),
+        ("7 // 2", "3"),
+        ("10 / 4", "2,5"),
+        ("2 ** 3", "8"),
+        ("-(5 - 8)", "3"),
+        # Testes do operador na VPS: ponto de milhar e vírgula decimal, como o contato escreve.
+        ("87.432 × 5.291", "462.602.712"),
+        ("918.273 ÷ 47,6", "19.291,4495798319"),
+        ("(3.847 × 219) - (15.632 / 8) + 2.901²", "9.256.340"),
+        ("1.299,90 * 3", "3.899,7"),
+        ("0.125 * 8", "1"),
+        ("-1.500 + 200", "-1.300"),
+        ("1 / 3", "0,3333333333"),
+        ("10 ** 20 / 4", "25.000.000.000.000.000.000"),
+    ],
 )
 def test_calculadora_faz_conta_exata(conta: str, resultado: str) -> None:
     assert calcular(conta) == resultado
