@@ -29,6 +29,8 @@ class Conversa(ComId, ComCriacao, Base):
     agente_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agente.id"))
     contato_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contato.id"))
     id_externo: Mapped[str] = mapped_column(String(200))
+    canal: Mapped[str] = mapped_column(String(20))
+    """Por onde a conversa acontece: o canal do agente ou `nativo` na conversa de teste do terminal."""
     status: Mapped[str] = mapped_column(String(20), default="agente")
     respondido_ate: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     """Hora da última mensagem do contato que um turno respondeu. O que chega durante o turno fica depois."""

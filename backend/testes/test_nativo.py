@@ -15,7 +15,7 @@ from app.consumo.modelos import Turno
 from app.conversas import turno
 from app.conversas.modelos import Conversa, Mensagem
 from app.plataforma.config import config
-from testes.conftest import ADMIN, cria_cliente_e_agente
+from testes.conftest import ADMIN, BOT_ID, CONEXAO_EXEMPLO, cria_cliente_e_agente, envia_webhook, payload_chatwoot
 from testes.test_handoff import ModeloQueTransfere
 
 
@@ -157,14 +157,89 @@ async def test_conversa_do_terminal_isolada_por_cliente(http, canal, fila) -> No
     assert (outro_cliente.status_code, outro_agente.status_code, manda_na_alheia.status_code) == (404, 404, 404)
 
 
-async def test_terminal_so_com_agente_nativo(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+async def test_agente_do_chatwoot_conversa_no_terminal_sem_passar_pelo_chatwoot(http, canal, fila, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: _responde("Oi do teste"))
     chatwoot = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
 
-    resp = await http.post(_terminal(chatwoot), json={"texto": "oi"}, headers=ADMIN)
+    enviada = await _manda(http, chatwoot, "oi")
+    assert await _roda_turno(fila, redis) == "respondido"
+
+    assert [m["texto"] for m in (await _le(http, chatwoot, enviada["conversa"]))["mensagens"]] == ["Oi do teste"]
+    assert canal.enviadas == [] and canal.digitando_chamadas == []
+
+
+async def test_terminal_nao_le_nem_escreve_em_conversa_do_canal(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+    chatwoot = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    await envia_webhook(http, chatwoot["token"], payload_chatwoot(conversa=10))
+
+    leitura = await http.get(f"{_terminal(chatwoot)}/10", headers=ADMIN)
+    escrita = await http.post(_terminal(chatwoot), json={"texto": "oi", "conversa": "10"}, headers=ADMIN)
     vazia = await http.post(_terminal(chatwoot), json={"texto": "   "}, headers=ADMIN)
     sem_chave = await http.post(_terminal(chatwoot), json={"texto": "oi"})
 
-    assert (resp.status_code, vazia.status_code, sem_chave.status_code) == (422, 422, 401)
+    assert (leitura.status_code, escrita.status_code, vazia.status_code, sem_chave.status_code) == (404, 404, 422, 401)
+
+
+async def test_leitura_traz_o_ultimo_turno(http, fila, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: _responde("Oi!"))
+    agente = await cria_nativo(http)
+    enviada = await _manda(http, agente, "oi")
+    assert (await _le(http, agente, enviada["conversa"]))["turno"] is None
+
+    await _roda_turno(fila, redis)
+
+    turno_lido = (await _le(http, agente, enviada["conversa"]))["turno"]
+    assert turno_lido["modelo"] == "openai:gpt-5.5" and turno_lido["erro"] is None
+    assert turno_lido["ferramentas"] == [] and turno_lido["tokens_entrada"] > 0
+
+
+# ── Conectar a um canal depois ────────────────────────────────────────────
+
+
+def _canal(agente: dict[str, Any]) -> str:
+    return f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}/canal"
+
+
+async def test_nativo_conectado_ao_chatwoot_atende_pelo_canal_e_segue_no_terminal(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: _responde("Oi!"))
+    agente = await cria_nativo(http, buffer_segundos=2)
+    teste = await _manda(http, agente, "oi antes de conectar")
+
+    resp = await http.post(
+        _canal(agente),
+        json={"canal": "chatwoot", "conexao": CONEXAO_EXEMPLO, "handoff_destino": {"tipo": "caixa"}},
+        headers=ADMIN,
+    )
+
+    assert resp.status_code == 200, resp.text
+    conectado = resp.json()
+    assert conectado["canal"] == "chatwoot" and conectado["buffer_segundos"] == 2
+    assert conectado["url_webhook"] == agente["url_webhook"].replace("/nativo/", "/chatwoot/")
+    assert conectado["credenciais"]["bot_id"] == BOT_ID and conectado["handoff_destino"] == {"tipo": "caixa", "id": None, "nome": None}
+
+    token = conectado["url_webhook"].rsplit("/", 1)[1]
+    assert (await envia_webhook(http, token, payload_chatwoot(conversa=77))).status_code == 200
+    assert await _roda_turno(fila, redis) == "respondido"
+    assert canal.enviadas == [("77", "Oi!")]
+
+    await _manda(http, conectado, "oi depois", teste["conversa"])
+    assert await _roda_turno(fila, redis) == "respondido"
+    assert [m["texto"] for m in (await _le(http, conectado, teste["conversa"]))["mensagens"]] == ["Oi!"]
+    assert len(canal.enviadas) == 1
+
+
+async def test_conectar_pede_token_e_recusa_agente_que_ja_tem_canal(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+    nativo = await cria_nativo(http)
+    chatwoot = await cria_cliente_e_agente(http, "Padaria Pão Quente", "Bia")
+    sem_token = {k: v for k, v in CONEXAO_EXEMPLO.items() if k != "token_admin"}
+    await http.delete("/admin/canais/chatwoot/acessos", params={"endereco": CONEXAO_EXEMPLO["url"]}, headers=ADMIN)
+
+    pede_token = await http.post(_canal(nativo), json={"canal": "chatwoot", "conexao": sem_token}, headers=ADMIN)
+    ja_tem = await http.post(_canal(chatwoot), json={"canal": "chatwoot", "conexao": CONEXAO_EXEMPLO}, headers=ADMIN)
+    para_nativo = await http.post(_canal(nativo), json={"canal": "nativo"}, headers=ADMIN)
+
+    assert (pede_token.status_code, ja_tem.status_code, para_nativo.status_code) == (428, 409, 422)
+    assert (await http.get(f"/admin/clientes/{nativo['cliente_id']}/agentes/{nativo['id']}", headers=ADMIN)).json()["canal"] == "nativo"
 
 
 async def test_nativo_sem_webhook(http, fila) -> None:  # type: ignore[no-untyped-def]

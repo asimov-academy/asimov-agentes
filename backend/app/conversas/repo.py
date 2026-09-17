@@ -54,6 +54,7 @@ async def conversa_do_canal(
     agente_id: uuid.UUID,
     contato_id: uuid.UUID,
     id_externo: str,
+    canal: str,
 ) -> Conversa:
     instrucao = (
         insert(Conversa)
@@ -63,6 +64,7 @@ async def conversa_do_canal(
             agente_id=agente_id,
             contato_id=contato_id,
             id_externo=id_externo,
+            canal=canal,
             status="agente",
             criado_em=agora(),
             atualizado_em=agora(),

@@ -10,7 +10,7 @@ ajuda() {
   printf '\n  %sasimov%s %sv%s%s\n\n' "$NEGRITO" "$NORMAL" "$CINZA" "$VERSAO" "$NORMAL"
   printf '    %sasimov%s        abre o menu\n' "$CIANO" "$NORMAL"
   printf '    %snovo-agente%s   cria um agente no Chatwoot ou nativo\n' "$CIANO" "$NORMAL"
-  printf '    %sconversar%s     conversa com um agente nativo aqui no terminal\n' "$CIANO" "$NORMAL"
+  printf '    %sconversar%s     conversa de teste com um agente aqui no terminal\n' "$CIANO" "$NORMAL"
   printf '    %sagentes%s       lista os agentes, empresas e webhooks\n' "$CIANO" "$NORMAL"
   printf '    %seditar%s        muda nome, buffer, mensagens, modelos ou handoff de um agente\n' "$CIANO" "$NORMAL"
   printf '    %sremover%s       remove um agente\n' "$CIANO" "$NORMAL"

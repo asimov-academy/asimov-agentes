@@ -20,6 +20,15 @@ async def grava_turno(sessao: AsyncSession, turno: Turno) -> None:
     await sessao.flush()
 
 
+async def ultimo_turno(sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID) -> Turno | None:
+    return await sessao.scalar(
+        select(Turno)
+        .where(Turno.cliente_id == cliente_id, Turno.conversa_id == conversa_id, Turno.funcao == "resposta")
+        .order_by(Turno.criado_em.desc())
+        .limit(1)
+    )
+
+
 async def registra_falha(
     tipo: str,
     detalhe: dict[str, Any] | None = None,

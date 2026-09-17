@@ -7,7 +7,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 ## O que você ganha
 
 - **Agente respondendo no Chatwoot**: o setup cria o bot e liga na caixa de entrada sozinho.
-- **Agente nativo para testar**: sem canal nenhum, você conversa com ele no terminal com o mesmo buffer, digitando, ferramentas, consumo e handoff.
+- **Agente nativo para testar**: sem canal nenhum, você conversa com ele no terminal com o mesmo buffer, digitando, ferramentas, consumo e handoff, e liga num canal quando estiver pronto.
 - **Atendimento com cara de gente**: espera o contato terminar de mandar as mensagens (buffer), mostra "digitando" e responde em mensagens curtas.
 - **Entende áudio, imagem e PDF**: transcreve áudio, lê foto de documento e PDF, e não processa de novo o mesmo arquivo reenviado.
 - **Passa para uma pessoa**: quando o contato pede, o agente transfere a conversa no Chatwoot para o atendente ou time escolhido, com um resumo em nota privada. Devolver a conversa para Pendente faz o agente voltar.
@@ -49,7 +49,7 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde. Com um a
 |---|---|
 | `asimov` | Menu: criar, listar, editar e remover agentes, ver consumo e falhas |
 | `asimov novo-agente` | Cria outro agente no Chatwoot ou nativo, para empresa nova ou existente |
-| `asimov conversar` | Conversa com um agente nativo aqui no terminal, para testar prompt e ferramentas |
+| `asimov conversar` | Conversa de teste com qualquer agente aqui no terminal, mostrando cada etapa, tokens, custo e ferramentas; nada vai para o canal |
 | `asimov agentes` | Lista agentes, empresas e webhooks |
 | `asimov editar` | Muda nome, tempo de buffer, mensagens por resposta, modelos ou handoff de um agente |
 | `asimov remover` | Remove um agente e o bot dele no Chatwoot |

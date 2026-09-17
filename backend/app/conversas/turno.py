@@ -21,7 +21,6 @@ import structlog
 
 from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
-from app.canais.registro import obter_canal
 from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import buffer, repo
@@ -104,13 +103,12 @@ async def _turno(
         if agente is None or not agente.ativo:
             return "agente_inativo"
 
-        canal = obter_canal(agente.canal)
-        credenciais = agentes_servico.credenciais(agente)
+        canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
         if not await canal.agente_pode_falar(credenciais, conversa.id_externo):
             return "humano_conduz"
         # O canal diz que o agente conduz: handoff ainda aberto é devolução que não chegou.
         if conversa.status == "humano" and await handoff.retomar(
-            s, cliente_id, conversa_id, agente.canal
+            s, cliente_id, conversa_id, conversa.canal
         ):
             await s.commit()
 

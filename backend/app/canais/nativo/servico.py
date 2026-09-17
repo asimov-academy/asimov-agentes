@@ -1,7 +1,9 @@
-"""Conversa do operador com um agente nativo, pelo terminal.
+"""Conversa de teste do operador com um agente, pelo terminal.
 
-Mandar grava a mensagem e agenda o buffer, como um webhook: a IA roda só no worker. Ler devolve o que
-o agente mandou desde a última leitura, se está digitando e o handoff aberto.
+Vale para agente de qualquer canal: a conversa é criada no canal nativo e o turno responde por ele,
+sem passar pelo canal do agente. Mandar grava a mensagem e agenda o buffer, como um webhook: a IA roda
+só no worker. Ler devolve o que o agente mandou desde a última leitura, digitando, turno em andamento,
+o último turno (tempo, tokens, custo, ferramentas) e o handoff aberto.
 """
 
 import uuid
@@ -14,6 +16,7 @@ from app.agentes import repo as agentes_repo
 from app.agentes.modelos import Agente
 from app.canais.nativo import memoria
 from app.canais.nativo.canal import ID_CONTATO, Nativo
+from app.consumo import repo as consumo_repo
 from app.conversas import buffer
 from app.conversas import repo as conversas_repo
 from app.conversas.modelos import Conversa, Mensagem
@@ -21,10 +24,6 @@ from app.handoff import repo as handoff_repo
 
 
 class NaoEncontrado(LookupError):
-    pass
-
-
-class NaoENativo(ValueError):
     pass
 
 
@@ -43,6 +42,8 @@ class Leitura:
     digitando: bool
     respondendo: bool
     """Turno em andamento: resposta, handoff ou resumo ainda podem chegar."""
+    turno: dict[str, Any] | None
+    """Último turno de resposta da conversa."""
     handoff: dict[str, Any] | None
 
 
@@ -50,8 +51,6 @@ async def _agente(sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.U
     agente = await agentes_repo.obter(sessao, cliente_id, agente_id)
     if agente is None or not agente.ativo:
         raise NaoEncontrado("agente não encontrado")
-    if agente.canal != Nativo.nome:
-        raise NaoENativo("só agentes nativos conversam no terminal")
     return agente
 
 
@@ -59,7 +58,8 @@ async def _conversa(
     sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID, conversa: str
 ) -> Conversa:
     encontrada = await conversas_repo.conversa_por_externo(sessao, cliente_id, agente_id, conversa)
-    if encontrada is None:
+    # Só conversa do terminal: nunca escrever numa conversa real do canal do agente.
+    if encontrada is None or encontrada.canal != Nativo.nome:
         raise NaoEncontrado("conversa não encontrada")
     return encontrada
 
@@ -79,7 +79,7 @@ async def enviar(
             sessao, cliente_id, agente.id, ID_CONTATO, "Operador no terminal", None
         )
         atual = await conversas_repo.conversa_do_canal(
-            sessao, cliente_id, agente.id, contato.id, uuid.uuid4().hex
+            sessao, cliente_id, agente.id, contato.id, uuid.uuid4().hex, Nativo.nome
         )
     else:
         atual = await _conversa(sessao, cliente_id, agente.id, conversa)
@@ -113,11 +113,26 @@ async def ler(
         respondendo = await buffer.turno_em_andamento(r, atual.id)
     mensagens = await memoria.le_saida(atual.id_externo, depois)
     handoff = await handoff_repo.aberto(sessao, cliente_id, atual.id)
+    turno = await consumo_repo.ultimo_turno(sessao, cliente_id, atual.id)
     return Leitura(
         mensagens=mensagens,
         proxima=depois + len(mensagens),
         digitando=await memoria.esta_digitando(atual.id_externo),
         respondendo=respondendo,
+        turno=(
+            {
+                "id": str(turno.id),
+                "modelo": turno.modelo,
+                "latencia_ms": turno.latencia_ms,
+                "tokens_entrada": turno.tokens_entrada,
+                "tokens_saida": turno.tokens_saida,
+                "custo_estimado": str(turno.custo_estimado) if turno.custo_estimado is not None else None,
+                "ferramentas": turno.tools_chamadas or [],
+                "erro": turno.erro,
+            }
+            if turno is not None
+            else None
+        ),
         handoff=(
             {"motivo": handoff.motivo, "resumo": handoff.resumo, "codigo": handoff.codigo}
             if handoff is not None

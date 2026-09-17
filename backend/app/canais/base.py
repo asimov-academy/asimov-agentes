@@ -81,6 +81,9 @@ class Canal(Protocol):
     """True quando o agente volta sozinho depois de `retomada_automatica_horas` (canais diretos)."""
     pede_acesso_do_operador: bool
     """False quando criar, renomear e remover não precisam de token do operador (nativo)."""
+    externo: bool
+    """True quando o agente atende contatos de fora por este canal. Agente em canal que não é
+    externo (nativo) pode ser conectado a um externo depois."""
 
     def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Só a parte secreta do acesso do operador (no Chatwoot, o token de administrador), ou {}."""

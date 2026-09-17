@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
-from app.canais.registro import obter_canal
 from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import repo as conversas_repo
@@ -160,9 +159,8 @@ async def retomar_pelo_operador(
     agente = await agentes_repo.obter(sessao, cliente_id, conversa.agente_id)
     if agente is None:
         raise ConversaNaoEncontrada("o agente desta conversa foi removido")
-    await obter_canal(agente.canal).devolver_ao_agente(
-        agentes_servico.credenciais(agente), conversa.id_externo
-    )
+    canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
+    await canal.devolver_ao_agente(credenciais, conversa.id_externo)
     fechou = await retomar(sessao, cliente_id, conversa_id, "operador")
     await sessao.commit()
     return fechou

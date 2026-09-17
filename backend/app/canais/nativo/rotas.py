@@ -28,13 +28,8 @@ class LeituraSaida(BaseModel):
     proxima: int
     digitando: bool
     respondendo: bool
+    turno: dict[str, Any] | None
     handoff: dict[str, Any] | None
-
-
-def _erro(erro: Exception) -> HTTPException:
-    if isinstance(erro, servico.NaoENativo):
-        return HTTPException(status_code=422, detail=str(erro))
-    return HTTPException(status_code=404, detail=str(erro))
 
 
 @router.post("/clientes/{cliente_id}/agentes/{agente_id}/terminal", response_model=EnviadaSaida)
@@ -50,8 +45,8 @@ async def enviar(
         raise HTTPException(status_code=422, detail="mensagem vazia")
     try:
         enviada = await servico.enviar(s, request.app.state.fila, cliente_id, agente_id, texto, dados.conversa)
-    except (servico.NaoEncontrado, servico.NaoENativo) as erro:
-        raise _erro(erro) from erro
+    except servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
     return EnviadaSaida(conversa=enviada.conversa, conversa_id=enviada.conversa_id, agendada=enviada.agendada)
 
 
@@ -65,12 +60,13 @@ async def ler(
 ) -> LeituraSaida:
     try:
         leitura = await servico.ler(s, cliente_id, agente_id, conversa, depois)
-    except (servico.NaoEncontrado, servico.NaoENativo) as erro:
-        raise _erro(erro) from erro
+    except servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
     return LeituraSaida(
         mensagens=leitura.mensagens,
         proxima=leitura.proxima,
         digitando=leitura.digitando,
         respondendo=leitura.respondendo,
+        turno=leitura.turno,
         handoff=leitura.handoff,
     )

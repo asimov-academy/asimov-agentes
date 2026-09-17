@@ -109,7 +109,7 @@ async def receber(
                 evento.contato_telefone,
             )
             conversa = await repo.conversa_do_canal(
-                s, agente.cliente_id, agente.id, contato.id, evento.conversa_externa
+                s, agente.cliente_id, agente.id, contato.id, evento.conversa_externa, agente.canal
             )
         else:
             conversa = await repo.conversa_por_externo(

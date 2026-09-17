@@ -263,33 +263,40 @@ escolhe_ferramentas() {
   printf -v "$__var" '%s' "$__escolhidas"
 }
 
-# Chatwoot → conta → caixa → handoff → nome → empresa → cria.
-fluxo_agente_chatwoot() {
-  local conta_i caixa_i conta_id conta_nome caixa_id caixas nome corpo
-  AGENTE_CANAL=chatwoot
+# escolhe_caixa_chatwoot: URL → conta → caixa → handoff. Define CHATWOOT_CONEXAO (JSON), CHATWOOT_CONTA_NOME,
+# AGENTE_CAIXA e HANDOFF_DESTINO.
+escolhe_caixa_chatwoot() {
+  local conta_i caixa_i conta_id caixa_id caixas
   acessa_chatwoot
 
   escolha_da_lista conta_i "Conta do Chatwoot" "$(jq -c '[.contas[].nome]' <<<"$CHATWOOT_CONTAS")"
   conta_id=$(jq -r ".contas[$conta_i].id" <<<"$CHATWOOT_CONTAS")
-  conta_nome=$(jq -r ".contas[$conta_i].nome" <<<"$CHATWOOT_CONTAS")
+  CHATWOOT_CONTA_NOME=$(jq -r ".contas[$conta_i].nome" <<<"$CHATWOOT_CONTAS")
   caixas=$(jq -c ".contas[$conta_i].caixas" <<<"$CHATWOOT_CONTAS")
   if [ "$(jq 'length' <<<"$caixas")" -eq 0 ]; then
-    erro_fatal "A conta $conta_nome não tem caixa de entrada" "Crie a caixa no Chatwoot e rode o comando de novo."
+    erro_fatal "A conta $CHATWOOT_CONTA_NOME não tem caixa de entrada" "Crie a caixa no Chatwoot e rode o comando de novo."
   fi
   escolha_da_lista caixa_i "Caixa de entrada" "$(jq -c '[.[].nome]' <<<"$caixas")"
   caixa_id=$(jq -r ".[$caixa_i].id" <<<"$caixas")
   AGENTE_CAIXA=$(jq -r ".[$caixa_i].nome" <<<"$caixas")
   escolhe_destino_handoff "$(jq -c ".contas[$conta_i]" <<<"$CHATWOOT_CONTAS")"
+  CHATWOOT_CONEXAO=$(jq -n --arg url "$CHATWOOT_URL" --argjson conta "$conta_id" --argjson caixa "$caixa_id" \
+    '{url: $url, account_id: $conta, inbox_ids: [$caixa]}')
+}
+
+# Chatwoot → conta → caixa → handoff → nome → empresa → cria.
+fluxo_agente_chatwoot() {
+  local nome corpo
+  AGENTE_CANAL=chatwoot
+  escolhe_caixa_chatwoot
 
   echo
   pergunta nome "Nome do agente"
-  escolhe_empresa "$conta_nome"
+  escolhe_empresa "$CHATWOOT_CONTA_NOME"
 
   while true; do
-    corpo=$(jq -n --arg nome "$nome" --arg url "$CHATWOOT_URL" \
-      --argjson conta "$conta_id" --argjson caixa "$caixa_id" --argjson destino "$HANDOFF_DESTINO" \
-      '{nome: $nome, canal: "chatwoot", handoff_destino: $destino,
-        conexao: {url: $url, account_id: $conta, inbox_ids: [$caixa]}}')
+    corpo=$(jq -n --arg nome "$nome" --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
+      '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando o bot no Chatwoot…"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
@@ -350,7 +357,7 @@ lista_agentes() {
       printf '    %s▲%s %s %spausado%s' "$AMARELO" "$NORMAL" "$(destaque "$nome")" "$AMARELO" "$NORMAL"
     fi
     if [ "$canal" = nativo ]; then
-      printf '  %snativo · %s · conversa: asimov conversar%s\n' "$CINZA" "$modelo" "$NORMAL"
+      printf '  %snativo · %s · sem canal: asimov conversar, ou asimov editar para conectar%s\n' "$CINZA" "$modelo" "$NORMAL"
       continue
     fi
     printf '  %s%s · %s · handoff: %s%s\n' "$CINZA" "$canal" "$modelo" "$(nome_do_destino "$destino")" "$NORMAL"

@@ -4,10 +4,10 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.8.1` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes de ritmo, ferramentas e modelo na criação.
+- `v0.8.2` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal e feedback de etapa e turno na conversa.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 116 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 120 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
 
 ## Fases
 
@@ -17,7 +17,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.1), falta validar na VPS; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.2), falta validar na VPS; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -40,6 +40,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ### Plataforma
 
+- Conversa de teste no terminal para agente de qualquer canal (`Conversa.canal` nativo; `canal_da_conversa`). Agente nativo pode ser conectado depois a um canal externo (`POST .../canal`, hoje só Chatwoot).
 - Canal nativo (`canais/nativo/`): sem conexão nem webhook; rotas `POST` e `GET .../terminal` em `canais/nativo/rotas.py`; envio, digitando e humano conduzindo no Redis (`memoria.py`); a leitura diz se o turno ainda está em andamento. Handoff mostra motivo, resumo e código no terminal e `/retomar` usa a retomada do operador.
 - Canal Chatwoot (`canais/chatwoot/`): cria o Agent Bot e confere na caixa que ele ficou ligado; aceita evento de qualquer caixa em que o bot esteja ligado (a assinatura prova o bot).
 - Turno (`conversas/turno.py`): buffer por conversa, lock de 240 s, mídia antes do modelo, resposta descartada se chegar mensagem nova antes do envio, digitando com o tempo de uma pessoa digitar (6 caracteres/s, variação de 15%, teto de 20 s por mensagem, soma até 90 s; editável por agente).
@@ -48,11 +49,11 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Ferramentas por agente (`ia/ferramentas.py`): calculadora (sem `eval`) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), ligadas por padrão. OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
-- Migrações até `0007` (acesso ao canal; digitação e ferramentas do agente).
+- Migrações até `0008` (canal da conversa).
 
 ## Pendências conhecidas
 
-- v0.8.1 não conferida na VPS (na v0.8.0 o operador criou e conversou, mas lento pelo ritmo padrão): criar agente nativo pelo menu com ritmo rápido e conversar com digitando, ferramentas, consumo e handoff (critério 1 da fase 5).
+- v0.8.2 não conferida na VPS: conectar um nativo ao Chatwoot e ver a linha de etapa e o resumo do turno. v0.8.1 (na v0.8.0 o operador criou e conversou, mas lento pelo ritmo padrão): criar agente nativo pelo menu com ritmo rápido e conversar com digitando, ferramentas, consumo e handoff (critério 1 da fase 5).
 - v0.7.0 ainda não conferida na VPS com modelo real: busca na web, calculadora e mídia depois da troca da OpenAI para a Responses.
 - `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0 para o agente não citar a mecânica ("recebi a transcrição"): não conferido na VPS.
 - Causa de o Chatwoot não ligar o bot: era o Enter duplo escolhendo a primeira caixa (v0.6.3). Se voltar a acontecer, a criação agora falha com mensagem clara.
@@ -64,6 +65,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo (feito, v0.8.0), WAHA, WhatsApp oficial**, uma versão por parte, com validação na VPS entre elas.
 
 O que reaproveitar:
+- WAHA e oficial entram também em "Conectar a um canal" (`conecta_canal` em `menu.sh`, hoje fixo no Chatwoot) e precisam de `externo = True`.
 - Contrato do canal em `canais/base.py` (`pede_acesso_do_operador`, `descobrir`, `conectar`, `desconectar`, `renomear`, `verificar`, `interpretar`, `agente_pode_falar`, `digitando`, `enviar_texto`, `valida_destino_handoff`, `transferir`, `devolver_ao_agente`, `baixar_midia`, `retoma_por_tempo`, `acesso_do_operador`, `endereco`) e registro em `canais/registro.py`. O webhook genérico `POST /webhook/{canal}/{token}` já serve para a WAHA.
 - `Handoff` já tem `codigo` e `retomar_em`; falta o job `retomada_automatica` no `worker.py` (hoje só `processar_turno`).
 - No menu: `com_voltar`, `api_com_token`, `escolha`, `marca`, `pergunta_numero`, `pausa`. A escolha do canal está em `fluxo_novo_agente` (`agente.sh`): WAHA e oficial entram como opções novas ali; `escolhe_agente [canal]` filtra por canal; editar monta as opções por canal (`fluxo_editar_agente`).

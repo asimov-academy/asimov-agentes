@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Conectar agente nativo a um canal e feedback na conversa (v0.8.2)
+
+- **Pedido do operador: ligar num canal, depois, o agente criado sem canal.** "Conectar a um canal" na ficha de edição do nativo e `POST .../agentes/{id}/canal`. Mantém prompt, modelos, ajustes, conversas e o token do webhook. Só sai do nativo: trocar entre canais externos continua sendo remover e criar de novo. Hoje o único canal externo é o Chatwoot; WAHA e oficial entram na mesma tela. O contrato do canal ganhou `externo`.
+- **A conversa de teste do terminal passou a ser da conversa, não do agente.** `Conversa.canal` (migração `0008`, conversas antigas com o canal do agente) e `canal_da_conversa` em `agentes/servico.py`: o turno, o handoff e a retomada usam o canal da conversa. Assim o agente conectado continua conversando no terminal, e qualquer agente (Chatwoot incluso) pode ser testado lá sem mandar nada ao canal. O terminal só lê e escreve em conversa do nativo: nunca numa conversa real do canal. Substitui "só agentes nativos conversam no terminal" da v0.8.0.
+- **Pedido do operador: mais feedback do agente funcionando.** Linha animada com a etapa, derivada do que a API já dava (buffer contado no terminal, `respondendo`, `digitando`, mensagens) e o resumo do último turno na leitura (modelo, latência, tokens, custo, ferramentas, erro). Ferramenta em tempo real exigiria streaming do modelo; fica no resumo do fim do turno.
+- **`tools_chamadas` inclui a busca nativa do provedor** (`BaseToolCallPart`); antes só as tools nossas apareciam.
+
 ## 2026-09-17: Ajustes na criação do agente nativo (v0.8.1)
 
 - **Achado do operador na VPS**: o nativo era criado só com nome e empresa e herdava o buffer de 8 s e a digitação de uma pessoa (até 20 s por mensagem, 90 s na resposta). No terminal isso parecia travado.

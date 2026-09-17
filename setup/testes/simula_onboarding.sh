@@ -42,7 +42,9 @@ api() {
     "GET /admin/consumo?dias=30") API_STATUS=200; API_RESPOSTA='{"agentes":[{"cliente_id":"c1","cliente":"Loja Exemplo","agente_id":"a1","agente":"Luiz","turnos":480,"chamadas":530,"tokens_entrada":3100000,"tokens_saida":52000,"custo_estimado":"12.805","sem_custo":3},{"cliente_id":"c2","cliente":"Padaria Pão Quente","agente_id":"a2","agente":"Bia","turnos":40,"chamadas":40,"tokens_entrada":300,"tokens_saida":90,"custo_estimado":"0.05","sem_custo":0}],"falhas":[{"criado_em":"2026-09-16T21:05:08.123456Z","tipo":"envio_falhou","detalhe":{"erro":"HTTPStatusError(500)"},"cliente":"Loja Exemplo","agente":"Luiz"},{"criado_em":"2026-09-15T08:00:00Z","tipo":"webhook_token_desconhecido","detalhe":{"canal":"chatwoot"},"cliente":null,"agente":null}]}' ;;
     "POST /admin/clientes/c1/agentes") API_STATUS=201; API_RESPOSTA='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"nativo","ativo":true,"buffer_segundos":2,"arquivo_prompt":"loja-exemplo/ana/persona.md","credenciais":{}}'; echo "$3" >"$DIR/criado_nativo" ;;
     "POST /admin/clientes/c1/agentes/a3/terminal") API_STATUS=200; API_RESPOSTA='{"conversa":"k1","conversa_id":"u1","agendada":true}' ;;
-    "GET /admin/clientes/c1/agentes/a3/terminal/k1?depois=0") API_STATUS=200; API_RESPOSTA='{"mensagens":[{"id":"m1","texto":"Oi! Sou a Ana.\nComo posso ajudar?"}],"proxima":1,"digitando":false,"respondendo":false,"handoff":{"motivo":"contato pediu uma pessoa","resumo":"Quer falar com alguém.","codigo":"K7M2QX"}}' ;;
+    "GET /admin/clientes/c1/agentes/a3/terminal/k1?depois=0") API_STATUS=200; API_RESPOSTA='{"mensagens":[{"id":"m1","texto":"Oi! Sou a Ana.\nComo posso ajudar?"}],"proxima":1,"digitando":false,"respondendo":false,"turno":{"id":"t1","modelo":"openai:gpt-5.5","latencia_ms":3140,"tokens_entrada":1180,"tokens_saida":64,"custo_estimado":"0.002100","ferramentas":["web_search","calcular"],"erro":null},"handoff":{"motivo":"contato pediu uma pessoa","resumo":"Quer falar com alguém.","codigo":"K7M2QX"}}' ;;
+    "POST /admin/clientes/c1/agentes/a3/canal") API_STATUS=200; API_RESPOSTA='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"chatwoot","buffer_segundos":2,"digitacao_maximo_segundos":1}'; echo "$3" >"$DIR/conectado" ;;
+    "PATCH /admin/clientes/c1/agentes/a3") API_STATUS=200; API_RESPOSTA=$(jq -c --argjson m "$3" '. + $m' <<<'{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"chatwoot"}') ;;
     *) API_STATUS=201; API_RESPOSTA='{"id":"a1","url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/x"}' ;;
   esac
 }
@@ -57,3 +59,9 @@ tela_handoff_pendente
 # Menu: criar agente nativo e conversar, conversar sem agente nativo, editar buffer, ferramentas e modelo do resumo, remover agente e empresa, consumo, esquecer token, sair.
 menu_operador
 jq -c . "$DIR/criado_nativo"
+# Conectar o nativo criado ao Chatwoot pela ficha de edição.
+AGENTE='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"nativo","buffer_segundos":2,"digitacao_maximo_segundos":1}'
+com_voltar conecta_canal
+printf '%s\n' "$RESULTADO"
+jq -c . "$DIR/conectado"
+jq -c . <<<"$AGENTE"
