@@ -90,7 +90,7 @@ async def test_contato_pede_humano_e_a_conversa_vai_atribuida_com_resumo(http, c
     assert [t for _, t in canal.enviadas] == ["Vou chamar alguém da equipe"]
     [(conversa, destino, nota)] = canal.transferencias
     assert conversa == "1532" and destino == DESTINO
-    assert "Conversa transferida por Ana" in nota and "contato pediu para falar com uma pessoa" in nota and RESUMO in nota
+    assert nota == f"Motivo: contato pediu para falar com uma pessoa\n{RESUMO}"
     [registro] = await _handoffs(sessao)
     assert registro.resumo == RESUMO and registro.destino == DESTINO and registro.retomado_em is None
     assert len(registro.codigo) == 6

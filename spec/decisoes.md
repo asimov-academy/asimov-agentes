@@ -2,6 +2,10 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Nota de handoff curta (v0.4.1)
+
+- **Primeiro teste na VPS: nota longa demais** para o atendente ler no meio da conversa. Agora é só `Motivo:` e o resumo, sem título nem instrução de devolver. O prompt padrão `resumo_handoff.md` pede até 2 linhas e não repete o motivo. Agentes já criados mantêm o próprio arquivo: o setup nunca sobrescreve prompt.
+
 ## 2026-09-16: Handoff no Chatwoot (fase 3, v0.4.0)
 
 - **A tool só registra o pedido; a transferência roda no fim do turno, depois do envio.** Se o contato mandar mensagem nova antes do envio, resposta e pedido são descartados juntos e o turno seguinte decide de novo. Transferir antes de enviar deixaria o contato sem o aviso de que alguém vai continuar. Mesma regra para tools futuras que alteram estado. spec/arquitetura.md, Tools padrão.
