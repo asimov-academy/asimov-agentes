@@ -99,9 +99,13 @@ TIPOS_POR_MIME = (("audio/", "audio"), ("image/", "imagem"), ("video/", "video")
 
 
 def _anexos(mensagem: dict[str, Any]) -> tuple[Anexo, ...]:
-    """A WAHA baixa o arquivo e devolve a URL dele em `media.url` (serviço local, com a chave)."""
+    """A WAHA baixa o arquivo e devolve a URL dele em `media.url` (serviço local, com a chave).
+
+    O que vale é haver URL: `hasMedia` nem sempre vem, e mídia com `hasMedia` e sem URL é arquivo
+    que a WAHA não baixou (download desligado ou falho) e que ninguém tem como ler.
+    """
     midia = mensagem.get("media")
-    if not mensagem.get("hasMedia") or not isinstance(midia, dict):
+    if not isinstance(midia, dict):
         return ()
     url = midia.get("url")
     if not isinstance(url, str) or not url.startswith(("http://", "https://")):
@@ -391,7 +395,10 @@ class Waha:
     async def baixar_midia(
         self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int
     ) -> ArquivoBaixado:
-        """A URL é do serviço de arquivos da própria WAHA: vai com a chave da instalação."""
+        """A URL é do serviço de arquivos da própria WAHA: vai com a chave da instalação.
+
+        Só a chave: pedir `Accept: application/json` aqui faz a WAHA recusar o arquivo (v0.11.2).
+        """
         partes: list[bytes] = []
         total = 0
         try:
@@ -406,6 +413,10 @@ class Waha:
                             raise ArquivoGrandeDemais(f"mais de {limite_bytes} bytes")
                         partes.append(parte)
                     mime = resposta.headers.get("content-type", "").split(";")[0].strip().lower()
+        except httpx.HTTPStatusError as erro:
+            raise CredencialInvalida(
+                f"a WAHA recusou o arquivo: HTTP {erro.response.status_code}"
+            ) from erro
         except httpx.HTTPError as erro:
             raise CredencialInvalida(f"não consegui baixar o arquivo na WAHA ({type(erro).__name__})") from erro
         if not mime or mime == "application/octet-stream":

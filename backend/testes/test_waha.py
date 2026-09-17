@@ -606,3 +606,10 @@ async def test_numero_com_e_sem_o_nono_digito_e_o_mesmo(http, fila, waha) -> Non
     await manda(http, agente, waha, payload_waha("oi", de="5551986389892@c.us"))
 
     assert len(fila.jobs) == 1
+
+
+def test_baixar_arquivo_nao_pede_json() -> None:
+    """Regressão da v0.11.2: o `Accept: application/json` do QR code foi parar no download e a
+    WAHA recusava o arquivo, deixando todo áudio e imagem como `falhou`."""
+    assert "Accept" not in api.cabecalho()
+    assert api.cabecalho_json()["Accept"] == "application/json"

@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Áudio não era baixado da WAHA (v0.11.2)
+
+- **Achado no teste de ponta a ponta**: o agente respondeu texto, mas o áudio virou `midia_download_falhou` e o contato recebeu o pedido para escrever. Causa: quando o QR code em texto entrou (v0.9.0), o `Accept: application/json` foi para o cabeçalho compartilhado das chamadas à WAHA, e ele acompanhava também o download do arquivo, que é binário.
+- **Cabeçalhos separados**: `cabecalho()` só com a chave, para baixar arquivo; `cabecalho_json()` para a API, onde o `Accept` é justamente o que faz o QR code vir em texto. Teste de regressão nos dois.
+- **Erro de download agora diz o status HTTP** (`a WAHA recusou o arquivo: HTTP 406`), que é o que faltava para achar isso em minutos em vez de por eliminação.
+- **`hasMedia` deixou de ser exigido** para reconhecer o anexo: o que vale é a URL do arquivo. `hasMedia` nem sempre vem, e `hasMedia` sem URL é arquivo que a WAHA não baixou.
+
 ## 2026-09-17: Número escondido atrás de @lid barrava quem podia falar (v0.11.1)
 
 - **Achado no primeiro teste de ponta a ponta**: o agente não respondeu a um número liberado na lista. O log mostrou `contato fora da lista do agente`, e o log da WAHA mostrou a razão: o WhatsApp entrega a conversa endereçada por `@lid` (id oculto), não pelo telefone. A comparação não tinha como bater.
