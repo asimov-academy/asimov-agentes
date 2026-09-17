@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Raciocínio baixo nos modelos da OpenAI que vêm sem ele (v0.8.5)
+
+- **Achado na VPS, mesmo com a v0.8.4**: o gpt-5.1 buscava a cotação e respondia que não conseguia ver o valor em tempo real, ou prometia "já te respondo" sem dar o valor.
+- **Teste na VPS sem enviar nada** (turno refeito com o histórico real e com uma conversa limpa em que o agente já tinha recusado antes), instrução nova da busca nos dois casos: com o raciocínio padrão do gpt-5.1 (desligado), não deu o valor em nenhum e chegou a chamar a calculadora 4 vezes com "1+1" (32 mil tokens); com raciocínio `low`, buscou e respondeu o valor nos dois. Trocar só a instrução, sem raciocínio, também falhou nas 2 rodadas com o histórico real.
+- **`OPENAI_RACIOCINIO`** (padrão `low`): vale só para modelo da OpenAI que aceita raciocínio e vem com ele desligado (perfil da PydanticAI). Os que já raciocinam (gpt-5, gpt-5.5, mini) e os que não aceitam (gpt-4o, gpt-4.1) ficam como estão; `none` mantém o padrão. Configuração, não nome de modelo no código. Custa uns segundos a mais por turno.
+- **Instrução da busca**: responder com o que encontrou e nunca dizer que não consegue ver informação em tempo real, mesmo que tenha dito antes na conversa. **Calculadora**: só quando houver conta de verdade.
+
 ## 2026-09-17: Histórico com o handoff e teto por turno (v0.8.4)
 
 - **Achado na VPS**: numa conversa do Chatwoot que já tinha passado por handoff e sido devolvida, o contato pediu a cotação do dólar. O gpt-5.1 buscou (a v0.8.3 funcionou), mas transferiu de novo com o motivo "já está em fluxo com atendente humano" e chamou `transferir_para_humano` 16 vezes no mesmo turno: 30 s e 102 mil tokens.

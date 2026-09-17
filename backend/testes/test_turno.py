@@ -270,3 +270,21 @@ async def test_mensagem_que_chega_enquanto_o_modelo_pensa_e_respondida_junto(htt
     async with sessao() as s:
         erros = list(await s.scalars(select(Turno.erro).order_by(Turno.criado_em)))
     assert erros[0] is not None and erros[0].startswith("descartada") and erros[1] is None
+
+
+def test_raciocinio_baixo_so_nos_modelos_openai_que_vem_com_ele_desligado(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.ia.provedores import construir_modelo
+    from app.plataforma.config import config
+
+    def esforco(nome: str) -> str | None:
+        return (construir_modelo(nome).settings or {}).get("openai_reasoning_effort")
+
+    # Na VPS, o gpt-5.1 sem raciocínio buscava e não usava o resultado.
+    assert esforco("openai:gpt-5.1") == "low"
+    assert esforco("openai:gpt-5.5") is None and esforco("openai:gpt-5-mini") is None
+    assert esforco("openai:gpt-4o") is None and esforco("groq:llama-3.3-70b-versatile") is None
+
+    monkeypatch.setattr(config(), "openai_raciocinio", "medium")
+    assert esforco("openai:gpt-5.1") == "medium"
+    monkeypatch.setattr(config(), "openai_raciocinio", "none")
+    assert esforco("openai:gpt-5.1") is None

@@ -101,7 +101,7 @@ async def test_turno_entrega_ao_modelo_so_as_ferramentas_ligadas(http, canal, fi
     assert {"calcular", "transferir_para_humano"} < vistas[1] and not any(v.startswith("nativa:") for v in vistas[1])
     assert vistas[2] == {"transferir_para_humano"}
     # Ferramenta ligada vem com a instrução de quando usar; sem ela o modelo não buscava (v0.8.3).
-    assert "use a busca na web" in instrucoes[0] and "Use a calculadora" in instrucoes[0]
+    assert "use a busca na web" in instrucoes[0] and "use a calculadora" in instrucoes[0]
     assert "busca na web" not in instrucoes[2] and "calculadora" not in instrucoes[2]
     assert esperas and all(e >= DIGITANDO_MINIMO_SEGUNDOS for e in esperas)
 
