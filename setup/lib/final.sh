@@ -41,7 +41,10 @@ mostra_resumo() {
   comando=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo codex || echo claude)
 
   secao "Pronto"
-  if [ -n "$(estado_get agente_id)" ]; then
+  if [ "$(estado_get agente_canal)" = nativo ]; then
+    ok "Agente $(destaque "$(estado_get agente_nome)") criado para conversar no terminal ${CINZA}· $(estado_get agente_conta)${NORMAL}"
+    echo
+  elif [ -n "$(estado_get agente_id)" ]; then
     ok "$(destaque "$(estado_get agente_nome)") no ar na caixa $(destaque "$(estado_get agente_caixa)") ${CINZA}· $(estado_get agente_conta)${NORMAL}"
     echo
   fi
@@ -58,6 +61,7 @@ mostra_resumo() {
   printf '  %sComandos%s\n' "$NEGRITO" "$NORMAL"
   printf '    %sasimov%s               %smenu: criar, editar e remover agentes, ver consumo%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov novo-agente%s   %soutro agente, para empresa nova ou existente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %sasimov conversar%s     %sconversa com um agente nativo aqui no terminal%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov ajuda%s         %stodos os comandos%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
   echo

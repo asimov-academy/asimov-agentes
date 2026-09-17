@@ -2,8 +2,9 @@ from typing import Any
 
 from app.canais.base import Canal
 from app.canais.chatwoot.canal import Chatwoot
+from app.canais.nativo.canal import Nativo
 
-CANAIS: dict[str, Canal] = {"chatwoot": Chatwoot()}
+CANAIS: dict[str, Canal] = {"chatwoot": Chatwoot(), "nativo": Nativo()}
 
 
 def obter_canal(nome: str) -> Canal:

@@ -79,11 +79,11 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Objetivo: operar os agentes sem front.
 - Quem acessa: operador.
 - Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo, modelos), reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
-- `asimov` sem argumento abre o mesmo menu. Cada ação também existe como subcomando: `novo-agente`, `agentes`, `editar`, `remover`, `consumo`, `handoff` (desde a v0.4.0), `atualizar` e `ajuda`.
+- `asimov` sem argumento abre o mesmo menu. Cada ação também existe como subcomando: `novo-agente`, `conversar` (desde a v0.8.0), `agentes`, `editar`, `remover`, `consumo`, `handoff` (desde a v0.4.0), `atualizar` e `ajuda`.
 - Atualizar para a v0.4.0 pergunta uma vez o destino do handoff dos agentes que não têm.
 - Ações do menu:
   - Criar agente (mesmo fluxo da tela 6).
-  - Conversar com agente (fase 5): escolhe um agente nativo e conversa no terminal; cada linha é uma mensagem do contato, a resposta aparece depois do digitando; `/nova` começa outra conversa e Esc volta.
+  - Conversar com agente (v0.8.0): escolhe um agente nativo e conversa no terminal; cada linha é uma mensagem do contato, "digitando…" aparece acima da linha em edição e a resposta chega sem apagar o que já foi digitado; handoff mostra motivo, resumo e código, e o agente fica calado; `/retomar` devolve a conversa ao agente, `/nova` começa outra conversa, `/sair` ou Esc volta. Criar um agente nativo pelo menu oferece conversar na hora.
   - Listar agentes: por empresa, nome, canal, modelo de resposta, destino do handoff, status e URL do webhook.
   - Editar agente: escolhe o agente, vê a configuração e muda nome (também o nome do bot no Chatwoot; se o Chatwoot estiver fora, oferece salvar só na plataforma), tempo de buffer, mensagens por resposta, digitação (caracteres por segundo e teto por mensagem), ferramentas (lista de marcar: calculadora e busca na web), modelos (resposta, fallback, resumo do handoff, visão, áudio; só provedores com chave) ou destino do handoff. Vale na próxima mensagem. Credenciais do canal e tempo de retomada automática entram com os canais diretos (fase 5): no Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente.
   - Remover agente: pede o nome do agente para confirmar e apaga o bot no Chatwoot junto; se o Chatwoot estiver fora, oferece remover deixando o bot lá. No modo revenda, empresa que ficou sem agentes pode ser removida junto.

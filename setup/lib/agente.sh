@@ -159,9 +159,50 @@ nome_do_destino() {
     else (.nome // "usuário \(.id)") end' <<<"$1"
 }
 
-# Chatwoot → conta → caixa → handoff → nome → empresa → cria. Define AGENTE_* para quem chamou.
+# Canal primeiro, depois o fluxo dele. Define AGENTE_* para quem chamou.
 fluxo_novo_agente() {
+  local op
+  AGENTE_CAIXA=""
+  escolha op "Canal" \
+    "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
+    "Nativo  ${CINZA}sem canal: você conversa com ele aqui no terminal${NORMAL}"
+  echo
+  case "$op" in
+    1) fluxo_agente_chatwoot ;;
+    *) fluxo_agente_nativo ;;
+  esac
+}
+
+# Nome → empresa → cria. Nada para conectar: serve para testar prompt e ferramentas no terminal.
+fluxo_agente_nativo() {
+  local nome corpo
+  AGENTE_CANAL=nativo
+  dica "Mesmo buffer, digitando, ferramentas, consumo e handoff dos outros canais; não atende ninguém de fora."
+  pergunta nome "Nome do agente"
+  escolhe_empresa ""
+  while true; do
+    corpo=$(jq -n --arg nome "$nome" '{nome: $nome, canal: "nativo"}')
+    api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
+    if [ "$API_STATUS" = 201 ]; then
+      AGENTE_NOME=$nome
+      AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
+      AGENTE=$API_RESPOSTA
+      ok "Agente $(destaque "$nome") criado ${CINZA}· nativo · $EMPRESA_NOME${NORMAL}"
+      return 0
+    fi
+    falha "$(detalhe_erro "$API_RESPOSTA")"
+    if [ "$API_STATUS" = 409 ]; then
+      pergunta nome "Outro nome para o agente"
+    else
+      erro_fatal "Não consegui criar o agente" "Rode o comando de novo."
+    fi
+  done
+}
+
+# Chatwoot → conta → caixa → handoff → nome → empresa → cria.
+fluxo_agente_chatwoot() {
   local conta_i caixa_i conta_id conta_nome caixa_id caixas nome corpo
+  AGENTE_CANAL=chatwoot
   acessa_chatwoot
 
   escolha_da_lista conta_i "Conta do Chatwoot" "$(jq -c '[.contas[].nome]' <<<"$CHATWOOT_CONTAS")"
@@ -197,7 +238,7 @@ fluxo_novo_agente() {
     if [ "$API_STATUS" = 409 ]; then
       pergunta nome "Outro nome para o agente"
     elif [ "$API_STATUS" = 422 ]; then
-      fluxo_novo_agente
+      fluxo_agente_chatwoot
       return 0
     else
       erro_fatal "Não consegui criar o agente" "Rode o comando de novo."
@@ -207,9 +248,10 @@ fluxo_novo_agente() {
 
 tela_primeiro_agente() {
   estado_tem agente_id && return 0
-  secao "Agente no Chatwoot"
+  secao "Primeiro agente"
   fluxo_novo_agente
   estado_set agente_nome "$AGENTE_NOME"
+  estado_set agente_canal "$AGENTE_CANAL"
   estado_set agente_caixa "$AGENTE_CAIXA"
   estado_set agente_conta "$EMPRESA_NOME"
   estado_set agente_id "$AGENTE_ID"
@@ -243,15 +285,20 @@ lista_agentes() {
     else
       printf '    %s▲%s %s %spausado%s' "$AMARELO" "$NORMAL" "$(destaque "$nome")" "$AMARELO" "$NORMAL"
     fi
+    if [ "$canal" = nativo ]; then
+      printf '  %snativo · %s · conversa: asimov conversar%s\n' "$CINZA" "$modelo" "$NORMAL"
+      continue
+    fi
     printf '  %s%s · %s · handoff: %s%s\n' "$CINZA" "$canal" "$modelo" "$(nome_do_destino "$destino")" "$NORMAL"
     printf '      %swebhook %s%s\n' "$CINZA" "$webhook" "$NORMAL"
   done
   echo
 }
 
-# escolhe_agente: define AGENTE (JSON do agente) e AGENTE_EMPRESA. Devolve 1 se não há agentes.
+# escolhe_agente [canal]: define AGENTE (JSON do agente) e AGENTE_EMPRESA. Com canal, só agentes dele.
+# Devolve 1 se não há agentes.
 escolhe_agente() {
-  local op linha clientes agentes
+  local canal=${1:-} op linha clientes agentes
   local -a rotulos=()
   api GET /admin/clientes
   exige_api
@@ -261,8 +308,9 @@ escolhe_agente() {
   agentes=$(jq -c --argjson clientes "$clientes" '
     ($clientes | map({(.id): .nome}) | add // {}) as $nomes
     | map(. + {empresa: ($nomes[.cliente_id] // "?")}) | sort_by(.empresa, .nome)' <<<"$API_RESPOSTA")
+  [ -z "$canal" ] || agentes=$(jq -c --arg canal "$canal" 'map(select(.canal == $canal))' <<<"$agentes")
   if [ "$(jq 'length' <<<"$agentes")" -eq 0 ]; then
-    dica "Nenhum agente ainda. Crie com: asimov novo-agente"
+    dica "Nenhum agente${canal:+ $canal} ainda. Crie com: asimov novo-agente"
     return 1
   fi
   while IFS= read -r linha; do rotulos+=("$linha"); done \
@@ -316,7 +364,7 @@ configura_handoff() {
 # asimov handoff: escolhe o agente e troca quem recebe o handoff.
 fluxo_handoff() {
   secao "Handoff"
-  escolhe_agente || return 0
+  escolhe_agente chatwoot || return 0
   configura_handoff "$AGENTE"
   echo
 }
@@ -327,7 +375,7 @@ tela_handoff_pendente() {
   estado_tem handoff_perguntado && return 0
   api GET /admin/agentes
   [ "$API_STATUS" = 200 ] || return 0
-  sem_destino=$(jq -c '[.[] | select(.handoff_destino == null)]' <<<"$API_RESPOSTA")
+  sem_destino=$(jq -c '[.[] | select(.canal == "chatwoot" and .handoff_destino == null)]' <<<"$API_RESPOSTA")
   if [ "$(jq 'length' <<<"$sem_destino")" -gt 0 ]; then
     secao "Handoff"
     info "O agente agora passa a conversa para uma pessoa quando o contato pede."

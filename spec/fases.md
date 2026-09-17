@@ -121,7 +121,7 @@ Commit: `feat: menu do operador com agentes e consumo`
 
 ## Fase 5: WhatsApp direto (oficial e WAHA) e agente nativo
 
-Situação: não iniciada. O Telegram saiu antes de começar (spec/decisoes.md).
+Situação: em construção. O Telegram saiu antes de começar (spec/decisoes.md). Agente nativo construído (v0.8.0); faltam WAHA e WhatsApp oficial.
 
 Objetivo: agentes ligados direto no WhatsApp, pela Cloud API oficial ou pela WAHA instalada na VPS, com handoff por aviso; e agentes nativos, sem canal, para conversar no terminal.
 

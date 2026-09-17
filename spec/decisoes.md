@@ -2,6 +2,19 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Agente nativo (fase 5, v0.8.0)
+
+- **A fase 5 sai em três versões**, decisão do operador: nativo (v0.8.0), WAHA e WhatsApp oficial, com validação na VPS entre elas. O operador confirmou a validação que faltava da fase 4.
+- **Envio e digitando no Redis; o terminal lê pela API.** O turno roda no worker e só grava no banco no fim: lendo do banco, as mensagens chegariam todas juntas, sem o digitando entre elas. `canais/nativo/memoria.py` guarda a saída por conversa (7 dias), o digitando (prazo de 5 minutos, para worker que caiu) e a marca de humano conduzindo.
+- **`depois` é a posição, não uma marca de tempo.** A lista no Redis é só do agente e só cresce: a posição não perde nem repete mensagem com relógios diferentes entre API e worker. spec/arquitetura.md.
+- **A leitura devolve `respondendo`** (lock do turno ocupado). O handoff é gravado depois da última mensagem, com o resumo do modelo no meio: sem isso o terminal parava de esperar antes de ele chegar.
+- **Handoff no nativo**: o canal marca humano conduzindo no Redis (é o que `agente_pode_falar` lê no turno) e o terminal mostra motivo, resumo e código. `/retomar` usa a rota de retomada do operador que já existia; ganhou assim a primeira opção no menu, só para o nativo. Mensagem mandada com handoff aberto é gravada e não agenda turno.
+- **Rotas do terminal ficam em `canais/nativo/rotas.py`**, para a regra "só agente nativo" não sair de `canais/`.
+- **Canal sem acesso do operador**: `pede_acesso_do_operador` no contrato. Falso no nativo; `usa_acesso` roda a operação sem procurar token. A WAHA (chave no `.env`) e o oficial (credenciais do agente) também não precisam.
+- **Criar agente começa pelo canal**, na primeira instalação e no menu; só aparecem os canais já construídos. "Conversar com agente" entra como segunda opção do menu. Editar esconde Handoff no nativo; listar mostra `asimov conversar` no lugar do webhook; a pergunta de handoff pendente da v0.4.0 e `asimov handoff` só olham agentes do Chatwoot.
+- **`/sair` além do Esc**: sem terminal (simulação com arquivo de respostas) não há Esc.
+- **Simulação do onboarding realinhada**: a espera do DNS consome uma linha do arquivo de respostas, e desde a v0.6 as respostas seguintes caíam uma pergunta adiante (a conta escolhida era a errada, o nome do agente ficava vazio). O arquivo ganhou a linha que faltava.
+
 ## 2026-09-17: Fase 5 sem Telegram; WAHA e agente nativo
 
 - **Telegram saiu**, decisão do operador. No lugar: WhatsApp não oficial e um agente nativo, sem canal, para conversar no terminal. O WhatsApp oficial continua. spec/visao.md, spec/usuarios.md, spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/fases.md.

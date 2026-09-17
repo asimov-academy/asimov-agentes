@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.agentes.rotas import router as agentes
+from app.canais.nativo.rotas import router as terminal
 from app.clientes.rotas import router as clientes
 from app.consumo.rotas import router as consumo
 from app.conversas.webhook import router as webhook
@@ -43,6 +44,7 @@ app.include_router(clientes)
 app.include_router(agentes)
 app.include_router(consumo)
 app.include_router(handoff)
+app.include_router(terminal)
 app.include_router(webhook)
 
 

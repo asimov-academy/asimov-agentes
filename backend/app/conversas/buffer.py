@@ -52,5 +52,9 @@ async def adquire_lock(redis: Redis, conversa_id: uuid.UUID, token: str, ttl: in
     return bool(await redis.set(_chave_lock(conversa_id), token, nx=True, ex=ttl))
 
 
+async def turno_em_andamento(redis: Redis, conversa_id: uuid.UUID) -> bool:
+    return bool(await redis.exists(_chave_lock(conversa_id)))
+
+
 async def libera_lock(redis: Redis, conversa_id: uuid.UUID, token: str) -> None:
     await redis.eval(_LIBERA_SE_MEU, 1, _chave_lock(conversa_id), token)  # type: ignore[misc]

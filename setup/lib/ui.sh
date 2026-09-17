@@ -216,11 +216,18 @@ if tem_terminal; then
   trap 'printf "\033[?25h"' EXIT
 fi
 
-# le_tecla VAR: um caractere digitado, ou enter, esc, apagar, cima, baixo, esquerda, direita,
+# le_tecla VAR [segundos]: um caractere digitado, ou enter, esc, apagar, cima, baixo, esquerda, direita,
 # ignorar. Lê a sequência de escape inteira: sobra dela nunca vira texto nem Esc falso.
+# Com segundos, devolve `nada` se nenhuma tecla chegar nesse tempo (a conversa no terminal consulta a API).
 le_tecla() {
-  local __lida="" __proximo="" __parametros="" __final=""
-  if ! IFS= read -rsn1 __lida <&3; then
+  local __lida="" __proximo="" __parametros="" __final="" __status=0
+  local -a __espera=()
+  [ -n "${2:-}" ] && __espera=(-t "$2")
+  IFS= read -rsn1 ${__espera[@]+"${__espera[@]}"} __lida <&3 || __status=$?
+  if [ "$__status" -gt 128 ]; then
+    printf -v "$1" '%s' nada
+    return 0
+  elif [ "$__status" -ne 0 ]; then
     printf '\033[?25h\n'
     exit 1
   fi

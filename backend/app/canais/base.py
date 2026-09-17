@@ -79,6 +79,8 @@ class Canal(Protocol):
     """True quando o canal pune resposta de erro (Chatwoot silencia o bot na conversa)."""
     retoma_por_tempo: bool
     """True quando o agente volta sozinho depois de `retomada_automatica_horas` (canais diretos)."""
+    pede_acesso_do_operador: bool
+    """False quando criar, renomear e remover não precisam de token do operador (nativo)."""
 
     def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Só a parte secreta do acesso do operador (no Chatwoot, o token de administrador), ou {}."""

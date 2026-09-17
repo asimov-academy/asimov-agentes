@@ -31,6 +31,8 @@ async def usa_acesso(
     operacao: Callable[[dict[str, Any]], Awaitable[T]],
 ) -> T:
     """Roda `operacao` com o acesso. Quem chama faz o commit (o acesso guardado vai junto)."""
+    if not canal.pede_acesso_do_operador:
+        return await operacao({})
     acesso = canal.acesso_do_operador(informado or {})
     guardado = False
     if not acesso:
