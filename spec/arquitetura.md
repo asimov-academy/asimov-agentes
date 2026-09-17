@@ -196,6 +196,7 @@ Worker arq, mesmo código do backend, container `worker`:
 | `processar_midia` | chamado dentro do turno, antes do modelo (`midia/servico.py`) | baixa pelo canal, consulta cache por `cliente_id` + hash; se não houver, confere limites, transcreve ou lê, grava arquivo, Mídia e Turno da leitura; grava a `situacao` no anexo da mensagem |
 | `enviar_resposta` | fim do turno | envia até `max_mensagens_por_resposta` mensagens com digitando antes de cada uma pelo tempo de uma pessoa digitar: caracteres / `digitacao_caracteres_por_segundo`, variação de 15%, entre 1 s e `digitacao_maximo_segundos`; o tempo que o turno já levou conta na primeira; soma limitada a 90 s (abaixo do lock) |
 | `ingerir_documento` | envio de documento | extrai texto, divide em trechos de cerca de 800 tokens com sobreposição de 100, gera embeddings em lote, marca `pronto` ou `erro` |
+| `confere_whatsapp` | cron a cada dez minutos | confere se os números dos agentes WAHA continuam pareados; fora do ar vira Falha, uma por agente por hora |
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
 | `limpar_midia` | cron diário | apaga arquivos de mídia com mais de 90 dias |
 

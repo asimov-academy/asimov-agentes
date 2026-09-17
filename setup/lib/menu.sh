@@ -412,10 +412,16 @@ mostra_consumo() {
 menu_operador() {
   local op
   local -a rotulos acoes
+  # Uma consulta só ao abrir: número fora do ar deixa o agente mudo e ninguém percebe sozinho.
+  avisa_numeros_fora_do_ar
   while true; do
     secao "Menu"
     # A WAHA atualiza sozinha; o aviso aparece aqui quando ela precisou voltar para a versão anterior.
     [ -n "$(estado_get waha_aviso)" ] && aviso "WhatsApp: $(estado_get waha_aviso)"
+    if [ -n "${AVISO_WAHA:-}" ]; then
+      aviso "Número fora do ar no WhatsApp: $(destaque "$AVISO_WAHA")"
+      dica "Leia o QR code de novo em Editar agente > WhatsApp > Parear o número."
+    fi
     rotulos=("Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" "Remover agente" "Ver consumo e falhas")
     acoes=(acao_novo_agente fluxo_conversar "com_pausa lista_agentes" fluxo_editar_agente "com_pausa fluxo_remover_agente" "com_pausa mostra_consumo")
     if [ "$(env_get WAHA_ATIVA)" = 1 ]; then

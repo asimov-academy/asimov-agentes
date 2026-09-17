@@ -163,6 +163,25 @@ def telefone_do_contato(mensagem: dict[str, Any]) -> str | None:
     return None
 
 
+STATUS_QUE_ATENDEM = ("WORKING",)
+STATUS_PASSAGEIROS = ("STARTING", "SCAN_QR_CODE")
+
+
+def _situacao_da_sessao(corpo: Any) -> Evento:
+    """O WhatsApp derruba o aparelho sem avisar ninguém: sem isso, o agente ficava mudo em silêncio."""
+    status = corpo.get("status") if isinstance(corpo, dict) else None
+    if not isinstance(status, str) or status in STATUS_QUE_ATENDEM:
+        return Evento(Acao.IGNORAR, f"sessão em {status!r}")
+    if status in STATUS_PASSAGEIROS:
+        # Pareamento em andamento: o setup está com o QR code na tela, ninguém precisa ser avisado.
+        return Evento(Acao.IGNORAR, f"sessão em {status!r}")
+    return Evento(
+        Acao.ALERTA,
+        f"o número do agente saiu do ar no WhatsApp (sessão em {status})",
+        texto=status,
+    )
+
+
 def _chat_da_mensagem(mensagem: dict[str, Any]) -> str | None:
     """A conversa é sempre a do outro lado: no que sai do número, `from` é o próprio agente."""
     lado = mensagem.get("to") if mensagem.get("fromMe") else mensagem.get("from")
@@ -234,11 +253,14 @@ class Waha:
         self, payload: dict[str, Any], credenciais: dict[str, Any], destino: dict[str, Any] | None = None
     ) -> Evento:
         evento = payload.get("event")
-        if evento not in ("message.any", "message", "message.reaction"):
+        if evento not in ("message.any", "message", "message.reaction", "session.status"):
             return Evento(Acao.IGNORAR, f"evento fora da lista: {evento!r}")
         sessao = payload.get("session")
         if sessao and credenciais.get("sessao") and sessao != credenciais["sessao"]:
             return Evento(Acao.IGNORAR, f"sessão de outro agente: {sessao!r}")
+
+        if evento == "session.status":
+            return _situacao_da_sessao(payload.get("payload"))
 
         mensagem = payload.get("payload")
         if not isinstance(mensagem, dict):

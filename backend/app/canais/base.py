@@ -22,6 +22,8 @@ class Acao(StrEnum):
     """Grava e agenda o buffer do turno."""
     PAUSAR = "pausar"
     """Grava e cala o agente: uma pessoa da empresa assumiu a conversa pelo próprio aparelho."""
+    ALERTA = "alerta"
+    """O canal avisou um problema que deixa o agente mudo (número desconectado do WhatsApp)."""
     RETOMAR = "retomar"
     """O atendente devolveu a conversa ao agente: fecha o handoff aberto."""
     RETOMAR_POR_CODIGO = "retomar_por_codigo"

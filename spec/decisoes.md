@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Número que sai do ar deixa de ser silêncio (v0.12.0)
+
+- **Lacuna conhecida desde a v0.9.0**: o WhatsApp derruba o aparelho sem avisar (número em outro celular, muito tempo offline, alguém desconectou na mão) e o agente ficava mudo sem ninguém saber. O evento `session.status` chegava e era ignorado.
+- **`Acao.ALERTA`** no contrato do canal: o canal avisa um problema que deixa o agente mudo, e o webhook registra Falha (`canal_fora_do_ar`) em vez de gravar conversa. Pareamento em andamento (`STARTING`, `SCAN_QR_CODE`) não gera alerta: alguém está com o QR code na tela.
+- **Ronda a cada dez minutos** (`confere_whatsapp`, em `canais/waha/vigia.py`) como rede de segurança para quando nem o evento chega (contêiner reiniciado, WAHA fora do ar). Uma falha por agente por hora, controlada no Redis: o operador precisa saber, não ser inundado.
+- **Aviso no menu**, consultado uma vez ao abrir: "Número fora do ar no WhatsApp: Spencer (FAILED)", com o caminho para ler o QR code de novo. A falha em Ver consumo e falhas conta o histórico; o menu conta o agora.
+- Avisar pelo próprio WhatsApp não serve aqui: se a sessão caiu, é justamente por ela que não dá para mandar nada.
+
 ## 2026-09-17: Áudio não era baixado da WAHA (v0.11.2)
 
 - **Achado no teste de ponta a ponta**: o agente respondeu texto, mas o áudio virou `midia_download_falhou` e o contato recebeu o pedido para escrever. Causa: quando o QR code em texto entrou (v0.9.0), o `Accept: application/json` foi para o cabeçalho compartilhado das chamadas à WAHA, e ele acompanhava também o download do arquivo, que é binário.
