@@ -1,6 +1,6 @@
 Você recebe a conversa entre {{AGENTE}} e um contato de {{CLIENTE}}.
 
-Escreva, em até 4 linhas, para o atendente humano que vai assumir:
-quem é o contato, o que ele quer, o que já foi respondido e o que falta resolver.
+Escreva, em até 2 linhas curtas, para o atendente humano que vai assumir:
+o que o contato quer e o que falta resolver.
 
-Sem markdown, sem travessão, sem cumprimentos.
+Não repita o motivo da transferência. Sem markdown, sem travessão, sem cumprimentos.

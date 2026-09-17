@@ -43,13 +43,9 @@ def novo_codigo() -> str:
     return "".join(secrets.choice(_LETRAS_DO_CODIGO) for _ in range(6))
 
 
-def nota_para_atendente(agente: "Agente", motivo: str, resumo: str) -> str:
-    return (
-        f"Conversa transferida por {agente.nome}\n"
-        f"Motivo: {motivo}\n\n"
-        f"{resumo}\n\n"
-        "Para devolver a conversa ao agente, marque como pendente."
-    )
+def nota_para_atendente(motivo: str, resumo: str) -> str:
+    """Curta: o atendente lê no meio da conversa. O tamanho do resumo vem de `resumo_handoff.md`."""
+    return f"Motivo: {motivo}\n{resumo}"
 
 
 async def _resumo(
@@ -104,7 +100,7 @@ async def transferir(
             credenciais,
             conversa.id_externo,
             agente.handoff_destino,
-            nota_para_atendente(agente, motivo, resumo),
+            nota_para_atendente(motivo, resumo),
         )
     except Exception as erro:
         await registra_falha("handoff_falhou", {"erro": repr(erro)[:500]}, agente.cliente_id, agente.id)
