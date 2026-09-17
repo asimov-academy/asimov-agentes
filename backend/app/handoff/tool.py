@@ -18,8 +18,9 @@ async def transferir_para_humano(ctx: RunContext[ContextoTurno], motivo: str) ->
     Args:
         motivo: Por que a conversa vai para humano, em uma frase.
     """
-    if ctx.deps.motivo_handoff is None:
-        ctx.deps.motivo_handoff = motivo.strip()[:500] or "sem motivo informado"
+    if ctx.deps.motivo_handoff is not None:
+        return "Transferência já registrada. Não chame esta ferramenta de novo: responda agora ao contato."
+    ctx.deps.motivo_handoff = motivo.strip()[:500] or "sem motivo informado"
     return (
         "Transferência registrada. Avise o contato, em uma mensagem curta, que uma pessoa da "
         "equipe vai continuar o atendimento por aqui. Não faça novas perguntas."

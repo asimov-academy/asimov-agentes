@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Histórico com o handoff e teto por turno (v0.8.4)
+
+- **Achado na VPS**: numa conversa do Chatwoot que já tinha passado por handoff e sido devolvida, o contato pediu a cotação do dólar. O gpt-5.1 buscou (a v0.8.3 funcionou), mas transferiu de novo com o motivo "já está em fluxo com atendente humano" e chamou `transferir_para_humano` 16 vezes no mesmo turno: 30 s e 102 mil tokens.
+- **Causa**: o histórico só tinha as falas. O modelo via o pedido antigo de pessoa e o "vou chamar alguém", sem saber que a equipe tinha devolvido a conversa. E a tool respondia igual a cada chamada.
+- **Handoffs viram avisos do sistema no histórico**, no ponto em que aconteceram: passou para a equipe (com o motivo) e a equipe devolveu. A instrução de handoff diz para chamar uma vez só e que pedido já atendido não conta.
+- **Tool de handoff chamada de novo no mesmo turno** responde "já registrada, responda o contato agora"; vale o primeiro motivo.
+- **Teto por turno**: 6 chamadas ao modelo e 8 tools (`LIMITE_CHAMADAS_MODELO_POR_TURNO`, `LIMITE_TOOLS_POR_TURNO`). Estourar vira falha do turno (mensagem de expectativa e handoff) sem as tentativas extras, que só repetiriam o gasto.
+
 ## 2026-09-17: Busca na web com instrução de uso (v0.8.3)
 
 - **Achado na VPS**: com a busca ligada, o gpt-5.1 respondia "não consigo acessar a cotação em tempo real" sem buscar. A requisição levava `web_search`, mas nenhuma instrução dizia quando usar, e a plataforma obriga uma tool com o raciocínio desligado: o modelo ia direto para a resposta.

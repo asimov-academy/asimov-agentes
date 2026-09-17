@@ -20,6 +20,18 @@ async def aberto(
     )
 
 
+async def da_conversa(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID
+) -> list[Handoff]:
+    return list(
+        await sessao.scalars(
+            select(Handoff)
+            .where(Handoff.cliente_id == cliente_id, Handoff.conversa_id == conversa_id)
+            .order_by(Handoff.iniciado_em)
+        )
+    )
+
+
 async def abre(sessao: AsyncSession, handoff: Handoff) -> bool:
     """False quando a conversa já tinha handoff aberto."""
     instrucao = (

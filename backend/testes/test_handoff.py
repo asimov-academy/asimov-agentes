@@ -234,3 +234,77 @@ async def test_handoff_de_um_cliente_nao_aparece_em_outro(http, canal, fila, ses
         assert await repo.aberto(s, conversa.cliente_id, conversa.id) is not None
         assert await repo.aberto(s, uuid.uuid4(), conversa.id) is None
         assert not await repo.fecha(s, uuid.uuid4(), conversa.id, "chatwoot")
+
+
+async def test_depois_da_devolucao_o_modelo_ve_que_o_pedido_de_pessoa_ja_foi_atendido(http, canal, fila, sessao, redis, modelo, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    vistos: list[list[ModelMessage]] = []
+    original = modelo.__call__
+
+    def espia(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if info.output_tools:
+            vistos.append(list(historico))
+        return original(historico, info)
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(espia))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=1, conteudo="quero falar com uma pessoa"))
+    assert await _turno(sessao, redis) == "transferido"
+    canal.status = "pending"
+    await envia_webhook(http, agente["token"], _devolucao())
+
+    modelo.transfere = False
+    await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=2, conteudo="qual a cotação do dólar?"))
+    assert await _turno(sessao, redis) == "respondido"
+
+    # O FunctionModel entrega a parte de sistema como fala com o prefixo <system>, no ponto em que está.
+    linha_do_tempo = [str(getattr(p, "content", "")) for m in vistos[-1] for p in m.parts]
+    avisos = [i for i, f in enumerate(linha_do_tempo) if f.startswith("<system>")]
+    pedido = linha_do_tempo.index("quero falar com uma pessoa")
+    assert len(avisos) == 2 and pedido < avisos[0] < avisos[1] < len(linha_do_tempo) - 1
+    assert "contato pediu para falar com uma pessoa" in linha_do_tempo[avisos[0]]
+    assert "devolveu a conversa para você" in linha_do_tempo[avisos[1]]
+    assert linha_do_tempo[-1] == "qual a cotação do dólar?"
+
+
+async def test_tool_de_handoff_chamada_de_novo_no_mesmo_turno_nao_repete(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    retornos: list[str] = []
+
+    def chama_duas_vezes(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if not info.output_tools:
+            return ModelResponse(parts=[TextPart(RESUMO)])
+        ultima = historico[-1]
+        voltas = [p for p in ultima.parts if isinstance(p, ToolReturnPart)] if isinstance(ultima, ModelRequest) else []
+        retornos.extend(str(p.content) for p in voltas)
+        if len(retornos) < 2:
+            return ModelResponse(parts=[ToolCallPart("transferir_para_humano", {"motivo": f"pedido {len(retornos) + 1}"})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Já chamei alguém"]})])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(chama_duas_vezes))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    await envia_webhook(http, agente["token"], payload_chatwoot(conteudo="quero falar com uma pessoa"))
+
+    assert await _turno(sessao, redis) == "transferido"
+    assert "Transferência registrada" in retornos[0] and "já registrada" in retornos[1]
+    [registro] = await _handoffs(sessao)
+    assert registro.motivo == "pedido 1"
+
+
+async def test_modelo_em_loop_para_no_teto_do_turno_sem_tentar_de_novo(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    chamadas: list[int] = []
+
+    def em_loop(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if not info.output_tools:
+            return ModelResponse(parts=[TextPart(RESUMO)])
+        chamadas.append(1)
+        return ModelResponse(parts=[ToolCallPart("transferir_para_humano", {"motivo": "de novo"})])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(em_loop))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    await envia_webhook(http, agente["token"], payload_chatwoot(conteudo="oi"))
+
+    assert await _turno(sessao, redis) == "falhou"
+    assert len(chamadas) <= config().limite_chamadas_modelo_por_turno
+    assert [t for _, t in canal.enviadas] == [handoff.MENSAGEM_DE_EXPECTATIVA]
+    async with sessao() as s:
+        registro = await s.scalar(select(Turno).where(Turno.funcao == "resposta"))
+    assert registro is not None and "UsageLimitExceeded" in (registro.erro or "")
