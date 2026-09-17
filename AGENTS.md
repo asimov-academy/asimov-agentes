@@ -20,7 +20,7 @@ Fale com o operador em português, curto e direto.
 ## Stack
 
 - Setup e comando `asimov`: Bash para Ubuntu 24.04 (`curl`, `jq`, `dig`).
-- Backend: Python 3.12, `uv`, FastAPI, PydanticAI (OpenAI, Anthropic, Gemini, Groq, FallbackModel), arq.
+- Backend: Python 3.12, `uv`, FastAPI, PydanticAI (OpenAI pela Responses, Anthropic, Gemini, Groq, FallbackModel, `WebSearch` com DuckDuckGo local), arq.
 - Dados: PostgreSQL 16 com pgvector, SQLAlchemy 2.0, Alembic, Redis 7.
 - Execução: Docker Compose com Caddy.
 - Testes: pytest com Postgres e Redis reais em container; `shellcheck`.
@@ -36,8 +36,8 @@ Fale com o operador em português, curto e direto.
 ## Organização
 
 - `setup/` é o único cliente da API. Depois que a API sobe, ele NUNCA acessa o banco.
-- `setup/lib/base.sh` tem `VERSAO`, caminhos e carrega as telas; `instalar.sh` e `asimov.sh` só orquestram.
-- `backend/app/` agrupa por assunto (`clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `conhecimento/`, `handoff/`, `consumo/`). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA chama banco direto.
+- `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
+- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA chama banco direto.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`.
 - Não existe `frontend/` na primeira versão.
 
