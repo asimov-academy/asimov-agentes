@@ -95,6 +95,7 @@ Modelos de IA:
 ```
 backend/app/
 ├── plataforma/     config, banco, redis, log, criptografia, autenticação admin
+├── acessos/        token de administrador do operador no canal, cifrado (da instalação, sem cliente_id)
 ├── clientes/       rotas.py, servico.py, repo.py, modelos.py
 ├── agentes/        rotas.py, servico.py, repo.py, modelos.py
 ├── canais/
@@ -104,7 +105,7 @@ backend/app/
 │   ├── waha/       WhatsApp não oficial
 │   └── nativo/     conversa no terminal, sem canal externo
 ├── conversas/      webhook, buffer, turno, divisão e envio de mensagens
-├── ia/             fábrica de modelos por provedor, agente PydanticAI, tools padrão
+├── ia/             fábrica de modelos por provedor (provedores.py), agente PydanticAI (agente.py), ferramentas opcionais (ferramentas.py)
 ├── midia/          download, cache por hash, transcrição, visão
 ├── conhecimento/   ingestão, divisão em trechos, embeddings, busca, tool de busca
 ├── handoff/        tool de transferência, aviso, comando de retomada, retomada automática
@@ -119,7 +120,7 @@ prompts/<cliente>/<agente>/resumo_handoff.md
 
 - Em cada assunto: `rotas.py` só recebe e valida, `servico.py` tem a regra, `repo.py` fala com o banco. Rota nunca chama banco direto.
 - Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo.
-- Tools novas que o operador criar em vibecoding ficam em `ia/tools/` ou no assunto que elas tocam, e são registradas por agente.
+- Ferramenta nova que o operador liga por agente entra no `CATALOGO` de `ia/ferramentas.py`; tool que todo agente tem é registrada em `ia/agente.py`.
 - Por que assim: para mudar como a WAHA envia mensagem, mexe-se só em `canais/waha/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
 
 ## 6. Contrato da API
@@ -195,10 +196,10 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 
 ## 8. Segredos
 
-- Tudo em `.env`, gerado pelo setup a partir de `modelos/env.example`. O repositório tem só `.env.example` com as chaves e nenhum valor.
-- Variáveis: `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `PROVEDOR_IA`, `PROVEDOR_APOIO`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `MODELO_EMBEDDINGS`, `LOG_NIVEL`.
+- Tudo em `.env`, gerado pelo setup. O repositório tem só `.env.example` com as chaves e nenhum valor.
+- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`. Entram depois: `WAHA_API_KEY` (fase 5) e `MODELO_EMBEDDINGS` (fase 6).
 - Senha do Postgres, `CHAVE_API_ADMIN` e `CHAVE_CRIPTOGRAFIA` são geradas pelo setup com `openssl rand`, nunca pedidas ao operador.
-- Credenciais de canal não ficam no `.env`: ficam criptografadas no banco, por agente.
+- Credenciais de canal não ficam no `.env`: ficam criptografadas no banco, por agente. O token de administrador do Chatwoot também fica no banco, cifrado, em `acessos/`.
 - Nunca no repositório: `.env`, dumps, backups, mídia, documentos de clientes, `.venv`. O `.gitignore` do projeto gerado já cobre tudo isso.
 - Perder `CHAVE_CRIPTOGRAFIA` torna as credenciais ilegíveis: ela entra no backup e o resumo final avisa isso.
 

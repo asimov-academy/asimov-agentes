@@ -1,75 +1,95 @@
 # Estado do projeto
 
-Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-09-16.
+Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-09-17.
 
 ## Versão publicada
 
-- `v0.7.0` em `asimov-academy/asimov-agentes` (público). Escolhas com setas e telas limpas desde a v0.5.1; Esc volta à tela anterior desde a v0.5.2. `main` tem também o README.
+- `v0.7.0` em `asimov-academy/asimov-agentes` (público). `main` tem também a spec da fase 5 reescrita (só documentação, sem tag).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
-- Atualizar uma VPS instalada: `ASIMOV_ATUALIZAR=1` antes do mesmo comando, ou `asimov atualizar`.
+- Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
+- Verificação local na última revisão: 108 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5.
 
 ## Fases
 
 | Fase | Situação |
 |---|---|
-| 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real (texto respondido pelo Chatwoot com WhatsApp) |
-| 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2): áudio, imagem e PDF respondidos; 4 áudios seguidos numa resposta só; reenvio dos mesmos áudios sem nova transcrição |
-| 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1): conversa atribuída com resumo em nota privada, agente calado com a conversa Aberta, volta ao marcar Pendente |
-| 4. Menu do operador | **Construída (v0.5.0)**, falta o critério de aceite numa VPS real |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | Não iniciada; spec reescrita em 2026-09-17 (sem Telegram) |
+| 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real |
+| 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
+| 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
+| 4. Menu do operador | Construída. Validação parcial na VPS (v0.6.3): instalação do zero, menu, segundo agente em outra empresa e outra caixa (Instagram) respondendo. O operador ainda não confirmou buffer pelo menu, remoção e consumo por empresa |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Próxima.** Spec reescrita em 2026-09-17: Telegram saiu, entraram WAHA e agente nativo. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
-| 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup e domínio próprio do setup |
+| 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
-## O que já existe além da fase 1
+## Ambiente do operador
 
-- Modo de uso perguntado antes de instalar: `MODO_INSTALACAO=empresa|revenda`.
-- Modelo por função com provedor próprio: `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO` (openai, anthropic, gemini, groq). Fallback com `FallbackModel`. Visão e transcrição usadas desde a v0.3.0.
-- Setup cria o Agent Bot no Chatwoot com o token de administrador (pedido uma vez e guardado cifrado desde a v0.6.0) e opera com o token do bot.
-- Setup rodado de novo numa instalação concluída pede o que faltar de versões novas e reconstrói.
+- VPS Hostinger com Ubuntu 24.04, acessada pelo terminal no navegador do painel da Hostinger. Esse terminal manda Enter como `\r\n` (resolvido na v0.6.3 com `descarta_pendentes`).
+- Chatwoot próprio do operador (a URL nunca entra no repositório), com caixas de WhatsApp e Instagram.
+- Modo revenda, com mais de uma empresa.
 
-## Como a fase 2 ficou
+## O que existe hoje
 
-- Webhook grava o anexo na Mensagem (uma por anexo) e agenda o turno; nada é baixado ali.
-- No turno, `midia/servico.py` baixa pelo canal (`baixar_midia`), usa o cache por `cliente_id` + hash ou lê, e grava a `situacao` no anexo. O modelo recebe o conteúdo em `<midia_do_contato>`.
-- Leitura de mídia registra Turno com `funcao` `transcricao` ou `visao`; mídia do cache não registra.
-- Arquivos em volume Docker `midia` (`/var/lib/asimov/midia`). Retenção de 90 dias fica para a fase 7.
-- Validada na VPS em 2026-09-16. O teste achou a mensagem perdida durante o turno, corrigida na v0.3.2 (spec/decisoes.md).
-- O agente às vezes citava a mecânica ("recebi as transcrições"): `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0; ainda não conferido na VPS.
+### Setup e comando `asimov`
 
-## Como a fase 3 ficou
+- Instalação guiada: modo de uso, domínio, e-mail do SSL, agente de código, modelo por função com provedor próprio (`MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`; openai, anthropic, gemini, groq), DNS, instalação com retomada, primeiro agente e resumo.
+- Setup rodado de novo numa instalação concluída pede o que faltar de versões novas, reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
+- Menu (`setup/lib/menu.sh`, `asimov` sem argumento): criar, listar, editar e remover agente, ver consumo e falhas (escolhe a empresa), token do Chatwoot (esquecer) e sair. Subcomandos: `novo-agente`, `agentes`, `editar`, `remover`, `consumo`, `handoff`, `atualizar`, `ajuda`.
+- Editar agente: nome (renomeia o bot no Chatwoot também), buffer, mensagens por resposta, digitação, ferramentas (lista de marcar), modelos (inclui o do resumo do handoff) e destino do handoff.
+- Tela: escolhas com setas e Enter (números como atalho), Sim/Não com setas, lista de marcar com Espaço, cada seção limpa a tela e redesenha o banner, Esc volta à tela anterior (cada ação do menu roda em `com_voltar`), pausa com Enter antes de o menu limpar o que precisa ser lido.
+- Token de administrador do Chatwoot pedido uma vez por URL e guardado cifrado (`acessos/`); a API responde 428 quando falta ou foi recusado e o menu pergunta (`api_com_token` em `setup/lib/agente.sh`).
 
-- Tool `transferir_para_humano` só registra o pedido em `ContextoTurno` (`ia/contexto.py`); `handoff/servico.py` transfere no fim do turno, depois do envio. Chatwoot: nota privada, atribuição, status aberto.
-- Retomada: `conversation_status_changed`/`conversation_updated` com mudança de status para pendente, e o turno fecha handoff esquecido quando o Chatwoot já está pendente.
-- Falha do modelo depois das tentativas e arquivo acima do limite também transferem.
-- Destino por agente: usuário, time ou caixa. `asimov handoff` troca; a atualização pergunta uma vez para agentes antigos. `PATCH` do agente aceita só `handoff_destino` por enquanto.
-- Ainda sem tool que altera estado além do handoff: a regra de turno com mídia continua sem efeito prático.
-- Validada na VPS em 2026-09-16. O teste achou a nota longa demais, encurtada na v0.4.1 (spec/decisoes.md). O debug confirmou a retomada pelo evento do Chatwoot (log `handoff_retomado` no `api`), nenhuma Falha e um handoff aberto por conversa.
-- Prompt de resumo de agente já criado não muda com atualização: o setup nunca sobrescreve prompt.
+### Plataforma
 
-## Como a fase 4 ficou
+- Canal Chatwoot (`canais/chatwoot/`): cria o Agent Bot e confere na caixa que ele ficou ligado; aceita evento de qualquer caixa em que o bot esteja ligado (a assinatura prova o bot).
+- Turno (`conversas/turno.py`): buffer por conversa, lock de 240 s, mídia antes do modelo, resposta descartada se chegar mensagem nova antes do envio, digitando com o tempo de uma pessoa digitar (6 caracteres/s, variação de 15%, teto de 20 s por mensagem, soma até 90 s; editável por agente).
+- Mídia: transcrição, visão e PDF com texto, cache por cliente e hash, limites de 20 MB e 5 minutos.
+- Handoff no Chatwoot: nota privada curta, atribuição, status aberto; retomada pelo status pendente; falha do modelo e arquivo grande também transferem. Retomada pelo operador existe na API (`POST .../conversas/{id}/retomar`), sem opção no menu.
+- Ferramentas por agente (`ia/ferramentas.py`): calculadora (sem `eval`) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), ligadas por padrão. OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
+- Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
+- Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
+- Migrações até `0007` (acesso ao canal; digitação e ferramentas do agente).
 
-- Menu em `setup/lib/menu.sh`: abre ao rodar o setup de novo e com `asimov`; subcomandos `editar`, `remover`, `consumo`. Seleção de agente em `escolhe_agente` (`agente.sh`).
-- API: `PATCH` do agente com nome, buffer, mensagens, modelos (inclui `modelo_auxiliar`), destino e retomada; `DELETE` de agente (com token opcional para apagar o bot) e de empresa sem agentes; `GET /admin/consumo`; `POST .../conversas/{id}/retomar` (sem opção no menu).
-- Contrato do canal ganhou `retoma_por_tempo` e `devolver_ao_agente`; `desconectar` do Chatwoot usa só o token de administrador.
-- Log `handoff_retomado` do webhook agora sai com `conversa_id`.
-- Decisões em spec/decisoes.md (2026-09-16, fase 4).
+## Pendências conhecidas
 
-## Para validar a fase 4 na VPS
+- Fase 4: operador confirmar buffer pelo menu, remoção e consumo por empresa na VPS.
+- v0.7.0 ainda não conferida na VPS com modelo real: busca na web, calculadora e mídia depois da troca da OpenAI para a Responses.
+- `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0 para o agente não citar a mecânica ("recebi a transcrição"): não conferido na VPS.
+- Causa de o Chatwoot não ligar o bot: era o Enter duplo escolhendo a primeira caixa (v0.6.3). Se voltar a acontecer, a criação agora falha com mensagem clara.
+- Retomada pelo operador sem opção no menu (falta listar conversas em handoff).
+- Web fetch (ler link) oferecido como terceira ferramenta; o operador não decidiu.
 
-1. `asimov atualizar`, depois `bash ~/asimov-agentes/setup/instalar.sh`: resumo e menu aparecem.
-2. Segundo cliente: no Chatwoot, uma segunda caixa (o setup cria o bot). Menu > Criar agente > nova empresa. Mandar mensagem nas duas caixas e conferir que cada agente responde só na sua.
-3. Menu > Editar > Tempo de buffer (ex.: 20 s) e conferir a espera na próxima mensagem.
-4. Menu > Editar > Modelos > Resumo do handoff com um modelo barato; forçar um handoff e ver o Turno `resumo_handoff` no consumo.
-5. Menu > Remover: o bot some da caixa e o agente não responde mais, sem pedir o token de novo.
-6. Menu > Ver consumo e falhas: totais de 7 e 30 dias por empresa.
+## Para a fase 5
+
+Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo, WAHA, WhatsApp oficial**.
+
+Antes de começar: confirmar com o operador a validação que falta da fase 4 (AGENTS.md pede uma fase por vez).
+
+O que reaproveitar:
+- Contrato do canal em `canais/base.py` (`descobrir`, `conectar`, `desconectar`, `renomear`, `verificar`, `interpretar`, `agente_pode_falar`, `digitando`, `enviar_texto`, `valida_destino_handoff`, `transferir`, `devolver_ao_agente`, `baixar_midia`, `retoma_por_tempo`, `acesso_do_operador`, `endereco`) e registro em `canais/registro.py`. O webhook genérico `POST /webhook/{canal}/{token}` já serve para a WAHA.
+- `Handoff` já tem `codigo` e `retomar_em`; falta o job `retomada_automatica` no `worker.py` (hoje só `processar_turno`).
+- No menu: `com_voltar`, `api_com_token`, `escolha`, `marca`, `pergunta_numero`, `pausa`. Criar agente hoje começa direto no Chatwoot (`fluxo_novo_agente` em `agente.sh`): a fase 5 põe a escolha do canal antes.
+
+Agente nativo:
+- `canais/nativo/`: sem conexão nem webhook; `enviar_texto` e `digitando` guardados no Redis por conversa; `agente_pode_falar` falso com handoff aberto.
+- Rotas `POST` e `GET .../agentes/{id}/terminal` (spec/arquitetura.md, contrato). Gravar e agendar o buffer como o webhook faz, nunca chamar IA na requisição.
+- `asimov conversar` e opção "Conversar com agente" no menu: cada linha é uma mensagem, mostra digitando e as respostas, `/nova` começa outra conversa, Esc volta.
+
+WAHA (conferido na documentação em 2026-09-17):
+- Imagem `devlikeapro/waha` com `WHATSAPP_DEFAULT_ENGINE=GOWS` (conferir a tag para amd64 e arm e fixar a versão). Variáveis: `WAHA_API_KEY` (gerada pelo setup no `.env`), `WAHA_DISABLE_DASHBOARD`, `WAHA_DISABLE_SWAGGER`, `WHATSAPP_DOWNLOAD_MEDIA`, `WHATSAPP_FILES_LIFETIME`. Header `X-Api-Key`. Volume para as sessões.
+- Sessões: `POST /api/sessions` com `{"name", "config": {"webhooks": [{"url", "events", "hmac": {"key"}, "retries"}]}}`, `POST /api/sessions/{s}/start|stop|logout`, `DELETE /api/sessions/{s}`, `GET /api/sessions/{s}` (status `STARTING`, `SCAN_QR_CODE`, `WORKING`, `FAILED`, `STOPPED`), `GET /api/{s}/auth/qr?format=raw` (texto para o `qrencode` desenhar no terminal), `POST /api/{s}/auth/request-code` com `phoneNumber` (código de pareamento), `GET /api/sessions/{s}/me`.
+- Webhook: eventos `message` (só recebidas) e `session.status`; corpo com `event`, `session` e `payload` (`id`, `from`, `fromMe`, `to`, `body`, `hasMedia`, `media.url`, `media.mimetype`, `media.filename`, `participant`). Assinatura `X-Webhook-Hmac` = HMAC SHA-512 do corpo cru, `X-Webhook-Hmac-Algorithm: sha512`.
+- Envio: `POST /api/sendText` com `session`, `chatId`, `text` (devolve `id`); `POST /api/startTyping` e `/api/stopTyping` com `session` e `chatId`; `POST /api/sendSeen`. `chatId`: `@c.us` (número), `@lid` (id oculto), `@g.us` (grupo).
+- Webhook pela rede interna do Docker (`http://api:8000/webhook/waha/{token}`), sem passar pelo Caddy. Container subido pelo setup só no primeiro agente WAHA (perfil do Compose). Setup instala `qrencode`.
+
+O operador precisa preparar: número de WhatsApp de teste para a WAHA (chip que possa ser bloqueado), número ou grupo que recebe o handoff, app na Meta com token permanente e app secret, e pedir a aprovação do template de aviso de handoff.
 
 ## Fluxo de publicação combinado com o operador
 
 1. Branch nova a partir de `main`.
-2. Testes (`backend`), `shellcheck` e, se mexeu no setup, `setup/testes/simula_onboarding.sh`.
+2. Testes (`backend`), `shellcheck` e, se mexeu no setup, `setup/testes/simula_onboarding.sh`. Mudança em leitura de tecla: teste num pty com bash 5 (AGENTS.md, armadilhas).
 3. Commit com autor `Vitor Paim <vitor.paim@asimov.academy>` via `git -c user.name=... -c user.email=...` (a máquina não tem identidade git global).
-4. PR, merge com `--delete-branch` e tag `vX.Y.Z` quando muda o setup ou o backend. Subir `VERSAO` em `setup/lib/base.sh` e o padrão em `setup/install.sh` antes da tag.
-5. Dizer ao operador o comando de atualização da VPS.
+4. PR, merge com `--delete-branch` e tag `vX.Y.Z` quando muda o setup ou o backend (o operador autorizou fazer os três). Subir `VERSAO` em `setup/lib/base.sh` e o padrão em `setup/install.sh` antes da tag.
+5. Dizer ao operador o comando de atualização da VPS (`asimov atualizar`).
 
 ## Nunca no repositório (é público)
 
