@@ -28,13 +28,17 @@ def test_digitando_segue_a_velocidade_com_teto_e_desconta_o_que_ja_passou() -> N
     assert sum(tempos_de_digitacao(["a" * 300] * 10, 6, 30, total_maximo_segundos=90)) == pytest.approx(90)
 
 
-async def test_agente_novo_tem_calculadora_e_busca_e_operador_edita(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+async def test_agente_novo_nasce_sem_ferramentas_e_operador_liga(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
-    assert agente["ferramentas"] == ["calculadora", "busca_web"]
+    # Agente nasce cru: só com as ferramentas que o operador marcar (v0.8.11).
+    assert agente["ferramentas"] == []
     assert (agente["digitacao_caracteres_por_segundo"], agente["digitacao_maximo_segundos"]) == (6, 20)
 
     catalogo = (await http.get("/admin/ferramentas", headers=ADMIN)).json()
-    assert [(f["nome"], f["padrao"]) for f in catalogo] == [("calculadora", True), ("busca_web", True)]
+    assert [(f["nome"], f["padrao"]) for f in catalogo] == [("calculadora", False), ("busca_web", False)]
+
+    escolhidas = await cria_cliente_e_agente(http, "Padaria Pão Quente", "Bia", ferramentas=["busca_web", "calculadora"])
+    assert escolhidas["ferramentas"] == ["calculadora", "busca_web"]
 
     caminho = f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}"
     resp = await http.patch(caminho, json={"ferramentas": ["busca_web"], "digitacao_caracteres_por_segundo": 10}, headers=ADMIN)
@@ -69,7 +73,7 @@ async def test_turno_entrega_ao_modelo_so_as_ferramentas_ligadas(http, canal, fi
     perfis: list[dict[str, Any] | None] = [None, {"supported_native_tools": frozenset()}, None]
     monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde, profile=perfis[0]))
     monkeypatch.setattr(turno.asyncio, "sleep", lambda s: _registra(esperas, s))
-    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", ferramentas=["calculadora", "busca_web"])
     caminho = f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}"
 
     for mensagem_id, ligadas in ((1, None), (2, None), (3, [])):

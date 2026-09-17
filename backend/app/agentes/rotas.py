@@ -43,7 +43,7 @@ class NovoAgente(BaseModel):
     retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
     digitacao_caracteres_por_segundo: int = Field(default=6, ge=1, le=30)
     digitacao_maximo_segundos: int = Field(default=20, ge=1, le=30)
-    ferramentas: list[str] | None = Field(default=None, description="Padrão: calculadora e busca na web.")
+    ferramentas: list[str] | None = Field(default=None, description="Padrão: nenhuma. O agente nasce cru.")
 
 
 class EdicaoAgente(BaseModel):

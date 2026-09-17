@@ -25,6 +25,7 @@ tok
 Luiz
 3
 
+
 s
 2
 1
@@ -33,8 +34,6 @@ Ana
 1
 1
 
-
-s
 s
 oi
 /sair

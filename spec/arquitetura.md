@@ -165,7 +165,7 @@ Webhooks, chamados pelos canais:
 
 Todo webhook valida, grava a mensagem, agenda o buffer e responde em menos de 1 segundo. Nenhum processamento de IA acontece dentro da requisição.
 
-Ferramentas opcionais por agente (`ia/ferramentas/`, uma por arquivo; campo `ferramentas`; agente novo recebe as que vêm ligadas):
+Ferramentas opcionais por agente (`ia/ferramentas/`, uma por arquivo; campo `ferramentas`; agente novo nasce só com as marcadas na criação, nenhuma por padrão):
 
 | Ferramenta | O que faz | Regras |
 |---|---|---|

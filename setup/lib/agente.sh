@@ -173,16 +173,19 @@ fluxo_novo_agente() {
   esac
 }
 
-# Nome → empresa → ajustes → cria. Nada para conectar: serve para testar prompt e ferramentas no terminal.
+# Nome → empresa → ritmo → ferramentas → cria. Nada para conectar: serve para testar prompt e ferramentas no terminal.
+# Agente nasce cru (decisão do operador): o resto se ajusta em Editar agente ou em vibecoding.
 fluxo_agente_nativo() {
-  local nome corpo
+  local nome corpo ferramentas
   AGENTE_CANAL=nativo
   dica "Mesmo buffer, digitando, ferramentas, consumo e handoff dos outros canais; não atende ninguém de fora."
   pergunta nome "Nome do agente"
   escolhe_empresa ""
-  configura_nativo_novo
+  configura_ritmo_novo
+  escolhe_ferramentas ferramentas ""
   while true; do
-    corpo=$(jq -n --arg nome "$nome" --argjson ajustes "$AJUSTES_AGENTE" '{nome: $nome, canal: "nativo"} + $ajustes')
+    corpo=$(jq -n --arg nome "$nome" --argjson ajustes "$AJUSTES_AGENTE" --argjson f "$ferramentas" \
+      '{nome: $nome, canal: "nativo", ferramentas: $f} + $ajustes')
     api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
@@ -202,13 +205,12 @@ fluxo_agente_nativo() {
   done
 }
 
-# configura_nativo_novo: ritmo, mensagens, ferramentas e modelo de resposta. Define AJUSTES_AGENTE (JSON).
+# configura_ritmo_novo: buffer e digitação do agente nativo. Define AJUSTES_AGENTE (JSON).
 # O padrão dos canais (buffer de 8 s e digitação de uma pessoa) deixa o teste no terminal lento.
-configura_nativo_novo() {
-  local op buffer velocidade maximo mensagens ferramentas modelo="" provedor
-  local -a provedores=()
+configura_ritmo_novo() {
+  local op buffer velocidade maximo
   echo
-  dica "Ajustes do agente. Tudo muda depois em Editar agente."
+  dica "Muda depois em Editar agente."
   dica "Rápido: responde 2 s depois da última mensagem, 1 s de digitando por mensagem."
   dica "Como no WhatsApp: espera 8 s e digita no ritmo de uma pessoa (até 20 s por mensagem)."
   echo
@@ -222,17 +224,8 @@ configura_nativo_novo() {
       pergunta_numero maximo "Máximo de segundos digitando por mensagem (1 a 30)" 1 30 20
       ;;
   esac
-  pergunta_numero mensagens "Máximo de mensagens por resposta (1 a 10)" 1 10 3
-  escolhe_ferramentas ferramentas ""
-  if ! confirma "Modelo de resposta padrão ($(env_get MODELO_CONVERSA))?"; then
-    while IFS= read -r provedor; do provedores+=("$provedor"); done < <(provedores_com_chave)
-    escolhe_modelo_em modelo "Resposta ao contato" conversa "" "${provedores[@]}"
-  fi
   AJUSTES_AGENTE=$(jq -n --argjson b "$buffer" --argjson v "$velocidade" --argjson m "$maximo" \
-    --argjson n "$mensagens" --argjson f "$ferramentas" --arg modelo "$modelo" \
-    '{buffer_segundos: $b, digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m,
-      max_mensagens_por_resposta: $n, ferramentas: $f}
-     + (if $modelo == "" then {} else {modelos: {modelo_conversa: $modelo}} end)')
+    '{buffer_segundos: $b, digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m}')
 }
 
 # provedores_com_chave: um por linha. A plataforma não enxerga chave nova sem reconstruir.
@@ -244,10 +237,11 @@ provedores_com_chave() {
 }
 
 # escolhe_ferramentas VAR JSON_DO_AGENTE: lista de marcar com o catálogo da API; devolve o JSON dos nomes.
-# Sem agente, começam marcadas as padrão.
+# Sem agente (criação), começam marcadas as que vêm ligadas por padrão: hoje nenhuma.
 escolhe_ferramentas() {
   local __var=$1 __agente=${2:-} __catalogo __ligadas __ferramentas_marcadas __escolhidas="[]" __numero __linha
   local -a __rotulos=()
+  [ -n "$__agente" ] || dica "O agente nasce só com as ferramentas que você marcar."
   api GET /admin/ferramentas
   exige_api
   __catalogo=$API_RESPOSTA
@@ -284,19 +278,20 @@ escolhe_caixa_chatwoot() {
     '{url: $url, account_id: $conta, inbox_ids: [$caixa]}')
 }
 
-# Chatwoot → conta → caixa → handoff → nome → empresa → cria.
+# Chatwoot → conta → caixa → handoff → nome → empresa → ferramentas → cria.
 fluxo_agente_chatwoot() {
-  local nome corpo
+  local nome corpo ferramentas
   AGENTE_CANAL=chatwoot
   escolhe_caixa_chatwoot
 
   echo
   pergunta nome "Nome do agente"
   escolhe_empresa "$CHATWOOT_CONTA_NOME"
+  escolhe_ferramentas ferramentas ""
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
-      '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao}')
+      --argjson f "$ferramentas" '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao, ferramentas: $f}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando o bot no Chatwoot…"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome

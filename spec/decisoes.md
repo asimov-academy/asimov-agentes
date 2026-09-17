@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Agente nasce cru (v0.8.11)
+
+- **Decisão do operador**: o agente criado deve ser o mais cru possível, para personalizar depois com vibecoding e ferramentas. Com a busca ligada, falar do que buscou não é erro do agente; o problema era o padrão. Agente de atendimento em geral não tem busca.
+- **Ferramentas**: nenhuma vem ligada (`padrao` falso nas fichas; migração `0009` troca o padrão da coluna para `[]`). A criação termina, em todo canal, numa lista de marcar toda desmarcada; o agente nasce só com as marcadas. Substitui "calculadora e busca ligadas por padrão" da v0.7.0 para agentes novos; os existentes mantêm as suas.
+- **`persona.md` padrão de uma linha**: "Você é {{AGENTE}}, do atendimento de {{CLIENTE}}." Saíram as regras de estilo e as proibições; a plataforma continua mandando limite de mensagens, sem markdown, mídia como dado, handoff e data. Agentes existentes mantêm o próprio arquivo (o setup nunca sobrescreve prompt).
+- **Criação do nativo**: nome, empresa, ritmo e ferramentas. Mensagens por resposta e modelo saíram da criação e continuam em Editar agente.
+
 ## 2026-09-17: Mensagem sem markdown e data no turno (v0.8.10)
 
 - **Teste do operador na VPS com a v0.8.9** (Isa, gpt-5.5, terminal): sem o erro de JSON; buscou quando precisava. Três achados.
