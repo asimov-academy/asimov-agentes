@@ -22,7 +22,15 @@ fi
 # O grupo evita que o 2>/dev/null do exec fique valendo para o script inteiro.
 { exec 3<"${ASIMOV_TTY:-/dev/tty}"; } 2>/dev/null || exec 3<&0
 
-ler() { IFS= read -r "$@" <&3 || true; }
+# Fim da entrada (Ctrl+D ou arquivo de respostas no fim) encerra: as telas repetem a pergunta
+# até ter resposta e ficariam presas.
+ler() {
+  IFS= read -r "$@" <&3 && return 0
+  local __nome=${!#}
+  [ -n "${!__nome}" ] && return 0
+  echo
+  exit 1
+}
 
 banner_asimov() {
   clear 2>/dev/null || true
@@ -97,6 +105,26 @@ pergunta() {
     fi
     falha "Resposta obrigatória."
   done
+}
+
+# pergunta_numero VAR "texto" mínimo máximo [padrão]
+pergunta_numero() {
+  local __var=$1 __texto=$2 __min=$3 __max=$4 __padrao=${5:-} __numero
+  while true; do
+    pergunta __numero "$__texto" "$__padrao"
+    if [[ "$__numero" =~ ^[0-9]{1,6}$ ]] && [ "$((10#$__numero))" -ge "$__min" ] && [ "$((10#$__numero))" -le "$__max" ]; then
+      printf -v "$__var" '%s' "$((10#$__numero))"
+      return 0
+    fi
+    falha "Digite um número de $__min a $__max."
+  done
+}
+
+# coluna "texto" largura: alinha contando caracteres (o printf conta bytes e desalinha acentos).
+coluna() {
+  local __texto=$1 __largura=$2
+  [ "${#__texto}" -gt "$__largura" ] && __texto="${__texto:0:$((__largura - 1))}…"
+  printf '%s%*s' "$__texto" $((__largura - ${#__texto})) ''
 }
 
 # pergunta_secreta VAR "texto": não mostra o que é digitado.

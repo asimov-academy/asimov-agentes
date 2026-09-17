@@ -14,6 +14,9 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agentes import repo as agentes_repo
+from app.agentes import servico as agentes_servico
+from app.canais.registro import obter_canal
 from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import repo as conversas_repo
@@ -137,4 +140,29 @@ async def retomar(
     await conversas_repo.muda_status(sessao, cliente_id, conversa_id, "agente")
     if fechou:
         log.info("handoff_retomado", por=por)
+    return fechou
+
+
+class ConversaNaoEncontrada(LookupError):
+    pass
+
+
+async def retomar_pelo_operador(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID
+) -> bool:
+    """Devolve a conversa no canal e fecha o handoff. False se não havia handoff aberto.
+
+    Se o canal recusar, o handoff continua aberto: o agente não pode falar onde o canal não deixa.
+    """
+    conversa = await conversas_repo.obter_conversa(sessao, cliente_id, conversa_id)
+    if conversa is None:
+        raise ConversaNaoEncontrada("conversa não encontrada")
+    agente = await agentes_repo.obter(sessao, cliente_id, conversa.agente_id)
+    if agente is None:
+        raise ConversaNaoEncontrada("o agente desta conversa foi removido")
+    await obter_canal(agente.canal).devolver_ao_agente(
+        agentes_servico.credenciais(agente), conversa.id_externo
+    )
+    fechou = await retomar(sessao, cliente_id, conversa_id, "operador")
+    await sessao.commit()
     return fechou

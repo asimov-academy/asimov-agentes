@@ -41,7 +41,7 @@ import pytest  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from app.canais import registro  # noqa: E402
-from app.canais.base import Anexo, ArquivoBaixado, ArquivoGrandeDemais  # noqa: E402
+from app.canais.base import Anexo, ArquivoBaixado, ArquivoGrandeDemais, CredencialInvalida  # noqa: E402
 from app.canais.chatwoot.assinatura import assina  # noqa: E402
 from app.canais.chatwoot.canal import Chatwoot  # noqa: E402
 from app.main import app  # noqa: E402
@@ -75,6 +75,8 @@ class ChatwootFalso(Chatwoot):
         self.baixados: list[str] = []
         self.transferencias: list[tuple[str, dict[str, Any] | None, str]] = []
         self.transferir_quebra = False
+        self.desconectar_recusa = False
+        self.devolvidas: list[str] = []
 
     async def conectar(self, dados: dict[str, Any], url_webhook: str, nome_agente: str) -> dict[str, Any]:
         return {
@@ -87,7 +89,13 @@ class ChatwootFalso(Chatwoot):
         }
 
     async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
+        if self.desconectar_recusa:
+            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
         self.desconectados.append(credenciais["bot_id"])
+
+    async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
+        self.devolvidas.append(conversa_externa)
+        self.status = "pending"
 
     async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str) -> bool:
         return self.status == "pending"
@@ -117,6 +125,7 @@ class ChatwootFalso(Chatwoot):
 class FilaFalsa:
     def __init__(self, falhar: bool = False) -> None:
         self.jobs: list[tuple[Any, ...]] = []
+        self.adiamentos: list[int | None] = []
         self.chaves: dict[str, str] = {}
         self.falhar = falhar
 
@@ -127,6 +136,7 @@ class FilaFalsa:
 
     async def enqueue_job(self, nome: str, *args: Any, **kwargs: Any) -> None:
         self.jobs.append((nome, *args))
+        self.adiamentos.append(kwargs.get("_defer_by"))
 
 
 @pytest.fixture(scope="session", autouse=True)

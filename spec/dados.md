@@ -142,7 +142,7 @@ Arquivo recebido de contato, com o cache do processamento.
 | iniciado_em | data e hora | sim |
 | retomar_em | data e hora (retomada automática agendada) | não |
 | retomado_em | data e hora | não |
-| retomado_por | `comando`, `tempo` ou `chatwoot` | não |
+| retomado_por | `comando`, `tempo`, `chatwoot` ou `operador` (menu) | não |
 
 ### Documento (base de conhecimento)
 
@@ -267,7 +267,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 - Armazenamento de arquivos: volume local na VPS, separado por `cliente/agente`, fora do diretório servido publicamente. Limite de 20 MB por arquivo e 5 minutos de áudio (assumido); acima disso, não processa, registra Falha e o agente pede para o contato escrever (handoff a partir da fase 3). Volume estimado: um agente ativo gera na ordem de 150 mensagens por dia; com 10 agentes, na ordem de 1.500 mensagens por dia e poucos GB de mídia por ano (assumido).
 - Retenção: mídia de contato guardada por 90 dias e depois apagada do disco, mantendo `texto_extraido` na mensagem (assumido).
 - Histórico: Mensagem, Handoff, Turno e Falha são somente inserção. Agente e Cliente guardam só o estado atual; o histórico dos prompts fica no git do projeto.
-- Exclusão lógica: Cliente, Agente e Documento (`removido_em`). Ao remover Documento, seus Trechos são apagados fisicamente. Ao remover Agente, o webhook deixa de responder e as credenciais são apagadas.
+- Exclusão lógica: Cliente, Agente e Documento (`removido_em`). Ao remover Documento, seus Trechos são apagados fisicamente. Ao remover Agente, o webhook deixa de responder e as credenciais são apagadas. Cliente só é removido sem agentes. O slug removido ganha o sufixo `~removido-<id>`, para um cadastro novo com o mesmo nome; agente novo com o nome de um removido reaproveita a pasta de prompts.
 - Backup obrigatório: banco completo, `.env`, prompts e arquivos da base de conhecimento, diário, com retenção de 14 dias e cópia remota opcional (assumido).
 - Importação inicial: nenhuma. Base de conhecimento carregada pelo menu a partir de arquivos na VPS (PDF, DOCX, TXT, MD) (assumido).
 - Modelos por agente: provedor e modelo são configuração, nunca constante no código; a Instalação precisa ter a chave do provedor de cada modelo escolhido. O modelo de embeddings é da Instalação, não do agente: trocar exige reprocessar todos os Trechos.

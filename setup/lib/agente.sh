@@ -18,6 +18,11 @@ api() {
   rm -f "$saida"
 }
 
+# exige_api: para o comando quando a última chamada não deu 200.
+exige_api() {
+  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
+}
+
 detalhe_erro() {
   if [ "$API_STATUS" = "000" ] || [ -z "$1" ]; then
     echo "a API não respondeu em $API_LOCAL. Veja: source deploy/compose.sh && dc logs api"
@@ -194,28 +199,71 @@ tela_primeiro_agente() {
 }
 
 lista_agentes() {
-  local clientes
+  local clientes tipo nome canal modelo destino ativo webhook
   api GET /admin/clientes
-  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
+  exige_api
   clientes=$API_RESPOSTA
   api GET /admin/agentes
-  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
+  exige_api
   secao "Agentes"
   if [ "$(jq 'length' <<<"$API_RESPOSTA")" -eq 0 ]; then
     dica "Nenhum agente ainda. Crie com: asimov novo-agente"
     return 0
   fi
+  # Separador \x1f: com tab, campos vazios seguidos sumiriam no read.
   jq -r --argjson clientes "$clientes" '
-    ($clientes | map({(.id): .nome}) | add) as $nomes
-    | group_by(.cliente_id)[]
-    | "\($nomes[.[0].cliente_id] // "?")\t" + (map("\(.nome)|\(.canal)|\(.modelo_conversa)|\(.handoff_destino | tojson)") | join("\t"))
-  ' <<<"$API_RESPOSTA" | while IFS=$'\t' read -r empresa resto; do
-    printf '  %s%s%s\n' "$NEGRITO" "$empresa" "$NORMAL"
-    tr '\t' '\n' <<<"$resto" | while IFS='|' read -r nome canal modelo destino; do
-      printf '    %s✓%s %-16s %s%s · %s · handoff: %s%s\n' "$VERDE" "$NORMAL" "$nome" "$CINZA" "$canal" "$modelo" "$(nome_do_destino "$destino")" "$NORMAL"
-    done
+    ($clientes | map({(.id): .nome}) | add // {}) as $nomes
+    | group_by(.cliente_id) | sort_by($nomes[.[0].cliente_id] // "?") | .[]
+    | "empresa\u001f\($nomes[.[0].cliente_id] // "?")",
+      (.[] | ["agente", .nome, .canal, .modelo_conversa, (.handoff_destino | tojson), .ativo, .url_webhook] | map(tostring) | join("\u001f"))
+  ' <<<"$API_RESPOSTA" | while IFS=$'\x1f' read -r tipo nome canal modelo destino ativo webhook; do
+    if [ "$tipo" = empresa ]; then
+      printf '  %s%s%s\n' "$NEGRITO" "$nome" "$NORMAL"
+      continue
+    fi
+    if [ "$ativo" = true ]; then
+      printf '    %s✓%s %s' "$VERDE" "$NORMAL" "$(destaque "$nome")"
+    else
+      printf '    %s▲%s %s %spausado%s' "$AMARELO" "$NORMAL" "$(destaque "$nome")" "$AMARELO" "$NORMAL"
+    fi
+    printf '  %s%s · %s · handoff: %s%s\n' "$CINZA" "$canal" "$modelo" "$(nome_do_destino "$destino")" "$NORMAL"
+    printf '      %swebhook %s%s\n' "$CINZA" "$webhook" "$NORMAL"
   done
   echo
+}
+
+# escolhe_agente: define AGENTE (JSON do agente) e AGENTE_EMPRESA. Devolve 1 se não há agentes.
+escolhe_agente() {
+  local op linha clientes agentes
+  local -a rotulos=()
+  api GET /admin/clientes
+  exige_api
+  clientes=$API_RESPOSTA
+  api GET /admin/agentes
+  exige_api
+  agentes=$(jq -c --argjson clientes "$clientes" '
+    ($clientes | map({(.id): .nome}) | add // {}) as $nomes
+    | map(. + {empresa: ($nomes[.cliente_id] // "?")}) | sort_by(.empresa, .nome)' <<<"$API_RESPOSTA")
+  if [ "$(jq 'length' <<<"$agentes")" -eq 0 ]; then
+    dica "Nenhum agente ainda. Crie com: asimov novo-agente"
+    return 1
+  fi
+  while IFS= read -r linha; do rotulos+=("$linha"); done \
+    < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[] | "\(.nome)  \($cinza)\(.empresa)\($normal)"' <<<"$agentes")
+  if [ "${#rotulos[@]}" -eq 1 ]; then
+    op=1
+    ok "Agente: ${rotulos[0]}"
+  else
+    echo
+    escolha op "Agente" "${rotulos[@]}"
+  fi
+  AGENTE=$(jq -c ".[$((op - 1))] | del(.empresa)" <<<"$agentes")
+  # shellcheck disable=SC2034  # lida pelas telas de editar e remover (menu.sh)
+  AGENTE_EMPRESA=$(jq -r ".[$((op - 1))].empresa" <<<"$agentes")
+}
+
+caminho_do_agente() {
+  jq -r '"/admin/clientes/\(.cliente_id)/agentes/\(.id)"' <<<"$1"
 }
 
 # configura_handoff JSON_DO_AGENTE: pede o token de administrador, lista quem pode receber e grava.
@@ -235,8 +283,9 @@ configura_handoff() {
   fi
   escolhe_destino_handoff "$conta"
   corpo=$(jq -n --argjson destino "$HANDOFF_DESTINO" '{handoff_destino: $destino}')
-  api PATCH "/admin/clientes/$(jq -r .cliente_id <<<"$agente")/agentes/$(jq -r .id <<<"$agente")" "$corpo"
+  api PATCH "$(caminho_do_agente "$agente")" "$corpo"
   if [ "$API_STATUS" = 200 ]; then
+    AGENTE=$API_RESPOSTA
     ok "Handoff de $(destaque "$nome") para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
   else
     falha "$(detalhe_erro "$API_RESPOSTA")"
@@ -245,23 +294,9 @@ configura_handoff() {
 
 # asimov handoff: escolhe o agente e troca quem recebe o handoff.
 fluxo_handoff() {
-  local agentes op
-  local -a rotulos=()
-  api GET /admin/agentes
-  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
-  agentes=$API_RESPOSTA
-  if [ "$(jq 'length' <<<"$agentes")" -eq 0 ]; then
-    dica "Nenhum agente ainda. Crie com: asimov novo-agente"
-    return 0
-  fi
   secao "Handoff"
-  while IFS= read -r linha; do rotulos+=("$linha"); done < <(jq -r '.[].nome' <<<"$agentes")
-  if [ "${#rotulos[@]}" -eq 1 ]; then
-    op=1
-  else
-    escolha op "Agente" "${rotulos[@]}"
-  fi
-  configura_handoff "$(jq -c ".[$((op - 1))]" <<<"$agentes")"
+  escolhe_agente || return 0
+  configura_handoff "$AGENTE"
   echo
 }
 

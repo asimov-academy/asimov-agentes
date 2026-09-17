@@ -47,6 +47,12 @@ class AcessoChatwoot(BaseModel):
     token_admin: str = Field(min_length=1)
 
 
+class AcessoAdmin(BaseModel):
+    """Para desfazer a conexão: URL e conta já estão nas credenciais do agente."""
+
+    token_admin: str = Field(min_length=1)
+
+
 class ConexaoChatwoot(AcessoChatwoot):
     account_id: int = Field(gt=0)
     inbox_ids: list[int] = Field(min_length=1)
@@ -158,6 +164,8 @@ class Chatwoot:
     nome = "chatwoot"
     campos_secretos = frozenset({"api_access_token", "bot_secret"})
     responde_200_em_assinatura_invalida = True
+    retoma_por_tempo = False
+    """A conversa volta ao agente quando o atendente a devolve para pendente."""
 
     def _http(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(timeout=TIMEOUT)
@@ -264,13 +272,22 @@ class Chatwoot:
         ).model_dump()
 
     async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
-        """Desfaz `conectar` quando o agente não chega a ser gravado."""
-        conexao: ConexaoChatwoot = _valida(ConexaoChatwoot, dados)
-        async with self._http() as http:
-            await http.delete(
-                f"{self._base(conexao.url, conexao.account_id)}/agent_bots/{credenciais['bot_id']}",
-                headers={"api_access_token": conexao.token_admin},
-            )
+        """Apaga o Agent Bot; o Chatwoot desliga o bot das caixas junto. Bot que já não existe é ok."""
+        acesso: AcessoAdmin = _valida(AcessoAdmin, dados)
+        try:
+            async with self._http() as http:
+                resp = await http.delete(
+                    f"{self._base_operacao(credenciais)}/agent_bots/{credenciais['bot_id']}",
+                    headers={"api_access_token": acesso.token_admin},
+                )
+        except httpx.HTTPError as erro:
+            raise CredencialInvalida(
+                f"não consegui falar com o Chatwoot em {credenciais['url']}"
+            ) from erro
+        if resp.status_code in (401, 403):
+            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+        if resp.status_code >= 400 and resp.status_code != 404:
+            raise CredencialInvalida(f"o Chatwoot recusou apagar o bot: HTTP {resp.status_code}")
 
     # ── Operação (token do bot) ────────────────────────────────────────────
 
@@ -404,6 +421,16 @@ class Chatwoot:
             )
         resp.raise_for_status()
         return resp.json().get("status") == "pending"
+
+    async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
+        """Pendente é o agente conduzindo. O Chatwoot avisa a mudança pelo webhook, que é idempotente."""
+        async with self._http() as http:
+            resp = await http.post(
+                f"{self._base_operacao(credenciais)}/conversations/{conversa_externa}/toggle_status",
+                json={"status": "pending"},
+                headers=self._cabecalho_bot(credenciais),
+            )
+        resp.raise_for_status()
 
     async def digitando(
         self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool

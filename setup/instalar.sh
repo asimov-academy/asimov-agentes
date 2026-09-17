@@ -8,7 +8,7 @@ RAIZ_PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$RAIZ_PROJETO/setup/lib/base.sh"
 
 # Instalação já concluída: completa o que versões novas pedem (modo, modelos), reconstrói se o
-# código mudou e mostra o resumo.
+# código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
 atualiza() {
   banner_asimov
   tela_modo
@@ -18,6 +18,7 @@ atualiza() {
   instala_comando
   tela_handoff_pendente
   mostra_resumo
+  [ -n "${ASIMOV_ATUALIZAR:-}" ] || menu_operador
 }
 
 principal() {

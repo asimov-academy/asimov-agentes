@@ -56,9 +56,9 @@ mostra_resumo() {
   aviso "Guarde uma cópia do .env fora da VPS: sem ele as credenciais dos canais não abrem."
   echo
   printf '  %sComandos%s\n' "$NEGRITO" "$NORMAL"
+  printf '    %sasimov%s               %smenu: criar, editar e remover agentes, ver consumo%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov novo-agente%s   %soutro agente, para empresa nova ou existente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
-  printf '    %sasimov agentes%s       %slista agentes e empresas%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
-  printf '    %sasimov handoff%s       %squem recebe a conversa passada pelo agente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %sasimov ajuda%s         %stodos os comandos%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
   echo
 }
