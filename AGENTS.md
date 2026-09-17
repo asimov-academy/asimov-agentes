@@ -39,6 +39,7 @@ Fale com o operador em português, curto e direto.
 - `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
 - `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA chama banco direto.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`.
+- Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.
 - Não existe `frontend/` na primeira versão.
 
 ## Regras que não mudam

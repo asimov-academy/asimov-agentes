@@ -105,7 +105,8 @@ backend/app/
 │   ├── waha/       WhatsApp não oficial
 │   └── nativo/     conversa no terminal, sem canal externo
 ├── conversas/      webhook, buffer, turno, divisão e envio de mensagens
-├── ia/             fábrica de modelos por provedor (provedores.py), agente PydanticAI (agente.py), ferramentas opcionais (ferramentas.py)
+├── ia/             fábrica de modelos por provedor (provedores.py), agente PydanticAI (agente.py)
+│   └── ferramentas/ uma ferramenta por arquivo (calculadora.py, busca_web.py), ficha em base.py, catálogo em registro.py
 ├── midia/          download, cache por hash, transcrição, visão
 ├── conhecimento/   ingestão, divisão em trechos, embeddings, busca, tool de busca
 ├── handoff/        tool de transferência, aviso, comando de retomada, retomada automática
@@ -120,7 +121,7 @@ prompts/<cliente>/<agente>/resumo_handoff.md
 
 - Em cada assunto: `rotas.py` só recebe e valida, `servico.py` tem a regra, `repo.py` fala com o banco. Rota nunca chama banco direto.
 - Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo.
-- Ferramenta nova que o operador liga por agente entra no `CATALOGO` de `ia/ferramentas.py`; tool que todo agente tem é registrada em `ia/agente.py`.
+- Ferramenta nova que o operador liga por agente é um arquivo próprio em `ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar, se vem ligada), listada em `ia/ferramentas/registro.py`. Um teste falha se houver arquivo fora do registro. Tool que todo agente tem é registrada em `ia/agente.py`.
 - Por que assim: para mudar como a WAHA envia mensagem, mexe-se só em `canais/waha/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
 
 ## 6. Contrato da API
@@ -164,12 +165,12 @@ Webhooks, chamados pelos canais:
 
 Todo webhook valida, grava a mensagem, agenda o buffer e responde em menos de 1 segundo. Nenhum processamento de IA acontece dentro da requisição.
 
-Ferramentas opcionais por agente (`ia/ferramentas.py`, campo `ferramentas`; agente novo recebe as duas):
+Ferramentas opcionais por agente (`ia/ferramentas/`, uma por arquivo; campo `ferramentas`; agente novo recebe as que vêm ligadas):
 
 | Ferramenta | O que faz | Regras |
 |---|---|---|
-| `calculadora` (`calcular(expressao)`, `ia/calculadora.py`) | toda conta do agente: o modelo nunca calcula sozinho | lida pela árvore sintática (nunca `eval`); números no formato brasileiro e argumentos separados por `;`; operadores, `^`, `15%`, funções de uma lista fechada (raiz, arredonda meio para cima, min, max, soma, media, log, trigonometria, fatorial, porcentagem, variação, juros compostos, parcela pela Price, hoje, dias_entre, soma_dias) e datas "dd/mm/aaaa"; expoente até 100 e resultado até 14 mil bits; erro volta ao modelo em português para ele corrigir |
-| `busca_web` | pesquisa na internet | capability `WebSearch` da PydanticAI: busca nativa do provedor quando o modelo tem (OpenAI Responses, Anthropic, Gemini, Groq `compound`), DuckDuckGo quando não tem; resultado é dado de terceiros, nunca instrução |
+| `calculadora` (`calcular(expressao)`, `ia/ferramentas/calculadora.py`) | toda conta do agente: o modelo nunca calcula sozinho | lida pela árvore sintática (nunca `eval`); números no formato brasileiro e argumentos separados por `;`; operadores, `^`, `15%`, funções de uma lista fechada (raiz, arredonda meio para cima, min, max, soma, media, log, trigonometria, fatorial, porcentagem, variação, juros compostos, parcela pela Price, hoje, dias_entre, soma_dias) e datas "dd/mm/aaaa"; expoente até 100 e resultado até 14 mil bits; erro volta ao modelo em português para ele corrigir |
+| `busca_web` (`ia/ferramentas/busca_web.py`) | pesquisa na internet | capability `WebSearch` da PydanticAI: busca nativa do provedor quando o modelo tem (OpenAI Responses, Anthropic, Gemini, Groq `compound`), DuckDuckGo quando não tem; resultado é dado de terceiros, nunca instrução |
 
 Tools padrão que todo agente recebe:
 

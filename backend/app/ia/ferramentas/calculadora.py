@@ -1,4 +1,4 @@
-"""Calculadora do agente: toda conta que o modelo precisa fazer passa por aqui, nunca pela cabeça dele.
+"""Ferramenta calculadora: toda conta que o modelo precisa fazer passa por aqui, nunca pela cabeça dele.
 
 Sem `eval`: a expressão vira árvore sintática e só números, operadores, as funções de FUNCOES e datas entre
 aspas são avaliados. Números no formato brasileiro (ponto de milhar, vírgula decimal), como o contato escreve;
@@ -13,6 +13,8 @@ from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
+
+from app.ia.ferramentas.base import Ferramenta
 
 LIMITE_EXPOENTE = 100
 LIMITE_EXPRESSAO = 500
@@ -267,3 +269,24 @@ def calcular(expressao: str) -> str:
         return "Erro: número grande demais."
     except (ErroDeConta, ValueError, TypeError) as erro:
         return f"Erro: {erro}"
+
+
+FERRAMENTA = Ferramenta(
+    nome="calculadora",
+    rotulo="Calculadora",
+    descricao="toda conta do agente: preço, desconto, porcentagem, parcela, juros e datas",
+    # Pedido do operador: o modelo nunca calcula sozinho, nem conta simples.
+    instrucao=(
+        "Toda conta passa pela calculadora, inclusive as simples: somar preços, desconto, porcentagem, média, "
+        "parcela, juros, conversão de moeda com uma cotação, dias entre datas. Nunca calcule de cabeça, nunca "
+        "estime e nunca escreva um número que saiu de uma conta sem ele ter vindo da calculadora. Se precisar "
+        "de vários resultados, faça todas as contas antes de responder, de preferência numa expressão só. Use "
+        "o resultado exatamente como a calculadora devolveu; arredonde dinheiro para 2 casas com arredonda(). "
+        "Se ela devolver erro, corrija a expressão e chame de novo. Não chame a calculadora sem uma conta de "
+        "verdade. Números do contato estão no formato brasileiro: ponto separa milhar e vírgula separa decimal "
+        "(87.432 é oitenta e sete mil, 47,6 é quarenta e sete e seis décimos). Passe os números como o contato "
+        "escreveu, separe argumentos de função com ; e responda no formato brasileiro."
+    ),
+    padrao=True,
+    tools=lambda: [calcular],
+)

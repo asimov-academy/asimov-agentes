@@ -17,7 +17,7 @@ Modelos padrão: {{MODELOS}}.
 
 - Prompt de cada agente: `prompts/<cliente>/<agente>/persona.md`; resumo do handoff em `resumo_handoff.md`. Relidos a cada turno; não precisa publicar.
 - Comportamento do turno (buffer, envio, divisão): `backend/app/conversas/`.
-- Tool nova que o operador liga por agente: entra no `CATALOGO` de `backend/app/ia/ferramentas.py` (aparece no menu `asimov` > Editar > Ferramentas). Tool que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
+- Ferramenta nova que o operador liga por agente: um arquivo próprio em `backend/app/ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar e se vem ligada), e uma linha em `backend/app/ia/ferramentas/registro.py`. Aparece no menu `asimov` > Editar > Ferramentas. Nunca duas ferramentas no mesmo arquivo. Tool que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
 - Canal novo: implemente `backend/app/canais/base.py` e registre em `backend/app/canais/registro.py`.
 - Em cada assunto: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco.
 

@@ -6,9 +6,9 @@ from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.ia import ferramentas
 from app.plataforma.banco import Base, ComCriacao, ComId, agora
 
-PADRAO_FERRAMENTAS = ("calculadora", "busca_web")
 
 
 class Agente(ComId, ComCriacao, Base):
@@ -39,9 +39,9 @@ class Agente(ComId, ComCriacao, Base):
     """Velocidade com que o agente "digita": define quanto o digitando dura antes de cada mensagem."""
     digitacao_maximo_segundos: Mapped[int] = mapped_column(default=20, server_default="20")
     ferramentas: Mapped[list[str]] = mapped_column(
-        JSONB, default=lambda: list(PADRAO_FERRAMENTAS), server_default='["calculadora", "busca_web"]'
+        JSONB, default=lambda: list(ferramentas.PADRAO), server_default='["calculadora", "busca_web"]'
     )
-    """Nomes de `ia/ferramentas.py` ligados neste agente."""
+    """Nomes do catálogo de `ia/ferramentas/registro.py` ligados neste agente."""
 
     handoff_destino: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     handoff_template: Mapped[str | None] = mapped_column(String(200))
