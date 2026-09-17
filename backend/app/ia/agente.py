@@ -6,7 +6,7 @@ edita o arquivo e a mudança vale na próxima mensagem, sem publicar de novo.
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -15,9 +15,11 @@ from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    SystemPromptPart,
     TextPart,
     UserPromptPart,
 )
+from pydantic_ai.usage import UsageLimits
 
 from app.handoff.tool import transferir_para_humano
 from app.ia import ferramentas
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
 
     from app.agentes.modelos import Agente
     from app.conversas.modelos import Mensagem
+    from app.handoff.modelos import Handoff
 
 
 class Resposta(BaseModel):
@@ -75,7 +78,15 @@ INSTRUCAO_DE_MIDIA = (
 
 INSTRUCAO_DE_HANDOFF = (
     "Se o contato pedir para falar com uma pessoa, ou se o atendimento precisar de alguém da equipe, "
-    "use transferir_para_humano e avise em uma mensagem curta que alguém vai continuar por aqui."
+    "use transferir_para_humano uma vez só e avise em uma mensagem curta que alguém vai continuar por aqui. "
+    "Pedido de pessoa que a equipe já atendeu e devolveu a conversa para você não conta: só transfira de novo "
+    "se o contato pedir outra vez depois da devolução."
+)
+
+MARCO_HANDOFF = "A conversa foi passada para uma pessoa da equipe. Motivo: {motivo}"
+MARCO_RETOMADA = (
+    "A pessoa da equipe terminou e devolveu a conversa para você. O pedido de atendimento humano anterior "
+    "já foi atendido: siga respondendo o contato normalmente."
 )
 
 PAPEL_NO_RESUMO = {"contato": "Contato", "agente": "Agente", "humano": "Atendente"}
@@ -116,16 +127,29 @@ def conteudo(m: "Mensagem") -> str:
     return "\n".join(partes) or f"[{m.tipo} sem texto]"
 
 
-def historico(mensagens: list["Mensagem"]) -> list[ModelMessage]:
-    """Contato vira fala do usuário; agente e atendente humano viram fala do assistente."""
+def historico(mensagens: list["Mensagem"], handoffs: "list[Handoff] | None" = None) -> list[ModelMessage]:
+    """Contato vira fala do usuário; agente e atendente humano viram fala do assistente.
+
+    Handoffs viram avisos do sistema no ponto em que aconteceram. Sem o aviso da devolução, o modelo via o
+    pedido antigo de pessoa e transferia de novo (v0.8.4).
+    """
+    marcos: list[tuple[Any, str]] = []
+    for h in handoffs or []:
+        marcos.append((h.iniciado_em, MARCO_HANDOFF.format(motivo=h.motivo)))
+        if h.retomado_em is not None:
+            marcos.append((h.retomado_em, MARCO_RETOMADA))
+    marcos.sort(key=lambda marco: marco[0])
     saida: list[ModelMessage] = []
     for m in mensagens:
+        while marcos and marcos[0][0] <= m.criado_em:
+            saida.append(ModelRequest(parts=[SystemPromptPart(content=marcos.pop(0)[1])]))
         texto = conteudo(m)
         if m.autor == "contato":
             saida.append(ModelRequest(parts=[UserPromptPart(content=texto)]))
         else:
             prefixo = "(atendente humano) " if m.autor == "humano" else ""
             saida.append(ModelResponse(parts=[TextPart(content=prefixo + texto)]))
+    saida.extend(ModelRequest(parts=[SystemPromptPart(content=texto)]) for _, texto in marcos)
     return saida
 
 
@@ -146,7 +170,9 @@ async def roda_turno(
     anteriores: list["Mensagem"],
     pendentes: list["Mensagem"],
     modelo: "Model | None" = None,
+    handoffs: "list[Handoff] | None" = None,
 ) -> ResultadoTurno:
+    """Levanta UsageLimitExceeded quando o modelo passa do teto de chamadas ou tools do turno."""
     tools, capabilities, instrucoes_das_ferramentas = ferramentas.monta(agente.ferramentas)
     ia = Agent(
         modelo or modelo_de_resposta(agente.modelo_conversa, agente.modelo_fallback),
@@ -164,7 +190,15 @@ async def roda_turno(
     )
     contexto = ContextoTurno()
     entrada = "\n".join(conteudo(m) for m in pendentes)
-    resultado = await ia.run(entrada, message_history=historico(anteriores), deps=contexto)
+    cfg = config()
+    resultado = await ia.run(
+        entrada,
+        message_history=historico(anteriores, handoffs),
+        deps=contexto,
+        usage_limits=UsageLimits(
+            request_limit=cfg.limite_chamadas_modelo_por_turno, tool_calls_limit=cfg.limite_tools_por_turno
+        ),
+    )
     novas = resultado.new_messages()
     return ResultadoTurno(
         mensagens=resultado.output.mensagens,

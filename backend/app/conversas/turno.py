@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Any
 
 import structlog
+from pydantic_ai.exceptions import UsageLimitExceeded
 
 from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
@@ -26,6 +27,7 @@ from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import buffer, repo
 from app.conversas.divisao import limita_mensagens, tempos_de_digitacao
 from app.conversas.modelos import Conversa, Mensagem
+from app.handoff import repo as handoff_repo
 from app.handoff import servico as handoff
 from app.ia.agente import ResultadoTurno, roda_turno
 from app.midia import servico as midia
@@ -59,14 +61,17 @@ def separa_pendentes(
     return [m for m in mensagens if m.id not in ids], pendentes
 
 
-async def _roda_com_tentativas(agente: Any, anteriores: list[Mensagem], pendentes: list[Mensagem]) -> ResultadoTurno:
+async def _roda_com_tentativas(
+    agente: Any, anteriores: list[Mensagem], pendentes: list[Mensagem], handoffs: list[Any]
+) -> ResultadoTurno:
     tentativas = config().tentativas_extra_modelo + 1
     for tentativa in range(1, tentativas + 1):
         try:
-            return await roda_turno(agente, anteriores, pendentes)
+            return await roda_turno(agente, anteriores, pendentes, handoffs=handoffs)
         except Exception as erro:
             log.warning("modelo_falhou", tentativa=tentativa, erro=repr(erro))
-            if tentativa == tentativas:
+            # Estourar o teto do turno é o modelo em loop: tentar de novo só repete o gasto.
+            if tentativa == tentativas or isinstance(erro, UsageLimitExceeded):
                 raise
             await _espera(2**tentativa)
     raise AssertionError("inalcançável")
@@ -126,7 +131,9 @@ async def _turno(
             return "substituido"
         inicio = time.monotonic()
         try:
-            resultado = await _roda_com_tentativas(agente, anteriores, pendentes)
+            resultado = await _roda_com_tentativas(
+                agente, anteriores, pendentes, await handoff_repo.da_conversa(s, cliente_id, conversa_id)
+            )
         except Exception as erro:
             await _digitando(canal, credenciais, conversa.id_externo, False)
             await grava_turno(

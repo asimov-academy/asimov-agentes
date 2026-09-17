@@ -35,6 +35,9 @@ class Config(BaseSettings):
     # Cobre ler mídia e responder no mesmo turno; abaixo do job_timeout do worker.
     lock_ttl_segundos: int = 240
     tentativas_extra_modelo: int = 2
+    # Teto por turno: o gpt-5.1 chegou a chamar a tool de handoff 16 vezes num turno (102 mil tokens).
+    limite_chamadas_modelo_por_turno: int = 6
+    limite_tools_por_turno: int = 8
     # Soma do digitando de uma resposta; abaixo do lock, que também cobre mídia e modelo.
     digitacao_total_maximo_segundos: int = 90
 
