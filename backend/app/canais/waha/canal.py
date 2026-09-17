@@ -37,6 +37,7 @@ from app.plataforma.textos import slug
 
 COMANDO_RETOMAR = re.compile(r"^\s*/retomar\s+([A-Za-z0-9]{4,12})\s*$", re.IGNORECASE)
 SUFIXOS_DE_PESSOA = ("@c.us", "@lid", "@s.whatsapp.net")
+SUFIXOS_DE_TELEFONE = ("@c.us", "@s.whatsapp.net")
 SUFIXO_DE_GRUPO = "@g.us"
 JOINHA = "\U0001f44d"
 """Reagir com joinha numa mensagem devolve a conversa ao agente: é o que a pessoa tem à mão no
@@ -115,6 +116,47 @@ def _anexos(mensagem: dict[str, Any]) -> tuple[Anexo, ...]:
             nome=midia.get("filename") if isinstance(midia.get("filename"), str) else None,
         ),
     )
+
+
+def _digitos_de(valor: Any) -> str | None:
+    """Telefone de um campo que pode vir como JID em texto, como objeto do GOWS ou só dígitos.
+
+    `@lid` nunca vira telefone: é o id oculto, e os dígitos dele não são o número de ninguém.
+    """
+    if isinstance(valor, dict):
+        valor = valor.get("User") or valor.get("user") or valor.get("_serialized") or valor.get("id")
+    if not isinstance(valor, str) or not valor:
+        return None
+    if "@" in valor:
+        usuario, _, servidor = valor.partition("@")
+        if f"@{servidor}" not in SUFIXOS_DE_TELEFONE:
+            return None
+        valor = usuario
+    valor = valor.split(":")[0].split(".")[0]
+    return valor if valor.isdigit() and 8 <= len(valor) <= 15 else None
+
+
+def telefone_do_contato(mensagem: dict[str, Any]) -> str | None:
+    """O número de verdade, mesmo quando a conversa é endereçada por `@lid` (id oculto).
+
+    O WhatsApp esconde o número por trás de um `@lid` e a conversa chega endereçada por ele. A WAHA
+    resolve e devolve o telefone em `pn` ou, no GOWS, em `_data.Info.SenderAlt`; em grupo, no
+    participante. Sem nenhum deles, o contato fica sem telefone e vale pelo id da conversa.
+    """
+    dados = mensagem.get("_data") if isinstance(mensagem.get("_data"), dict) else {}
+    info = dados.get("Info") if isinstance(dados.get("Info"), dict) else {}
+    for valor in (
+        mensagem.get("pn"),
+        mensagem.get("from"),
+        info.get("SenderAlt"),
+        info.get("Sender"),
+        mensagem.get("participantPn"),
+        mensagem.get("participant"),
+    ):
+        numero = _digitos_de(valor)
+        if numero:
+            return numero
+    return None
 
 
 def _chat_da_mensagem(mensagem: dict[str, Any]) -> str | None:
@@ -226,7 +268,7 @@ class Waha:
             "conversa_externa": chat,
             "contato_externo": chat,
             "contato_nome": _nome_do_contato(mensagem),
-            "contato_telefone": chat.split("@")[0] if chat.endswith("@c.us") else None,
+            "contato_telefone": telefone_do_contato(mensagem),
             "mensagem_externa": str(mensagem.get("id")) if mensagem.get("id") is not None else None,
             "texto": texto,
             "anexos": _anexos(mensagem),
