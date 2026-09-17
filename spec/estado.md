@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.8.0` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5.
+- `v0.8.1` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes de ritmo, ferramentas e modelo na criação.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
 - Verificação local na última revisão: 116 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
@@ -17,7 +17,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.0), falta validar na VPS; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.1), falta validar na VPS; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -52,7 +52,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Pendências conhecidas
 
-- v0.8.0 não conferida na VPS: criar agente nativo pelo menu e conversar com digitando, ferramentas, consumo e handoff (critério 1 da fase 5).
+- v0.8.1 não conferida na VPS (na v0.8.0 o operador criou e conversou, mas lento pelo ritmo padrão): criar agente nativo pelo menu com ritmo rápido e conversar com digitando, ferramentas, consumo e handoff (critério 1 da fase 5).
 - v0.7.0 ainda não conferida na VPS com modelo real: busca na web, calculadora e mídia depois da troca da OpenAI para a Responses.
 - `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0 para o agente não citar a mecânica ("recebi a transcrição"): não conferido na VPS.
 - Causa de o Chatwoot não ligar o bot: era o Enter duplo escolhendo a primeira caixa (v0.6.3). Se voltar a acontecer, a criação agora falha com mensagem clara.

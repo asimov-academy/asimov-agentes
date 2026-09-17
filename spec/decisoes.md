@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Ajustes na criação do agente nativo (v0.8.1)
+
+- **Achado do operador na VPS**: o nativo era criado só com nome e empresa e herdava o buffer de 8 s e a digitação de uma pessoa (até 20 s por mensagem, 90 s na resposta). No terminal isso parecia travado.
+- **Criar nativo pergunta o ritmo**: "Rápido, para testar" (buffer 2 s, 30 caracteres/s e teto de 1 s: cada mensagem fica 1 s digitando, o mínimo do turno), "Como no WhatsApp" (padrões dos canais) ou tempos escolhidos. Também mensagens por resposta, ferramentas e modelo de resposta. O resto dos modelos segue o padrão e muda em Editar agente. spec/telas.md.
+- **O Chatwoot continua sem essa tela**: lá o padrão é o ritmo certo e a edição já existe.
+
 ## 2026-09-17: Agente nativo (fase 5, v0.8.0)
 
 - **A fase 5 sai em três versões**, decisão do operador: nativo (v0.8.0), WAHA e WhatsApp oficial, com validação na VPS entre elas. O operador confirmou a validação que faltava da fase 4.

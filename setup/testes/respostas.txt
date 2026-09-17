@@ -31,6 +31,10 @@ s
 2
 Ana
 1
+1
+
+
+s
 s
 oi
 /sair
