@@ -44,7 +44,7 @@ A empresa atendida pelo operador.
 | cliente_id | referência a Cliente | sim |
 | nome | texto | sim |
 | slug | texto único dentro do cliente | sim |
-| canal | `whatsapp`, `telegram` ou `chatwoot` | sim |
+| canal | `chatwoot`, `whatsapp` (oficial), `waha` (não oficial) ou `nativo` (só terminal) | sim |
 | credenciais_canal | segredo estruturado por canal (ver abaixo), criptografado | sim |
 | token_webhook | segredo único gerado, compõe a URL do webhook | sim |
 | arquivo_prompt | caminho do prompt da persona no repositório | sim |
@@ -59,16 +59,17 @@ A empresa atendida pelo operador.
 | digitacao_caracteres_por_segundo | inteiro, 1 a 30 | sim, padrão 6 |
 | digitacao_maximo_segundos | inteiro, 1 a 30; teto do digitando por mensagem | sim, padrão 20 |
 | ferramentas | lista de nomes do catálogo (`calculadora`, `busca_web`) | sim, padrão as duas |
-| handoff_destino | estruturado por canal: número WhatsApp, chat id do grupo Telegram, ou no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
+| handoff_destino | estruturado por canal: no WhatsApp direto, número ou grupo que recebe o aviso; no nativo, vazio; no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
 | handoff_template | nome do template aprovado na Meta para o aviso de handoff | sim no canal WhatsApp; vazio nos outros |
-| retomada_automatica_horas | inteiro | não; vazio no Chatwoot (retomada é devolver a conversa para pendente) |
+| retomada_automatica_horas | inteiro | não; padrão 4 no WhatsApp direto (assumido); vazio no Chatwoot (retomada é devolver a conversa para pendente) |
 | ativo | booleano | sim |
 | criado_em, atualizado_em, removido_em | data e hora | criado e atualizado sim |
 
 Credenciais por canal:
 
 - WhatsApp oficial: phone_number_id, business_account_id, access_token, app_secret, verify_token.
-- Telegram: bot_token, secret_token (gerado pelo setup).
+- WAHA: sessao (nome da sessão na WAHA), hmac_key (gerada). Endereço e chave da WAHA são da Instalação (`WAHA_API_KEY` no `.env`).
+- Nativo: nenhuma.
 - Chatwoot: url, account_id, inbox_ids, api_access_token (token do Agent Bot), bot_id, bot_secret. O token do administrador não fica nas credenciais do agente: fica em Acesso ao canal.
 
 ### Acesso ao canal
@@ -90,7 +91,7 @@ Acesso do operador a um canal, pedido uma vez e reaproveitado (no Chatwoot, o to
 | id | identificador | sim |
 | cliente_id | referência a Cliente | sim |
 | agente_id | referência a Agente | sim |
-| id_externo | texto (telefone, user id do Telegram ou contact id do Chatwoot) | sim, único por agente |
+| id_externo | texto (telefone na Cloud API, chat id `@c.us`/`@lid` na WAHA, contact id do Chatwoot, `terminal` no nativo) | sim, único por agente |
 | nome | texto | não |
 | telefone | texto | não |
 | ultima_mensagem_em | data e hora | sim (controla a janela de 24 horas do WhatsApp) |
@@ -104,7 +105,7 @@ Acesso do operador a um canal, pedido uma vez e reaproveitado (no Chatwoot, o to
 | cliente_id | referência a Cliente | sim |
 | agente_id | referência a Agente | sim |
 | contato_id | referência a Contato | sim |
-| id_externo | texto (display_id no Chatwoot, chat id no Telegram, telefone no WhatsApp) | sim |
+| id_externo | texto (display_id no Chatwoot, telefone na Cloud API, chat id na WAHA, id da conversa do terminal no nativo) | sim |
 | status | `agente` ou `humano` | sim |
 | respondido_ate | data e hora da última mensagem do contato respondida por um turno | não |
 | criado_em, atualizado_em | data e hora | sim |

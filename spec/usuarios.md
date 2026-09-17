@@ -8,14 +8,14 @@ Quem roda o setup numa VPS: o dono do projeto, alunos da metodologia e clientes 
 
 No app:
 - Roda o setup, escolhe Claude Code ou Codex e informa domínio, e-mail do SSL e chaves.
-- Cria os agentes de cada cliente (empresa), escolhe o canal de cada agente (WhatsApp oficial, Telegram ou Chatwoot) e informa as credenciais.
+- Cria os agentes de cada cliente (empresa), escolhe o canal de cada agente (Chatwoot, WhatsApp oficial, WhatsApp não oficial pela WAHA ou nativo no terminal) e informa as credenciais.
 - Cola a URL de webhook gerada no canal.
 - Sobe a base de conhecimento de cada agente.
 - Depois do setup, evolui prompts, tools e comportamento em vibecoding direto no projeto.
 
 ### Contato
 
-O público de cada cliente (empresa) que conversa com o agente. Familiaridade variável; só usa WhatsApp ou Telegram.
+O público de cada cliente (empresa) que conversa com o agente. Familiaridade variável; só usa o WhatsApp (direto ou por uma caixa do Chatwoot).
 
 No app:
 - Manda texto, áudio, imagem e documento pelo canal e recebe as respostas do agente.
@@ -27,7 +27,7 @@ Pessoa da empresa cliente que assume a conversa no handoff. Familiaridade média
 
 No app:
 - **Canal Chatwoot:** recebe a conversa transferida pelo agente e responde dentro do próprio Chatwoot.
-- **Canal WhatsApp oficial ou Telegram direto:** recebe no número ou grupo da empresa um aviso com o resumo da conversa, fala com o contato pelo próprio telefone e manda um comando para o agente voltar a responder àquele contato. Sem o comando, o agente volta sozinho depois de um tempo configurável, com padrão de algumas horas (assumido).
+- **WhatsApp direto (oficial ou WAHA):** recebe no número ou grupo da empresa um aviso com o resumo da conversa, fala com o contato pelo próprio telefone e manda um comando para o agente voltar a responder àquele contato. Sem o comando, o agente volta sozinho depois de um tempo configurável, com padrão de algumas horas (assumido).
 - Não configura agentes nem acessa a VPS.
 
 ## Regras de visibilidade
@@ -44,7 +44,7 @@ O operador, sozinho. Não existe outro papel administrativo.
 ## Forma de entrada
 
 - Operador: acesso SSH à VPS. Não há login de usuário no app nesta versão.
-- Contato: sem login; identificado pelo ID do canal (telefone no WhatsApp, user id no Telegram, contato no Chatwoot).
+- Contato: sem login; identificado pelo ID do canal (telefone ou chat id no WhatsApp, contato no Chatwoot; no nativo, a conversa do operador no terminal).
 - Atendente humano: pelo login do próprio Chatwoot, ou pelo número ou grupo cadastrado para o handoff no canal direto.
 
 ## Escala e dispositivo principal
@@ -57,7 +57,7 @@ O operador, sozinho. Não existe outro papel administrativo.
 ## Implicações técnicas
 
 - Autenticação de pessoas: nenhuma dentro do app. O acesso administrativo é o SSH da VPS. Qualquer rota administrativa da API (criar agente, subir base de conhecimento) escuta só em localhost ou exige chave de API guardada em variável de ambiente (derivado).
-- Autenticação de entrada dos canais: todo webhook é verificado antes de processar. WhatsApp pela assinatura `X-Hub-Signature-256` com o app secret; Telegram pelo header `X-Telegram-Bot-Api-Secret-Token`; Chatwoot pela assinatura HMAC `X-Chatwoot-Signature` com o secret do Agent Bot, além do token secreto único por agente na URL do webhook (derivado). Webhook sem verificação válida é rejeitado.
+- Autenticação de entrada dos canais: todo webhook é verificado antes de processar. WhatsApp pela assinatura `X-Hub-Signature-256` com o app secret; WAHA pela assinatura `X-Webhook-Hmac` (HMAC SHA-512 do corpo) com a chave do agente, chegando só pela rede interna do Docker; Chatwoot pela assinatura HMAC `X-Chatwoot-Signature` com o secret do Agent Bot, além do token secreto único por agente na URL do webhook (derivado). Webhook sem verificação válida é rejeitado.
 - Autorização por papel:
 
 | Ação | Operador | Atendente | Contato |

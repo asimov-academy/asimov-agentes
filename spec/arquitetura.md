@@ -2,7 +2,7 @@
 
 ## Resumo para quem não é técnico
 
-O projeto tem duas partes: o script de instalação, que roda no terminal da VPS e conversa com você, e a plataforma dos agentes, que fica no ar recebendo mensagens do WhatsApp, Telegram e Chatwoot. A plataforma usa uma base madura e já testada em agentes em produção (Python, PydanticAI, Postgres e Redis), só que preparada para vários clientes e agentes na mesma VPS. Cada cliente só enxerga o que é dele, e senhas e chaves ficam trancadas fora do código. Tudo roda em containers numa única VPS, com HTTPS automático e backup diário. No final, o projeto fica com `CLAUDE.md` e `AGENTS.md` para você continuar evoluindo em vibecoding.
+O projeto tem duas partes: o script de instalação, que roda no terminal da VPS e conversa com você, e a plataforma dos agentes, que fica no ar recebendo mensagens do WhatsApp (oficial ou pela WAHA) e do Chatwoot, ou conversando com você no terminal. A plataforma usa uma base madura e já testada em agentes em produção (Python, PydanticAI, Postgres e Redis), só que preparada para vários clientes e agentes na mesma VPS. Cada cliente só enxerga o que é dele, e senhas e chaves ficam trancadas fora do código. Tudo roda em containers numa única VPS, com HTTPS automático e backup diário. No final, o projeto fica com `CLAUDE.md` e `AGENTS.md` para você continuar evoluindo em vibecoding.
 
 ## Ajustes de consistência
 
@@ -52,7 +52,8 @@ asimov-agentes/
 | Criptografia de credenciais | `cryptography` (Fernet) | padrão simples e auditado |
 | Logs | structlog em JSON | `cliente_id`, `agente_id` e `conversa_id` em todo evento |
 | Proxy e HTTPS | Caddy | certificado Let's Encrypt e renovação automáticos, configuração de poucas linhas |
-| Execução | Docker Compose (`caddy`, `api`, `worker`, `postgres`, `redis`) | sobe e reinicia tudo com um comando; nada de Swarm numa VPS dedicada |
+| WhatsApp não oficial | WAHA (`devlikeapro/waha`, Apache 2.0) com motor GOWS (whatsmeow), versão fixada, container `waha` subido só quando o primeiro agente WAHA é criado | leve, várias sessões numa instância, QR code e webhook assinado; manutenção do protocolo é do projeto WAHA; licença sem condições (Evolution e Baileys direto descartados, spec/decisoes.md) |
+| Execução | Docker Compose (`caddy`, `api`, `worker`, `postgres`, `redis` e, quando houver agente WAHA, `waha`) | sobe e reinicia tudo com um comando; nada de Swarm numa VPS dedicada |
 | Agente de código | Claude Code (instalador oficial) ou Codex (npm, com Node LTS) | escolha do operador |
 | Testes | pytest + pytest-asyncio; `shellcheck` no Bash | cobre regras e isolamento; pega erro comum de script |
 
@@ -69,9 +70,10 @@ Modelos de IA:
 - **Operador:** entra por SSH. As rotas administrativas (`/admin/*`) exigem o header `X-Admin-Key` com a `chave_api_admin` gerada pelo setup, comparada em tempo constante. O Caddy não publica `/admin/*`; a API escuta em `127.0.0.1:8000` e só o menu, na própria VPS, chega nela.
 - **Canais:** cada webhook entra por `https://bot.<dominio>/webhook/{canal}/{token_webhook}`. O `token_webhook` identifica o agente e, por ele, o cliente. Depois disso, a assinatura do canal é verificada com a credencial daquele agente:
   - WhatsApp: `GET` de verificação com `hub.verify_token`; `POST` com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`).
-  - Telegram: `X-Telegram-Bot-Api-Secret-Token` igual ao `secret_token` registrado pelo setup.
+  - WAHA: não passa pelo Caddy. A WAHA chama `http://api:8000/webhook/waha/{token_webhook}` pela rede interna, com `X-Webhook-Hmac` = HMAC SHA-512 do corpo cru com a `hmac_key` do agente.
+  - Nativo: sem webhook; o terminal chama as rotas administrativas de conversa.
   - Chatwoot: `X-Chatwoot-Signature` = HMAC SHA-256 de `"{X-Chatwoot-Timestamp}.{corpo cru}"` com o `bot_secret`.
-- **Resposta a webhook inválido:** WhatsApp e Telegram recebem 401. Chatwoot recebe 200 com registro em Falha, porque qualquer resposta de erro faz o Chatwoot silenciar o bot naquela conversa. O único erro proposital ao Chatwoot é 500 quando não dá para enfileirar.
+- **Resposta a webhook inválido:** WhatsApp oficial e WAHA recebem 401. Chatwoot recebe 200 com registro em Falha, porque qualquer resposta de erro faz o Chatwoot silenciar o bot naquela conversa. O único erro proposital ao Chatwoot é 500 quando não dá para enfileirar.
 - **Atendente no canal direto:** mensagem vinda do número ou grupo em `handoff_destino` é tratada como comando, nunca como conversa de contato. `/retomar <código>` só é aceito se o código pertence a um handoff aberto do mesmo agente.
 - **Atendente no Chatwoot:** autenticado pelo próprio Chatwoot. A retomada chega como `conversation_updated` com status `pending`, já verificada pela assinatura.
 - **Isolamento:** o `cliente_id` nunca vem do corpo da requisição. Nos webhooks sai do `token_webhook`; nas rotas administrativas vem da URL e é conferido contra o banco. Todo repositório recebe `cliente_id` como parâmetro obrigatório e todo `SELECT`, `UPDATE` e `DELETE` filtra por ele. A busca vetorial filtra por `cliente_id` e `agente_id` no `WHERE` antes da ordenação por similaridade.
@@ -97,9 +99,10 @@ backend/app/
 ├── agentes/        rotas.py, servico.py, repo.py, modelos.py
 ├── canais/
 │   ├── base.py     interface: conectar e desconectar, verificar, normalizar entrada, enviar, digitando, baixar mídia, transferir, devolver ao agente
-│   ├── whatsapp/
-│   ├── telegram/
-│   └── chatwoot/
+│   ├── chatwoot/
+│   ├── whatsapp/   Cloud API oficial
+│   ├── waha/       WhatsApp não oficial
+│   └── nativo/     conversa no terminal, sem canal externo
 ├── conversas/      webhook, buffer, turno, divisão e envio de mensagens
 ├── ia/             fábrica de modelos por provedor, agente PydanticAI, tools padrão
 ├── midia/          download, cache por hash, transcrição, visão
@@ -117,7 +120,7 @@ prompts/<cliente>/<agente>/resumo_handoff.md
 - Em cada assunto: `rotas.py` só recebe e valida, `servico.py` tem a regra, `repo.py` fala com o banco. Rota nunca chama banco direto.
 - Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo.
 - Tools novas que o operador criar em vibecoding ficam em `ia/tools/` ou no assunto que elas tocam, e são registradas por agente.
-- Por que assim: para mudar como o Telegram envia mensagem, mexe-se só em `canais/telegram/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
+- Por que assim: para mudar como a WAHA envia mensagem, mexe-se só em `canais/waha/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
 
 ## 6. Contrato da API
 
@@ -128,12 +131,12 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Verificar saúde | `GET /health` (pública) | nada | status de api, banco e redis | não expõe versões nem dados |
 | Criar cliente | `POST /admin/clientes` | nome | cliente | slug único |
 | Listar clientes | `GET /admin/clientes` | nada | lista | só não removidos |
-| Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, conta, caixas e token de administrador se não houver guardado), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook, liga nas caixas e confere na caixa que o bot ficou; se não ficou ou a gravação falhar, apaga o bot); o agente guarda só o token e o secret do bot, e o token de administrador que funcionou vai para Acesso ao canal; sem token guardado nem informado, 428; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; no Telegram registra o webhook |
+| Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, conta, caixas e token de administrador se não houver guardado), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook, liga nas caixas e confere na caixa que o bot ficou; se não ficou ou a gravação falhar, apaga o bot); o agente guarda só o token e o secret do bot, e o token de administrador que funcionou vai para Acesso ao canal; sem token guardado nem informado, 428; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; na WAHA cria a sessão com o webhook interno; no nativo não conecta nada |
 | Catálogo de ferramentas | `GET /admin/ferramentas` | nada | nome, rótulo, descrição e se é padrão | usado pelo menu |
 | Listar agentes | `GET /admin/agentes?cliente_id=` | filtro opcional | lista com canal, destino de handoff, URL do webhook, ativo | credenciais nunca devolvidas |
 | Ver agente | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}` | ids | agente | agente pertence ao cliente |
 | Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | só os campos alterados: nome, handoff_destino, buffer_segundos, max_mensagens_por_resposta, retomada_automatica_horas, digitacao_caracteres_por_segundo e digitacao_maximo_segundos (1 a 30), ferramentas (nomes do catálogo), modelo_conversa, modelo_fallback, modelo_auxiliar, modelo_visao, modelo_transcricao; `null` esvazia fallback, destino e retomada; nome novo vai ao canal com o token guardado ou informado em conexao (428 sem token), ou só na plataforma com `renomear_no_canal: false` | agente | agente pertence ao cliente; campo fora da lista é recusado; destino validado pelo canal; modelos só de provedores com chave; retomada por tempo só em canal que retoma por tempo; slug e pasta de prompts não mudam; credencial de canal editável entra com a fase 5 |
-| Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmacao (nome do agente), conexao opcional (token_admin) e desconectar_canal (padrão true) | removido e canal_desconectado | agente pertence ao cliente; desfaz no canal antes com o token guardado ou informado (Chatwoot apaga o Agent Bot; 428 sem token) e, se o canal recusar, não remove; `desconectar_canal: false` remove sem mexer no canal; exclusão lógica: webhook invalidado, credenciais apagadas, slug liberado; no Telegram remove o webhook |
+| Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmacao (nome do agente), conexao opcional (token_admin) e desconectar_canal (padrão true) | removido e canal_desconectado | agente pertence ao cliente; desfaz no canal antes com o token guardado ou informado (Chatwoot apaga o Agent Bot; 428 sem token) e, se o canal recusar, não remove; `desconectar_canal: false` remove sem mexer no canal; exclusão lógica: webhook invalidado, credenciais apagadas, slug liberado; na WAHA faz logout e apaga a sessão |
 | Remover empresa | `DELETE /admin/clientes/{cliente_id}` | confirmacao (nome da empresa) | nada (204) | só sem agentes (409); exclusão lógica com slug liberado |
 | Listar empresas | `GET /admin/clientes` | nada | lista | usada pelo `asimov novo-agente` no modo revenda |
 | Descobrir no canal | `POST /admin/canais/{canal}/descobrir` | acesso do operador (Chatwoot: url e, se não houver guardado, token de administrador) | contas, caixas de entrada, atendentes e times | grava só o token novo que funcionou; sem token, ou com o guardado recusado (que é apagado), 428 |
@@ -142,6 +145,9 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Enviar documento | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/documentos` | caminho do arquivo na VPS ou upload multipart | documento com status `processando` | formato aceito (PDF, DOCX, TXT, MD); hash repetido no mesmo agente é recusado; enfileira ingestão |
 | Listar documentos | `GET .../agentes/{agente_id}/documentos` | ids | lista com status e trechos | agente pertence ao cliente |
 | Remover documento | `DELETE .../documentos/{documento_id}` | ids | ok | documento pertence ao agente e ao cliente; apaga trechos |
+| Sessão WAHA | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}/sessao` | ids | status (`SCAN_QR_CODE`, `WORKING`, `FAILED`) e QR code em texto quando aguardando | agente WAHA do cliente; o menu desenha o QR no terminal até `WORKING` |
+| Conversar no terminal | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/terminal` | texto e conversa (opcional, para começar uma nova) | conversa | agente nativo do cliente; grava a mensagem e agenda o buffer, como um webhook |
+| Ler conversa do terminal | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}/terminal/{conversa}?depois=` | ids e marca de tempo | mensagens do agente depois da marca, digitando e handoff aberto | agente nativo do cliente |
 | Ver consumo e falhas | `GET /admin/consumo?cliente_id=&agente_id=&dias=` | filtros; `dias` de 1 a 365, padrão 7 | por agente: turnos (resposta), chamadas, tokens, custo estimado e chamadas sem preço; até 10 últimas falhas | cliente informado é conferido no banco; `agente_id` exige `cliente_id`; sem cliente, a instalação inteira |
 | Retomar agente | `POST /admin/clientes/{cliente_id}/conversas/{conversa_id}/retomar` | ids | retomado (false se não havia handoff aberto) | conversa pertence ao cliente; o canal devolve a conversa ao agente antes (Chatwoot: status pendente) e, se recusar, 502 sem fechar; `retomado_por` `operador` |
 
@@ -151,7 +157,7 @@ Webhooks, chamados pelos canais:
 |---|---|---|
 | Verificação da Meta | `GET /webhook/whatsapp/{token}` | `hub.verify_token` confere com o agente; devolve `hub.challenge` |
 | Receber WhatsApp | `POST /webhook/whatsapp/{token}` | assinatura; agente ativo; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando |
-| Receber Telegram | `POST /webhook/telegram/{token}` | secret token; agente ativo; deduplica por `update_id`; mensagem do grupo de handoff vira comando |
+| Receber WAHA | `POST /webhook/waha/{token}` (rede interna) | HMAC SHA-512; agente ativo; aceita `message` e `session.status`; ignora `fromMe` e grupos, exceto o grupo de handoff; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando |
 | Receber Chatwoot | `POST /webhook/chatwoot/{token}` | HMAC; aceita só `message_created`, `conversation_status_changed` e `conversation_updated`; vale qualquer caixa em que o bot esteja ligado (o Chatwoot só chama o bot a partir delas e a assinatura prova o bot); deduplica mensagem pelo id; mudança de status para `pending` fecha o handoff aberto (idempotente) |
 
 Todo webhook valida, grava a mensagem, agenda o buffer e responde em menos de 1 segundo. Nenhum processamento de IA acontece dentro da requisição.
@@ -183,7 +189,7 @@ Worker arq, mesmo código do backend, container `worker`:
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
 | `limpar_midia` | cron diário | apaga arquivos de mídia com mais de 90 dias |
 
-Digitando por canal: WhatsApp pelo indicador de digitação da Cloud API junto da confirmação de leitura; Telegram `sendChatAction` repetido a cada 4 s durante o turno; Chatwoot `toggle_typing_status`.
+Digitando por canal: WhatsApp pelo indicador de digitação da Cloud API junto da confirmação de leitura; WAHA `startTyping`/`stopTyping` e `sendSeen`; nativo guarda o digitando no Redis para o terminal mostrar; Chatwoot `toggle_typing_status`.
 
 Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persistindo, mensagem curta de expectativa ao contato, registro em Falha e handoff. Nunca resposta inventada.
 

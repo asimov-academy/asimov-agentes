@@ -88,7 +88,8 @@ Chatwoot ◄──────────────────── respost
 
 ## O que vem por aí
 
-- WhatsApp oficial e Telegram direto, sem Chatwoot
+- WhatsApp direto, oficial ou não oficial (WAHA), sem Chatwoot
+- Agente nativo para conversar no terminal
 - Base de conhecimento (RAG) por agente
 
 ## Licença
