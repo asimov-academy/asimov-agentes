@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Quem o agente atende (v0.9.2)
+
+- **Pedido do operador ao parear o primeiro número**: poder deixar o agente respondendo só a números escolhidos enquanto testa, ou abrir para qualquer pessoa. Campo `contatos_permitidos` no Agente (migração `0010`), lista vazia por padrão, aplicada no webhook antes de gravar qualquer coisa: quem está fora não vira conversa nem turno, só log. Vale para qualquer canal, não só a WAHA.
+- **Comparação tolerante**: o operador digita `11988887777` ou `+55 (11) 98888-7777` e o canal manda `5511988887777@c.us`. Bate quando o mais curto é o fim do mais longo, com pelo menos 8 dígitos; números de DDDs diferentes continuam diferentes.
+- **Grupo o agente nunca responde** (já era assim desde a v0.9.0, menos o grupo do handoff): agora está escrito na tela, porque era a primeira dúvida de quem pareia um número.
+- **Na criação e em Editar agente > WhatsApp**: "Qualquer pessoa que mandar mensagem" ou "Só os números que eu listar", separados por vírgula. A ficha do agente mostra quem ele atende.
+
 ## 2026-09-17: Aviso de API não oficial e correções do primeiro teste da WAHA (v0.9.1)
 
 - **Aviso de que a WAHA é API não oficial**, pedido pelo operador ao ver a tela de canais: o rótulo do canal passou a dizer "API não oficial" e, antes de qualquer coisa (antes até de subir o contêiner), o fluxo mostra o que isso significa (a Meta não homologa nem dá suporte, o número pode ser bloqueado, use um chip só do agente, valem as regras do WhatsApp) e pede confirmação. Vale na criação e ao ligar um agente que já existe. spec/telas.md.

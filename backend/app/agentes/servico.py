@@ -17,7 +17,7 @@ from app.ia.provedores import modelos_padrao, valida_modelos
 from app.plataforma import cripto
 from app.plataforma.banco import agora
 from app.plataforma.config import config
-from app.plataforma.textos import slug
+from app.plataforma.textos import slug, so_digitos
 
 if TYPE_CHECKING:
     from app.conversas.modelos import Conversa
@@ -51,10 +51,28 @@ CAMPOS_EDITAVEIS = frozenset(
         "digitacao_caracteres_por_segundo",
         "digitacao_maximo_segundos",
         "ferramentas",
+        "contatos_permitidos",
         *CAMPOS_MODELO,
     }
 )
 PODEM_FICAR_VAZIOS = frozenset({"handoff_destino", "retomada_automatica_horas", "modelo_fallback"})
+MAXIMO_CONTATOS_PERMITIDOS = 20
+
+
+def _valida_contatos(numeros: list[str]) -> list[str]:
+    """Guarda só dígitos: o operador digita com máscara e o canal manda de outro jeito."""
+    if len(numeros) > MAXIMO_CONTATOS_PERMITIDOS:
+        raise CampoInvalido(
+            f"lista de quem pode falar com o agente tem no máximo {MAXIMO_CONTATOS_PERMITIDOS} números"
+        )
+    limpos = []
+    for numero in numeros:
+        digitos = so_digitos(numero)
+        if len(digitos) < 8:
+            raise CampoInvalido(f"número inválido na lista: {numero!r}")
+        if digitos not in limpos:
+            limpos.append(digitos)
+    return limpos
 
 
 def _valida_ferramentas(nomes: list[str]) -> list[str]:
@@ -131,6 +149,8 @@ async def criar_agente(
     _valida_retomada(canal_obj, opcoes.get("retomada_automatica_horas"))
     if opcoes.get("ferramentas") is not None:
         opcoes["ferramentas"] = _valida_ferramentas(opcoes["ferramentas"])
+    if opcoes.get("contatos_permitidos") is not None:
+        opcoes["contatos_permitidos"] = _valida_contatos(opcoes["contatos_permitidos"])
     token = cripto.novo_token()
     acesso: dict[str, Any] = {}
 
@@ -256,6 +276,8 @@ async def editar_agente(
     valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
     if "ferramentas" in campos:
         campos["ferramentas"] = _valida_ferramentas(campos["ferramentas"])
+    if "contatos_permitidos" in campos:
+        campos["contatos_permitidos"] = _valida_contatos(campos["contatos_permitidos"] or [])
     if no_canal and "nome" in campos and campos["nome"] != agente.nome:
         cred = credenciais(agente)
         await usa_acesso(

@@ -356,6 +356,39 @@ pergunta_retomada() {
   fi
 }
 
+# escolhe_contatos_permitidos [JSON_ATUAL]: define CONTATOS_PERMITIDOS (JSON de números).
+# Lista vazia é o normal: o agente atende quem mandar mensagem. Grupo o agente nunca responde.
+escolhe_contatos_permitidos() {
+  local atuais=${1:-[]} op lista padrao invalidos
+  padrao=$(jq -r 'join(", ")' <<<"$atuais")
+  echo
+  dica "Grupo o agente nunca responde; isso vale sempre."
+  dica "Enquanto testa, dá para deixar só os seus números falando com ele."
+  echo
+  escolha op "Quem o agente atende" \
+    "Qualquer pessoa que mandar mensagem" \
+    "Só os números que eu listar  ${CINZA}para testar antes de abrir${NORMAL}"
+  if [ "$op" = 1 ]; then
+    CONTATOS_PERMITIDOS="[]"
+    return 0
+  fi
+  dica "Com DDI e DDD, separados por vírgula: 5511988887777, 5511977776666"
+  while true; do
+    pergunta lista "Números que podem falar com o agente" "$padrao"
+    CONTATOS_PERMITIDOS=$(jq -Rc '[splits("[,;]+")] | map(gsub("[^0-9]"; "")) | map(select(length > 0)) | unique' <<<"$lista")
+    invalidos=$(jq -r 'map(select(length < 8 or length > 15)) | join(", ")' <<<"$CONTATOS_PERMITIDOS")
+    if [ -n "$invalidos" ]; then
+      falha "Não entendi: $invalidos. Um número por vírgula, com DDI e DDD."
+      continue
+    fi
+    if [ "$(jq 'length' <<<"$CONTATOS_PERMITIDOS")" -gt 0 ]; then
+      ok "Atende $(jq -r 'join(", ")' <<<"$CONTATOS_PERMITIDOS")"
+      return 0
+    fi
+    falha "Nenhum número na lista. Digite ao menos um, com DDI e DDD."
+  done
+}
+
 # Nome → empresa → ferramentas → cria → QR code → destino do handoff.
 # O destino vem depois do pareamento porque a lista de grupos é do próprio número.
 fluxo_agente_waha() {
@@ -370,10 +403,12 @@ fluxo_agente_waha() {
   escolhe_empresa ""
   escolhe_ferramentas ferramentas ""
   pergunta_retomada
+  escolhe_contatos_permitidos
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" \
-      '{nome: $nome, canal: "waha", ferramentas: $f, retomada_automatica_horas: $horas}')
+      --argjson permitidos "$CONTATOS_PERMITIDOS" \
+      '{nome: $nome, canal: "waha", ferramentas: $f, retomada_automatica_horas: $horas, contatos_permitidos: $permitidos}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando a sessão na WAHA…"
     if [ "$API_STATUS" = 201 ]; then break; fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
@@ -418,11 +453,13 @@ edita_waha() {
   esac
   campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
   campo "Retomada" "$(jq -r 'if .retomada_automatica_horas then "sozinho em \(.retomada_automatica_horas) h" else "só com /retomar" end' <<<"$AGENTE")"
+  campo "Atende" "$(atende_do_agente "$AGENTE")"
   echo
-  ESC_ESCOLHE=4 escolha op "O que fazer?" \
+  ESC_ESCOLHE=5 escolha op "O que fazer?" \
     "Parear o número  ${CINZA}mostra o QR code${NORMAL}" \
     "Quem recebe o handoff" \
     "Horas até voltar sozinho" \
+    "Quem o agente atende" \
     "Voltar"
   case "$op" in
     1)
@@ -441,5 +478,15 @@ edita_waha() {
       pergunta_retomada "$(jq -r '.retomada_automatica_horas // 0' <<<"$AGENTE")"
       salva_agente "$(jq -n --argjson h "$RETOMADA_HORAS" '{retomada_automatica_horas: $h}')"
       ;;
+    4)
+      escolhe_contatos_permitidos "$(jq -c '.contatos_permitidos // []' <<<"$AGENTE")"
+      salva_agente "$(jq -n --argjson p "$CONTATOS_PERMITIDOS" '{contatos_permitidos: $p}')"
+      ;;
   esac
+}
+
+# atende_do_agente JSON: como a lista de quem pode falar aparece na ficha.
+atende_do_agente() {
+  jq -r '(.contatos_permitidos // []) | if length == 0 then "qualquer pessoa (grupos nunca)"
+    else "só \(length) número\(if length > 1 then "s" else "" end): \(join(", "))" end' <<<"$1"
 }

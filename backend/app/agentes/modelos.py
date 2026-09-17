@@ -43,6 +43,10 @@ class Agente(ComId, ComCriacao, Base):
     )
     """Nomes do catálogo de `ia/ferramentas/registro.py` ligados neste agente."""
 
+    contatos_permitidos: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
+    """Telefones que o agente atende, só dígitos. Lista vazia é o normal: atende quem mandar mensagem.
+    Serve para testar um número novo sem responder a qualquer pessoa que escreva para ele."""
+
     handoff_destino: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     handoff_template: Mapped[str | None] = mapped_column(String(200))
     retomada_automatica_horas: Mapped[int | None]
