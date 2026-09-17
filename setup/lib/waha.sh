@@ -313,23 +313,18 @@ espera_waha() {
 # escolhe_destino_waha AGENTE_JSON: número ou grupo que recebe o handoff. Define HANDOFF_DESTINO.
 # O grupo só aparece com o número já pareado: a lista vem do WhatsApp.
 escolhe_destino_waha() {
-  local agente=$1 op telefone grupos linha indice
-  local -a rotulos=()
+  local agente=$1 op telefone
   echo
   dica "Quando o agente passar a conversa para uma pessoa, o aviso com o resumo vai para cá."
   dica "Quem receber devolve a conversa mandando /retomar com o código do aviso."
-  api GET "$(caminho_do_agente "$agente")/waha/grupos"
-  grupos="[]"
-  [ "$API_STATUS" = 200 ] && grupos=$API_RESPOSTA
-  while IFS= read -r linha; do rotulos+=("$linha"); done \
-    < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[] | "\(.nome)  \($cinza)grupo\($normal)"' <<<"$grupos")
   echo
-  escolha op "Quem recebe o handoff" "Um número de WhatsApp" "${rotulos[@]}"
-  if [ "$op" -gt 1 ]; then
-    indice=$((op - 2))
-    HANDOFF_DESTINO=$(jq -c --argjson i "$indice" '{tipo: "grupo", chat_id: .[$i].chat_id, nome: .[$i].nome}' <<<"$grupos")
+  escolha op "Quem recebe o handoff" \
+    "Um número de WhatsApp" \
+    "Um grupo  ${CINZA}de que o número do agente participa${NORMAL}"
+  if [ "$op" = 2 ] && escolhe_grupo_waha "$agente"; then
     return 0
   fi
+
   dica "Com DDI e DDD, como 5511988887777. Precisa ser um número que use WhatsApp."
   while true; do
     pergunta telefone "Número que recebe o handoff"
@@ -340,6 +335,67 @@ escolhe_destino_waha() {
     fi
     falha "Número fora do formato: use DDI, DDD e o número, só dígitos."
   done
+}
+
+# Quantos grupos cabem na tela antes de valer a pena filtrar por nome.
+GRUPOS_POR_TELA=9
+
+# escolhe_grupo_waha AGENTE_JSON: define HANDOFF_DESTINO com um grupo. 1 se não deu (aí vai por número).
+# A lista vem do próprio número, então só existe depois do pareamento.
+escolhe_grupo_waha() {
+  local agente=$1 grupos filtrados termo op total linha
+  local -a rotulos=()
+  api_com_token GET "$(caminho_do_agente "$agente")/waha/grupos" "" "Procurando os grupos…"
+  if [ "$API_STATUS" != 200 ]; then
+    falha "$(detalhe_erro "$API_RESPOSTA")"
+    return 1
+  fi
+  grupos=$API_RESPOSTA
+  total=$(jq 'length' <<<"$grupos")
+  if [ "$total" -eq 0 ]; then
+    echo
+    aviso "Não achei nenhum grupo nesse número."
+    dica "O número do agente precisa participar do grupo, e o WhatsApp leva um tempo para sincronizar"
+    dica "logo depois do pareamento. Você pode escolher um número agora e trocar depois em Editar agente."
+    return 1
+  fi
+
+  filtrados=$grupos
+  while true; do
+    if [ "$(jq 'length' <<<"$filtrados")" -gt "$GRUPOS_POR_TELA" ]; then
+      echo
+      dica "$(jq 'length' <<<"$filtrados") grupos. Digite parte do nome para achar o que você quer."
+      pergunta termo "Nome do grupo" "todos"
+      if [ "$termo" != todos ]; then
+        filtrados=$(filtra_grupos "$grupos" "$termo")
+        if [ "$(jq 'length' <<<"$filtrados")" -eq 0 ]; then
+          falha "Nenhum grupo com $(destaque "$termo") no nome."
+          filtrados=$grupos
+          continue
+        fi
+      fi
+    fi
+    rotulos=()
+    while IFS= read -r linha; do rotulos+=("$linha"); done < <(jq -r '.[].nome' <<<"$filtrados")
+    echo
+    escolha op "Grupo que recebe o handoff" "${rotulos[@]}" "${CIANO}procurar outro nome${NORMAL}"
+    if [ "$op" -gt "${#rotulos[@]}" ]; then
+      filtrados=$grupos
+      continue
+    fi
+    HANDOFF_DESTINO=$(jq -c --argjson i "$((op - 1))" '{tipo: "grupo", chat_id: .[$i].chat_id, nome: .[$i].nome}' <<<"$filtrados")
+    return 0
+  done
+}
+
+# filtra_grupos JSON TERMO: grupos cujo nome contém o termo, ignorando acento e maiúscula.
+filtra_grupos() {
+  local grupos=$1 termo=$2 alvo linhas
+  alvo=$(normaliza "$termo")
+  linhas=$(jq -r '.[].nome' <<<"$grupos" | normaliza_linhas)
+  jq -c --arg alvo "$alvo" --arg linhas "$linhas" '
+    ($linhas | split("\n")) as $nomes
+    | [to_entries[] | select($nomes[.key] // "" | contains($alvo)) | .value]' <<<"$grupos"
 }
 
 # pergunta_retomada: horas até o agente voltar sozinho depois do handoff. Define RETOMADA_HORAS (JSON).

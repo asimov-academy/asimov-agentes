@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.9.2` em `asimov-academy/asimov-agentes` (público): o agente pode atender só os números listados (`contatos_permitidos`), escolhido na criação e em Editar agente; grupos continuam sempre ignorados.
+- `v0.9.3` em `asimov-academy/asimov-agentes` (público): destino do handoff da WAHA em dois passos (número ou grupo), com busca pelo nome do grupo.
+- `v0.9.2`: o agente pode atender só os números listados (`contatos_permitidos`), escolhido na criação e em Editar agente; grupos continuam sempre ignorados.
 - `v0.9.1`: aviso de API não oficial com confirmação antes de parear, correção do fluxo que voltava ao menu quando o systemd recusava o timer, e nomes dos passos da instalação do WhatsApp.
 - `v0.9.0`: **WhatsApp direto pela WAHA**, segunda parte da fase 5. A WAHA sobe sob demanda (perfil do Compose, no primeiro agente WhatsApp), o número é pareado por QR code no terminal, o handoff avisa um número ou grupo com resumo e código, e a conversa volta com `/retomar <código>` ou sozinha pelo prazo do agente.
 - `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).

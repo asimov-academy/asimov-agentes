@@ -134,9 +134,19 @@ async def qr_code(nome: str) -> str | None:
     return valor.get("value") if isinstance(valor, dict) else None
 
 
+LIMITE_GRUPOS = 200
+
+
 async def grupos(nome: str) -> list[dict[str, Any]]:
-    """Grupos de que o número participa, para escolher o destino do handoff."""
-    resposta = await _chama("GET", f"/api/{nome}/groups", "listar os grupos", aceita=(404, 422, 501))
+    """Grupos de que o número participa, para escolher o destino do handoff.
+
+    Sem a lista de participantes (que é grande e não serve aqui) e já em ordem de nome.
+    """
+    caminho = (
+        f"/api/{nome}/groups"
+        f"?limit={LIMITE_GRUPOS}&sortBy=subject&sortOrder=asc&exclude=participants"
+    )
+    resposta = await _chama("GET", caminho, "listar os grupos", aceita=(404, 422, 501))
     itens = resposta if isinstance(resposta, list) else []
     encontrados = []
     for item in itens:

@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Escolher o grupo do handoff pelo nome (v0.9.3)
+
+- **Pedido do operador**: o destino do handoff na WAHA precisa ser uma escolha clara entre número e grupo, e com muitos grupos dá para procurar pelo nome. A tela virou dois passos: "Um número de WhatsApp" ou "Um grupo"; no grupo, com mais de 9 na lista, o setup pede parte do nome e filtra ignorando acento e maiúscula (`normaliza_linhas`, um processo só para a lista inteira), com a opção de procurar outro nome sem sair.
+- **Lista de grupos mais leve**: `GET /api/{sessao}/groups?limit=200&sortBy=subject&sortOrder=asc&exclude=participants`. Sem os participantes, que não servem aqui e engordam a resposta.
+- **Número ainda é o caminho quando não há grupo**: número sem grupo nenhum (ou WAHA que ainda não sincronizou depois do pareamento) mostra o porquê e volta para a escolha por número, em vez de deixar o operador travado.
+
 ## 2026-09-17: Quem o agente atende (v0.9.2)
 
 - **Pedido do operador ao parear o primeiro número**: poder deixar o agente respondendo só a números escolhidos enquanto testa, ou abrir para qualquer pessoa. Campo `contatos_permitidos` no Agente (migração `0010`), lista vazia por padrão, aplicada no webhook antes de gravar qualquer coisa: quem está fora não vira conversa nem turno, só log. Vale para qualquer canal, não só a WAHA.
