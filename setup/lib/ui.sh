@@ -180,9 +180,18 @@ volta_se_puder() {
   exit "$SAIDA_VOLTAR"
 }
 
+# descarta_pendentes: joga fora o que chegou antes de a pergunta aparecer. Terminais no navegador
+# (painel da Hostinger) mandam Enter como \r\n: o segundo Enter respondia sozinho a pergunta seguinte.
+descarta_pendentes() {
+  local __sobra
+  [ "${BASH_VERSINFO[0]}" -ge 4 ] || return 0
+  while IFS= read -rsn1 -t 0.05 __sobra <&3; do :; done
+}
+
 # ler_linha VAR [secreta]: resposta digitada tecla a tecla, para o Esc voltar. Backspace apaga.
 ler_linha() {
   local __destino=$1 __secreta=${2:-} __digitado="" __letra
+  descarta_pendentes
   while true; do
     le_tecla __letra
     case "$__letra" in
@@ -292,6 +301,7 @@ escolha() {
     escolha_digitada "$__var" "$__texto" "$@"
     return 0
   fi
+  descarta_pendentes
   _prompt "$__texto"
   printf '  %s↑ ↓ e Enter%s%s\n' "$CINZA" "$([ -n "${ESC_ESCOLHE:-}${VOLTA_ATIVA:-}" ] && echo ' · Esc volta')" "$NORMAL"
   printf '\033[?25l'
@@ -361,6 +371,7 @@ confirma() {
     [[ -z "$__resposta" || "$__resposta" =~ ^[SsYy]$ ]]
     return
   fi
+  descarta_pendentes
   printf '\033[?25l'
   while true; do
     printf '\r\033[K'
@@ -390,6 +401,7 @@ confirma() {
 pausa() {
   local __tecla
   tem_terminal || return 0
+  descarta_pendentes
   printf '\n  %sEnter para voltar%s' "$CINZA" "$NORMAL"
   le_tecla __tecla
   echo
