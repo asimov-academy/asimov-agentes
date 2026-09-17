@@ -24,6 +24,7 @@ class Nativo:
     retoma_por_tempo = False
     pede_acesso_do_operador = False
     externo = False
+    webhook_interno = False
 
     def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
         return {}
@@ -47,10 +48,14 @@ class Nativo:
         """Sem webhook: qualquer chamada em /webhook/nativo é recusada."""
         return False
 
-    def interpretar(self, payload: dict[str, Any], credenciais: dict[str, Any]) -> Evento:
+    def interpretar(
+        self, payload: dict[str, Any], credenciais: dict[str, Any], destino: dict[str, Any] | None = None
+    ) -> Evento:
         raise NotImplementedError("o canal nativo não recebe webhook")
 
-    async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str) -> bool:
+    async def agente_pode_falar(
+        self, credenciais: dict[str, Any], conversa_externa: str, status: str
+    ) -> bool:
         return not await memoria.humano_conduz(conversa_externa)
 
     async def digitando(self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool) -> None:
@@ -66,10 +71,24 @@ class Nativo:
         return None
 
     async def transferir(
-        self, credenciais: dict[str, Any], conversa_externa: str, destino: dict[str, Any] | None, nota: str
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        destino: dict[str, Any] | None,
+        nota: str,
+        codigo: str = "",
     ) -> list[str]:
         await memoria.muda_humano(conversa_externa, True)
         return []
+
+    def rotulo_da_conversa(self, conversa_externa: str) -> str:
+        return "a conversa do terminal"
+
+    async def avisa_destino(
+        self, credenciais: dict[str, Any], destino: dict[str, Any] | None, texto: str
+    ) -> None:
+        """Quem recebe o handoff no terminal é o próprio operador, que está vendo a conversa."""
+        return None
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
         await memoria.muda_humano(conversa_externa, False)

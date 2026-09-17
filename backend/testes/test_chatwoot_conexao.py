@@ -129,7 +129,7 @@ async def test_operacao_usa_token_do_bot() -> None:
     canal = ChatwootHttp(lambda req, corpo: httpx.Response(200, json={"status": "pending", "id": 5}))
     credenciais = {"url": URL, "account_id": 1, "inbox_ids": [3], "api_access_token": "tok-bot", "bot_id": 99, "bot_secret": "seg-bot"}
 
-    assert await canal.agente_pode_falar(credenciais, "12")
+    assert await canal.agente_pode_falar(credenciais, "12", "agente")
     await canal.digitando(credenciais, "12", True)
     assert await canal.enviar_texto(credenciais, "12", "oi") == "5"
     assert [c[1] for c in canal.chamadas] == [

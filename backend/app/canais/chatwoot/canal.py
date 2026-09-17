@@ -158,6 +158,7 @@ class Chatwoot:
     retoma_por_tempo = False
     pede_acesso_do_operador = True
     externo = True
+    webhook_interno = False
     """A conversa volta ao agente quando o atendente a devolve para pendente."""
 
     def _http(self) -> httpx.AsyncClient:
@@ -341,7 +342,9 @@ class Chatwoot:
             credenciais.get("bot_secret", ""), ts, assinatura, entrada.corpo
         )
 
-    def interpretar(self, payload: dict[str, Any], credenciais: dict[str, Any]) -> Evento:
+    def interpretar(
+        self, payload: dict[str, Any], credenciais: dict[str, Any], destino: dict[str, Any] | None = None
+    ) -> Evento:
         evento = payload.get("event")
         if evento not in EVENTOS_ACEITOS:
             return Evento(Acao.IGNORAR, f"evento fora da lista: {evento!r}")
@@ -414,6 +417,7 @@ class Chatwoot:
         conversa_externa: str,
         destino: dict[str, Any] | None,
         nota: str,
+        codigo: str = "",
     ) -> list[str]:
         """Nota privada, atribuição e status aberto, nessa ordem.
 
@@ -458,7 +462,10 @@ class Chatwoot:
     def _cabecalho_bot(self, credenciais: dict[str, Any]) -> dict[str, str]:
         return {"api_access_token": credenciais["api_access_token"]}
 
-    async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str) -> bool:
+    async def agente_pode_falar(
+        self, credenciais: dict[str, Any], conversa_externa: str, status: str
+    ) -> bool:
+        """Quem manda é o Chatwoot: o atendente pode ter assumido a conversa por lá."""
         async with self._http() as http:
             resp = await http.get(
                 f"{self._base_operacao(credenciais)}/conversations/{conversa_externa}",
@@ -466,6 +473,15 @@ class Chatwoot:
             )
         resp.raise_for_status()
         return resp.json().get("status") == "pending"
+
+    def rotulo_da_conversa(self, conversa_externa: str) -> str:
+        return f"a conversa {conversa_externa}"
+
+    async def avisa_destino(
+        self, credenciais: dict[str, Any], destino: dict[str, Any] | None, texto: str
+    ) -> None:
+        """No Chatwoot o atendente vê a conversa voltar para pendente: nada a avisar."""
+        return None
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
         """Pendente é o agente conduzindo. O Chatwoot avisa a mudança pelo webhook, que é idempotente."""

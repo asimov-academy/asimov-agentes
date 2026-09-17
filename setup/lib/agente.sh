@@ -152,10 +152,14 @@ escolhe_destino_handoff() {
   HANDOFF_DESTINO=$(jq -c ".[$((op - 1))]" <<<"$opcoes")
 }
 
+# Serve aos dois canais: o tipo do destino diz de qual é (caixa, time e usuário no Chatwoot;
+# número e grupo na WAHA).
 nome_do_destino() {
   jq -r 'if . == null then "sem destino"
     elif .tipo == "caixa" then "quem estiver na caixa"
     elif .tipo == "time" then "time \(.nome // .id)"
+    elif .tipo == "grupo" then "grupo \(.nome // .chat_id)"
+    elif .tipo == "numero" then "+\(.telefone // (.chat_id | split("@")[0]))"
     else (.nome // "usuário \(.id)") end' <<<"$1"
 }
 
@@ -165,10 +169,12 @@ fluxo_novo_agente() {
   AGENTE_CAIXA=""
   escolha op "Canal" \
     "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
+    "WhatsApp  ${CINZA}um número seu, pareado por QR code aqui na VPS${NORMAL}" \
     "Nativo  ${CINZA}sem canal: você conversa com ele aqui no terminal${NORMAL}"
   echo
   case "$op" in
     1) fluxo_agente_chatwoot ;;
+    2) fluxo_agente_waha ;;
     *) fluxo_agente_nativo ;;
   esac
 }
@@ -361,8 +367,8 @@ lista_agentes() {
   echo
 }
 
-# escolhe_agente [canal]: define AGENTE (JSON do agente) e AGENTE_EMPRESA. Com canal, só agentes dele.
-# Devolve 1 se não há agentes.
+# escolhe_agente [canais]: define AGENTE (JSON do agente) e AGENTE_EMPRESA. Com um ou mais canais
+# separados por espaço, só agentes deles. Devolve 1 se não há agentes.
 escolhe_agente() {
   local canal=${1:-} op linha clientes agentes
   local -a rotulos=()
@@ -374,9 +380,10 @@ escolhe_agente() {
   agentes=$(jq -c --argjson clientes "$clientes" '
     ($clientes | map({(.id): .nome}) | add // {}) as $nomes
     | map(. + {empresa: ($nomes[.cliente_id] // "?")}) | sort_by(.empresa, .nome)' <<<"$API_RESPOSTA")
-  [ -z "$canal" ] || agentes=$(jq -c --arg canal "$canal" 'map(select(.canal == $canal))' <<<"$agentes")
+  [ -z "$canal" ] || agentes=$(jq -c --arg canais "$canal" \
+    'map(select(.canal as $c | ($canais | split(" ")) | index($c)))' <<<"$agentes")
   if [ "$(jq 'length' <<<"$agentes")" -eq 0 ]; then
-    dica "Nenhum agente${canal:+ $canal} ainda. Crie com: asimov novo-agente"
+    dica "Nenhum agente${canal:+ em $canal} ainda. Crie com: asimov novo-agente"
     return 1
   fi
   while IFS= read -r linha; do rotulos+=("$linha"); done \
@@ -427,11 +434,22 @@ configura_handoff() {
   printf '%s\n' "$RESULTADO"
 }
 
-# asimov handoff: escolhe o agente e troca quem recebe o handoff.
+# asimov handoff: escolhe o agente e troca quem recebe o handoff, no canal dele.
 fluxo_handoff() {
   secao "Handoff"
-  escolhe_agente chatwoot || return 0
-  configura_handoff "$AGENTE"
+  escolhe_agente "chatwoot waha" || return 0
+  if [ "$(jq -r '.canal' <<<"$AGENTE")" = waha ]; then
+    escolhe_destino_waha "$AGENTE"
+    api PATCH "$(caminho_do_agente "$AGENTE")" "$(jq -n --argjson d "$HANDOFF_DESTINO" '{handoff_destino: $d}')"
+    if [ "$API_STATUS" = 200 ]; then
+      AGENTE=$API_RESPOSTA
+      ok "Handoff de $(destaque "$(jq -r .nome <<<"$AGENTE")") para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
+    else
+      falha "$(detalhe_erro "$API_RESPOSTA")"
+    fi
+  else
+    configura_handoff "$AGENTE"
+  fi
   echo
 }
 

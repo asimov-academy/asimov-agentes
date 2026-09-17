@@ -23,6 +23,11 @@ class Config(BaseSettings):
     modelo_visao: str
     modelo_transcricao: str
 
+    # WAHA (WhatsApp na própria VPS): container sem porta pública, subido no primeiro agente WAHA.
+    # A chave é gerada na instalação, mesmo sem o container: assim ligar a WAHA depois não reinicia a API.
+    waha_url: str = "http://waha:3000"
+    waha_api_key: str = ""
+
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
@@ -61,6 +66,10 @@ class Config(BaseSettings):
 
     def url_webhook(self, canal: str, token: str) -> str:
         return f"https://{self.subdominio_bot}/webhook/{canal}/{token}"
+
+    def url_webhook_interna(self, canal: str, token: str) -> str:
+        """Para o canal que roda na própria VPS (WAHA): não passa pelo Caddy nem pela internet."""
+        return f"http://api:8000/webhook/{canal}/{token}"
 
 
 @lru_cache

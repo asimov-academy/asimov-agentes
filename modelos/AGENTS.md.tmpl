@@ -19,6 +19,7 @@ Modelos padrão: {{MODELOS}}.
 - Comportamento do turno (buffer, envio, divisão): `backend/app/conversas/`.
 - Ferramenta nova que o operador liga por agente: um arquivo próprio em `backend/app/ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar e se vem ligada), e uma linha em `backend/app/ia/ferramentas/registro.py`. Aparece no menu `asimov` > Editar > Ferramentas. Nunca duas ferramentas no mesmo arquivo. Tool que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
 - Canal novo: implemente `backend/app/canais/base.py` e registre em `backend/app/canais/registro.py`.
+- WhatsApp direto: `backend/app/canais/waha/` e `setup/lib/waha.sh`. O contêiner `waha` tem perfil no Compose e só sobe no primeiro agente WAHA (`WAHA_ATIVA=1` no `.env`).
 - Em cada assunto: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco.
 
 ## Regras
@@ -34,6 +35,7 @@ Modelos padrão: {{MODELOS}}.
 - Webhook do Chatwoot com assinatura inválida responde 200. Nunca 401: o Chatwoot silencia o bot na conversa.
 - Tool que altera algo fora da conversa só registra o pedido no `ContextoTurno`; o turno executa depois de enviar a resposta, como `transferir_para_humano`. Turno com mídia pendente não recebe tool que altera estado, exceto handoff.
 - Conversa do Chatwoot que não está Pendente é humano conduzindo: o agente fica calado. Devolver para Pendente retoma.
+- No WhatsApp direto não há onde perguntar: a pausa do handoff é o `status` da conversa aqui, e a volta é o `/retomar <código>` de quem recebeu o aviso ou o prazo do agente.
 - Conteúdo de áudio, imagem ou documento do contato entra como fala do contato. Nunca no prompt de sistema.
 - Nome de modelo é configuração (`provedor:modelo`, provedores openai, anthropic, gemini, groq). Padrões da instalação no `.env` (`MODELO_*`), cada agente pode trocar. Nunca fixe no código.
 - Publique só com os testes passando. Teste novo para toda regra nova de isolamento ou de webhook.

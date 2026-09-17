@@ -41,6 +41,9 @@ gera_segredos() {
   env_set_se_vazio POSTGRES_PASSWORD "$(openssl rand -hex 24)"
   env_set_se_vazio CHAVE_API_ADMIN "$(openssl rand -hex 32)"
   env_set_se_vazio CHAVE_CRIPTOGRAFIA "$(openssl rand -base64 32 | tr '+/' '-_')"
+  # A chave da WAHA nasce aqui mesmo sem o contêiner dela: assim ligar o WhatsApp depois não
+  # precisa reiniciar a API para ela enxergar a chave nova.
+  env_set_se_vazio WAHA_API_KEY "$(openssl rand -hex 32)"
   env_set_se_vazio LOG_NIVEL INFO
   for variavel in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GROQ_API_KEY MODELO_FALLBACK; do
     env_set_se_vazio "$variavel" ""

@@ -97,12 +97,15 @@ async def transferir(
 
     mensagens = await conversas_repo.ultimas_mensagens(sessao, agente.cliente_id, conversa.id)
     resumo = await _resumo(sessao, agente, conversa.id, mensagens, motivo)
+    # O código sai antes do aviso: nos canais diretos ele vai na mensagem que o destino recebe.
+    codigo = novo_codigo()
     try:
         problemas = await canal.transferir(
             credenciais,
             conversa.id_externo,
             agente.handoff_destino,
             nota_para_atendente(motivo, resumo),
+            codigo,
         )
     except Exception as erro:
         await registra_falha("handoff_falhou", {"erro": repr(erro)[:500]}, agente.cliente_id, agente.id)
@@ -121,7 +124,7 @@ async def transferir(
             conversa_id=conversa.id,
             motivo=motivo,
             resumo=resumo,
-            codigo=novo_codigo(),
+            codigo=codigo,
             destino=agente.handoff_destino,
             retomar_em=agora() + timedelta(hours=horas) if horas else None,
         ),
@@ -140,6 +143,92 @@ async def retomar(
     if fechou:
         log.info("handoff_retomado", por=por)
     return fechou
+
+
+AVISO_DE_RETOMADA = "Pronto: o agente voltou a atender {contato}."
+AVISO_DE_RETOMADA_POR_TEMPO = (
+    "Passaram-se {horas} h e ninguém devolveu a conversa com {contato}: o agente voltou a atender."
+)
+
+
+async def retomar_por_codigo(sessao: AsyncSession, agente: "Agente", codigo: str) -> bool:
+    """`/retomar <código>` mandado por quem recebeu o handoff. False quando o código não vale.
+
+    O canal já conferiu que o comando veio do destino do agente; aqui confere o código e devolve a
+    conversa. O destino recebe a confirmação, para não ficar na dúvida.
+    """
+    aberto = await repo.aberto_por_codigo(sessao, agente.cliente_id, agente.id, codigo)
+    canal, credenciais = _canal_do_agente(agente)
+    if aberto is None:
+        await _avisa(
+            canal,
+            credenciais,
+            agente.handoff_destino,
+            f"Não achei conversa em atendimento com o código {codigo.upper()}. "
+            "Confira o código no aviso que você recebeu.",
+        )
+        return False
+    conversa = await conversas_repo.obter_conversa(sessao, agente.cliente_id, aberto.conversa_id)
+    await retomar(sessao, agente.cliente_id, aberto.conversa_id, "comando")
+    await sessao.commit()
+    await _avisa(
+        canal,
+        credenciais,
+        agente.handoff_destino,
+        AVISO_DE_RETOMADA.format(contato=_nome_do_contato(canal, conversa)),
+    )
+    return True
+
+
+async def retomada_automatica(sessao: AsyncSession) -> int:
+    """Devolve ao agente as conversas cujo prazo de handoff venceu. Roda de minuto em minuto.
+
+    Falha ao avisar o destino não impede a retomada: o agente voltar a atender é o que importa.
+    """
+    from app.agentes import repo as agentes_repo
+
+    retomadas = 0
+    for aberto in await repo.vencidos(sessao, agora()):
+        agente = await agentes_repo.obter(sessao, aberto.cliente_id, aberto.agente_id)
+        if agente is None or not agente.ativo:
+            await repo.fecha(sessao, aberto.cliente_id, aberto.conversa_id, "tempo")
+            await sessao.commit()
+            continue
+        conversa = await conversas_repo.obter_conversa(sessao, aberto.cliente_id, aberto.conversa_id)
+        await retomar(sessao, aberto.cliente_id, aberto.conversa_id, "tempo")
+        await sessao.commit()
+        retomadas += 1
+        canal, credenciais = _canal_do_agente(agente)
+        await _avisa(
+            canal,
+            credenciais,
+            aberto.destino or agente.handoff_destino,
+            AVISO_DE_RETOMADA_POR_TEMPO.format(
+                horas=agente.retomada_automatica_horas, contato=_nome_do_contato(canal, conversa)
+            ),
+        )
+    if retomadas:
+        log.info("retomada_automatica", conversas=retomadas)
+    return retomadas
+
+
+def _canal_do_agente(agente: "Agente") -> tuple["Canal", dict[str, Any]]:
+    from app.canais.registro import obter_canal
+
+    return obter_canal(agente.canal), agentes_servico.credenciais(agente)
+
+
+def _nome_do_contato(canal: "Canal", conversa: "Conversa | None") -> str:
+    return "o contato" if conversa is None else canal.rotulo_da_conversa(conversa.id_externo)
+
+
+async def _avisa(
+    canal: "Canal", credenciais: dict[str, Any], destino: dict[str, Any] | None, texto: str
+) -> None:
+    try:
+        await canal.avisa_destino(credenciais, destino, texto)
+    except Exception as erro:
+        log.warning("aviso_ao_destino_falhou", erro=repr(erro))
 
 
 class ConversaNaoEncontrada(LookupError):

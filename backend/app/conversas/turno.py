@@ -109,7 +109,7 @@ async def _turno(
             return "agente_inativo"
 
         canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
-        if not await canal.agente_pode_falar(credenciais, conversa.id_externo):
+        if not await canal.agente_pode_falar(credenciais, conversa.id_externo, conversa.status):
             return "humano_conduz"
         # O canal diz que o agente conduz: handoff ainda aberto é devolução que não chegou.
         if conversa.status == "humano" and await handoff.retomar(

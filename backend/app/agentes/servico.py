@@ -136,7 +136,9 @@ async def criar_agente(
 
     async def conecta(informado: dict[str, Any]) -> dict[str, Any]:
         acesso.update(informado)
-        return await canal_obj.conectar({**conexao, **informado}, config().url_webhook(canal, token), nome)
+        return await canal_obj.conectar(
+            {**conexao, **informado}, _url_webhook(canal_obj, canal, token), nome
+        )
 
     credenciais_ok = await usa_acesso(sessao, canal_obj, canal_obj.endereco(conexao), conexao, conecta)
 
@@ -197,7 +199,9 @@ async def conectar_canal(
 
     async def conecta(informado: dict[str, Any]) -> dict[str, Any]:
         acesso.update(informado)
-        return await novo.conectar({**conexao, **informado}, config().url_webhook(canal, token), agente.nome)
+        return await novo.conectar(
+            {**conexao, **informado}, _url_webhook(novo, canal, token), agente.nome
+        )
 
     credenciais_ok = await usa_acesso(sessao, novo, novo.endereco(conexao), conexao, conecta)
     try:
@@ -308,7 +312,15 @@ async def remover_agente(
 
 
 def url_webhook(agente: Agente) -> str:
-    return config().url_webhook(agente.canal, cripto.decifra_texto(agente.token_webhook_cifrado))
+    return _url_webhook(obter_canal(agente.canal), agente.canal, cripto.decifra_texto(agente.token_webhook_cifrado))
+
+
+def _url_webhook(canal_obj: Canal, canal: str, token: str) -> str:
+    """Canal que roda na própria VPS (WAHA) chama a API pela rede do Compose, sem sair para fora."""
+    cfg = config()
+    if canal_obj.webhook_interno:
+        return cfg.url_webhook_interna(canal, token)
+    return cfg.url_webhook(canal, token)
 
 
 def credenciais(agente: Agente) -> dict[str, Any]:

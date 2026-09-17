@@ -126,7 +126,7 @@ class ChatwootFalso(Chatwoot):
         self.devolvidas.append(conversa_externa)
         self.status = "pending"
 
-    async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str) -> bool:
+    async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str, status: str) -> bool:
         return self.status == "pending"
 
     async def digitando(self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool) -> None:
@@ -136,7 +136,7 @@ class ChatwootFalso(Chatwoot):
         self.enviadas.append((conversa_externa, texto))
         return str(900000 + len(self.enviadas))
 
-    async def transferir(self, credenciais: dict[str, Any], conversa_externa: str, destino: dict[str, Any] | None, nota: str) -> list[str]:
+    async def transferir(self, credenciais: dict[str, Any], conversa_externa: str, destino: dict[str, Any] | None, nota: str, codigo: str = "") -> list[str]:
         if self.transferir_quebra:
             raise ConnectionError("chatwoot fora do ar")
         self.transferencias.append((conversa_externa, destino, nota))

@@ -22,6 +22,8 @@ class Acao(StrEnum):
     """Grava e agenda o buffer do turno."""
     RETOMAR = "retomar"
     """O atendente devolveu a conversa ao agente: fecha o handoff aberto."""
+    RETOMAR_POR_CODIGO = "retomar_por_codigo"
+    """Nos canais diretos, quem recebeu o handoff mandou `/retomar <código>` na conversa dele."""
 
 
 class DestinoInvalido(ValueError):
@@ -62,6 +64,8 @@ class Evento:
     acao: Acao
     motivo: str
     conversa_externa: str | None = None
+    codigo: str | None = None
+    """Código do handoff em RETOMAR_POR_CODIGO: a conversa a retomar é achada por ele."""
     contato_externo: str | None = None
     contato_nome: str | None = None
     contato_telefone: str | None = None
@@ -84,6 +88,8 @@ class Canal(Protocol):
     externo: bool
     """True quando o agente atende contatos de fora por este canal. Agente em canal que não é
     externo (nativo) pode ser conectado a um externo depois."""
+    webhook_interno: bool
+    """True quando o canal roda na própria VPS e chama a API pela rede do Compose (WAHA)."""
 
     def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Só a parte secreta do acesso do operador (no Chatwoot, o token de administrador), ou {}."""
@@ -120,10 +126,25 @@ class Canal(Protocol):
 
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool: ...
 
-    def interpretar(self, payload: dict[str, Any], credenciais: dict[str, Any]) -> Evento: ...
+    def interpretar(
+        self,
+        payload: dict[str, Any],
+        credenciais: dict[str, Any],
+        destino: dict[str, Any] | None = None,
+    ) -> Evento:
+        """`destino` é o `handoff_destino` do agente: nos canais diretos, o número ou grupo de
+        onde vem o `/retomar <código>`; nos outros, não muda nada."""
+        ...
 
-    async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str) -> bool:
-        """Relido na hora do turno: um humano pode ter assumido durante o buffer."""
+    async def agente_pode_falar(
+        self, credenciais: dict[str, Any], conversa_externa: str, status: str
+    ) -> bool:
+        """Relido na hora do turno: um humano pode ter assumido durante o buffer.
+
+        `status` é o da conversa aqui (`agente` ou `humano`). Canal que conduz pela própria
+        ferramenta (Chatwoot) pergunta a ele; canal direto (WhatsApp), que não tem onde guardar,
+        vale-se do status.
+        """
         ...
 
     async def digitando(
@@ -144,11 +165,23 @@ class Canal(Protocol):
         conversa_externa: str,
         destino: dict[str, Any] | None,
         nota: str,
+        codigo: str = "",
     ) -> list[str]:
         """Passa a conversa para humano: nota interna, atribuição ao destino e pausa do agente.
 
+        `codigo` é o do handoff, que os canais diretos mandam no aviso para o `/retomar`.
         Levanta se a pausa falhar. Devolve o que deu errado sem impedir a pausa (nota, atribuição).
         """
+        ...
+
+    def rotulo_da_conversa(self, conversa_externa: str) -> str:
+        """Como a conversa aparece para uma pessoa (na WAHA, o número formatado)."""
+        ...
+
+    async def avisa_destino(
+        self, credenciais: dict[str, Any], destino: dict[str, Any] | None, texto: str
+    ) -> None:
+        """Recado curto a quem recebeu o handoff (retomada por tempo). Canal sem isso não faz nada."""
         ...
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
