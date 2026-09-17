@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Busca na web com instrução de uso (v0.8.3)
+
+- **Achado na VPS**: com a busca ligada, o gpt-5.1 respondia "não consigo acessar a cotação em tempo real" sem buscar. A requisição levava `web_search`, mas nenhuma instrução dizia quando usar, e a plataforma obriga uma tool com o raciocínio desligado: o modelo ia direto para a resposta.
+- **Teste na VPS com a mesma pergunta** ("qual a cotação do dólar hoje?", gpt-5.1): sem instrução, 2,6 s, 4.676 tokens de entrada, sem busca; com instrução, 5,4 s, 17.465 tokens, buscou; instrução com raciocínio baixo, 8,0 s, 19.174 tokens, sem ganho; sem a busca ligada, 513 tokens.
+- **Cada ferramenta leva a própria instrução** (`Ferramenta.instrucao`), só quando está ligada. Raciocínio continua no padrão do modelo.
+- **Custo da busca nativa da OpenAI**: cerca de 4,2 mil tokens de entrada em todo turno, mesmo sem buscar, e cerca de 13 mil a mais no turno que busca. Continua ligada por padrão (decisão da v0.7.0); a descrição no menu passou a dizer isso para o operador decidir por agente.
+
 ## 2026-09-17: Conectar agente nativo a um canal e feedback na conversa (v0.8.2)
 
 - **Pedido do operador: ligar num canal, depois, o agente criado sem canal.** "Conectar a um canal" na ficha de edição do nativo e `POST .../agentes/{id}/canal`. Mantém prompt, modelos, ajustes, conversas e o token do webhook. Só sai do nativo: trocar entre canais externos continua sendo remover e criar de novo. Hoje o único canal externo é o Chatwoot; WAHA e oficial entram na mesma tela. O contrato do canal ganhou `externo`.
