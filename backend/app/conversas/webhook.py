@@ -105,7 +105,9 @@ async def receber(
 
     assert evento.conversa_externa is not None
     if evento.acao is Acao.RETOMAR:
-        return await _retoma(s, agente.cliente_id, agente.id, agente.canal, evento.conversa_externa)
+        return await _retoma(
+            s, agente.cliente_id, agente.id, evento.por or agente.canal, evento.conversa_externa
+        )
 
     try:
         if evento.autor == "contato":
@@ -139,6 +141,14 @@ async def receber(
     if not nova:
         log.info("webhook_reentrega_ignorada")
         return Response(status_code=200)
+
+    if evento.acao is Acao.PAUSAR and nova:
+        try:
+            await handoff.pausar_por_humano(s, agente, conversa)
+            await s.commit()
+        except Exception as erro:
+            log.error("pausa_por_intervencao_falhou", erro=repr(erro))
+            return Response(status_code=500)
 
     if evento.acao is Acao.PROCESSAR:
         fila = getattr(request.app.state, "fila", None)

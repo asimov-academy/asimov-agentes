@@ -2,6 +2,15 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Pessoa da equipe assume a conversa, joinha devolve (v0.10.0)
+
+- **Pedido do operador**: quando alguém da empresa responde pelo próprio aparelho, o agente tem de calar na hora, respeitando o tempo de retomada do onboarding, e voltar quando essa pessoa reagir com 👍 numa mensagem.
+- **Como o canal percebe**: a sessão passou a assinar `message.any` em vez de `message`, que traz também o que sai do número, com o campo `source`: `api` é o agente falando pela WAHA, `app` é gente digitando no celular ou no WhatsApp Web. Sem isso não dava para separar as duas coisas sem guardar estado (a primeira ideia, comparar os ids enviados, tinha corrida com o commit do turno).
+- **Ação nova no contrato do canal**: `Acao.PAUSAR`, que grava a mensagem como fala de humano e cala o agente. `handoff.pausar_por_humano` abre o handoff sem chamar IA e sem avisar o destino (foi a própria pessoa que assumiu), com `retomar_em` pelo `retomada_automatica_horas` do agente. A regra de nunca chamar IA dentro do webhook continua valendo.
+- **Joinha devolve**: `message.reaction` com 👍 vindo do próprio número (`fromMe`) fecha o handoff daquela conversa, com `retomado_por: joinha`. Tons de pele e seletor de variação entram na comparação. Reação do contato não mexe em nada: quem devolve é a equipe. O aviso de handoff agora oferece as duas saídas, 👍 ou `/retomar <código>`.
+- **A fala da equipe entra na memória do agente, marcada**: já era assim desde a fase 3 (mensagem de atendente vira fala do assistente com prefixo), e agora vale também para quem responde pelo aparelho na WAHA. O prefixo virou `(atendente da equipe)` e, antes da primeira fala dessas, entra um aviso do sistema explicando que aquilo foi escrito por uma pessoa e vale como combinado com o contato. O aviso só aparece em conversa que teve atendente: em conversa comum seriam tokens à toa em todo turno. Sem isso, o contato que volta dias depois era atendido por um agente que não sabia o que a equipe tinha prometido.
+- **Sessões já criadas**: `POST /admin/clientes/{c}/agentes/{a}/waha/webhook` reescreve a configuração da sessão com os eventos de hoje, e `asimov atualizar` chama para cada agente WAHA. Sem isso, um agente criado na v0.9.x nunca receberia reação nem mensagem do aparelho.
+
 ## 2026-09-17: Escolher o grupo do handoff pelo nome (v0.9.3)
 
 - **Pedido do operador**: o destino do handoff na WAHA precisa ser uma escolha clara entre número e grupo, e com muitos grupos dá para procurar pelo nome. A tela virou dois passos: "Um número de WhatsApp" ou "Um grupo"; no grupo, com mais de 9 na lista, o setup pede parte do nome e filtra ignorando acento e maiúscula (`normaliza_linhas`, um processo só para a lista inteira), com a opção de procurar outro nome sem sair.

@@ -27,6 +27,24 @@ TIMEOUT_DOWNLOAD = httpx.Timeout(60.0, connect=5.0)
 STATUS_PAREADO = "WORKING"
 STATUS_QR = "SCAN_QR_CODE"
 
+EVENTOS_WEBHOOK = ["message.any", "message.reaction", "session.status"]
+"""`message.any` em vez de `message`: traz também o que sai do número, que é como se percebe uma
+pessoa da empresa respondendo pelo celular (`source: app`). `message.reaction` é o joinha que
+devolve a conversa ao agente."""
+
+
+def _config_webhook(url_webhook: str, chave_hmac: str) -> dict[str, Any]:
+    return {
+        "webhooks": [
+            {
+                "url": url_webhook,
+                "events": EVENTOS_WEBHOOK,
+                "hmac": {"key": chave_hmac},
+                "retries": {"attempts": 3, "delaySeconds": 2},
+            }
+        ]
+    }
+
 
 def cabecalho() -> dict[str, str]:
     return {"X-Api-Key": config().waha_api_key, "Accept": "application/json"}
@@ -74,26 +92,26 @@ async def _chama(
 
 async def cria_sessao(nome: str, url_webhook: str, chave_hmac: str) -> None:
     """Cria a sessão já com o webhook assinado e a inicia. Sessão que já existe é atualizada."""
-    corpo = {
-        "name": nome,
-        "start": True,
-        "config": {
-            "webhooks": [
-                {
-                    "url": url_webhook,
-                    "events": ["message", "session.status"],
-                    "hmac": {"key": chave_hmac},
-                    "retries": {"attempts": 3, "delaySeconds": 2},
-                }
-            ]
-        },
-    }
+    corpo = {"name": nome, "start": True, "config": _config_webhook(url_webhook, chave_hmac)}
     resposta = await _chama("POST", "/api/sessions", "criar a sessão", corpo, aceita=(409, 422))
     if isinstance(resposta, dict) and resposta.get("name") == nome:
         return
     # Nome já usado (agente removido sem apagar a sessão, ou repetição do setup): reconfigura.
     await _chama("PUT", f"/api/sessions/{nome}", "reconfigurar a sessão", corpo)
     await inicia_sessao(nome)
+
+
+async def atualiza_webhook(nome: str, url_webhook: str, chave_hmac: str) -> None:
+    """Reescreve a configuração do webhook de uma sessão que já existe.
+
+    Serve para sessão criada por uma versão anterior, que não recebia os eventos de hoje.
+    """
+    await _chama(
+        "PUT",
+        f"/api/sessions/{nome}",
+        "reconfigurar a sessão",
+        {"name": nome, "config": _config_webhook(url_webhook, chave_hmac)},
+    )
 
 
 async def inicia_sessao(nome: str) -> None:

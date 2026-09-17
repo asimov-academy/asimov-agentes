@@ -20,6 +20,8 @@ class Acao(StrEnum):
     """Grava na conversa, mas o agente não responde."""
     PROCESSAR = "processar"
     """Grava e agenda o buffer do turno."""
+    PAUSAR = "pausar"
+    """Grava e cala o agente: uma pessoa da empresa assumiu a conversa pelo próprio aparelho."""
     RETOMAR = "retomar"
     """O atendente devolveu a conversa ao agente: fecha o handoff aberto."""
     RETOMAR_POR_CODIGO = "retomar_por_codigo"
@@ -66,6 +68,8 @@ class Evento:
     conversa_externa: str | None = None
     codigo: str | None = None
     """Código do handoff em RETOMAR_POR_CODIGO: a conversa a retomar é achada por ele."""
+    por: str | None = None
+    """Quem devolveu a conversa ao agente, para o histórico do handoff. Vazio vale o canal."""
     contato_externo: str | None = None
     contato_nome: str | None = None
     contato_telefone: str | None = None

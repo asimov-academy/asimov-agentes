@@ -36,6 +36,10 @@ MENSAGEM_DE_EXPECTATIVA = (
     "que vai continuar o atendimento por aqui."
 )
 MOTIVO_FALHA_NO_TURNO = "o agente não conseguiu responder (modelo ou tool com erro)"
+MOTIVO_PESSOA_RESPONDEU = "uma pessoa da equipe respondeu pelo aparelho"
+RESUMO_PESSOA_RESPONDEU = (
+    "Sem resumo: a conversa foi assumida na hora, direto no WhatsApp, e o agente só ficou calado."
+)
 MOTIVO_ARQUIVO_GRANDE = "contato enviou arquivo grande ou longo demais para o agente abrir"
 
 _LETRAS_DO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -132,6 +136,35 @@ async def transferir(
     await conversas_repo.muda_status(sessao, agente.cliente_id, conversa.id, "humano")
     log.info("handoff_aberto", destino=(agente.handoff_destino or {}).get("tipo"))
     return "transferido"
+
+
+async def pausar_por_humano(
+    sessao: AsyncSession, agente: "Agente", conversa: "Conversa"
+) -> bool:
+    """Alguém da equipe respondeu pelo aparelho: o agente cala até o joinha ou o prazo.
+
+    Chamado de dentro do webhook, então nada de IA nem de aviso: é só registrar a pausa. Com
+    handoff já aberto não faz nada. Quem chama faz o commit.
+    """
+    if await repo.aberto(sessao, agente.cliente_id, conversa.id) is not None:
+        return False
+    horas = agente.retomada_automatica_horas
+    await repo.abre(
+        sessao,
+        Handoff(
+            cliente_id=agente.cliente_id,
+            agente_id=agente.id,
+            conversa_id=conversa.id,
+            motivo=MOTIVO_PESSOA_RESPONDEU,
+            resumo=RESUMO_PESSOA_RESPONDEU,
+            codigo=novo_codigo(),
+            destino=agente.handoff_destino,
+            retomar_em=agora() + timedelta(hours=horas) if horas else None,
+        ),
+    )
+    await conversas_repo.muda_status(sessao, agente.cliente_id, conversa.id, "humano")
+    log.info("handoff_por_intervencao", agente_id=str(agente.id), horas=horas)
+    return True
 
 
 async def retomar(

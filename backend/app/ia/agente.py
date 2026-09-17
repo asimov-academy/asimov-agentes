@@ -95,6 +95,12 @@ MARCO_RETOMADA = (
     "A pessoa da equipe terminou e devolveu a conversa para você. O pedido de atendimento humano anterior "
     "já foi atendido: siga respondendo o contato normalmente."
 )
+PREFIXO_HUMANO = "(atendente da equipe) "
+MARCO_FALA_DE_HUMANO = (
+    "As falas marcadas com '(atendente da equipe)' foram escritas por uma pessoa da equipe nesta conversa, "
+    "não por você. Valem como combinado com o contato: leve o que foi dito em conta e não repita o que já "
+    "foi resolvido ali."
+)
 
 PAPEL_NO_RESUMO = {"contato": "Contato", "agente": "Agente", "humano": "Atendente"}
 
@@ -161,10 +167,18 @@ def tipo_de_saida(modelo: "Model") -> Any:
 def historico(mensagens: list["Mensagem"], handoffs: "list[Handoff] | None" = None) -> list[ModelMessage]:
     """Contato vira fala do usuário; agente e atendente humano viram fala do assistente.
 
+    A fala do atendente entra marcada e com um aviso do sistema antes da primeira delas: o contato
+    pode voltar dias depois, e o agente precisa saber o que a equipe já combinou com ele. Vale para
+    todo canal em que existe atendente (Chatwoot, WhatsApp); no terminal não há.
+
     Handoffs viram avisos do sistema no ponto em que aconteceram. Sem o aviso da devolução, o modelo via o
     pedido antigo de pessoa e transferia de novo (v0.8.4).
     """
     marcos: list[tuple[Any, str]] = []
+    primeira_humana = next((m.criado_em for m in mensagens if m.autor == "humano"), None)
+    if primeira_humana is not None:
+        # Só quando houve atendente na conversa: em conversa comum seriam tokens à toa em todo turno.
+        marcos.append((primeira_humana, MARCO_FALA_DE_HUMANO))
     for h in handoffs or []:
         marcos.append((h.iniciado_em, MARCO_HANDOFF.format(motivo=h.motivo)))
         if h.retomado_em is not None:
@@ -178,7 +192,7 @@ def historico(mensagens: list["Mensagem"], handoffs: "list[Handoff] | None" = No
         if m.autor == "contato":
             saida.append(ModelRequest(parts=[UserPromptPart(content=texto)]))
         else:
-            prefixo = "(atendente humano) " if m.autor == "humano" else ""
+            prefixo = PREFIXO_HUMANO if m.autor == "humano" else ""
             saida.append(ModelResponse(parts=[TextPart(content=prefixo + texto)]))
     saida.extend(ModelRequest(parts=[SystemPromptPart(content=texto)]) for _, texto in marcos)
     return saida

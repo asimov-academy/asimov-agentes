@@ -16,9 +16,10 @@ atualiza() {
   tela_instalacao
   ajusta_permissoes
   instala_comando
-  # Instalação que ligou o WhatsApp antes de o timer semanal da WAHA existir.
+  # Instalação que ligou o WhatsApp antes de o timer semanal e dos eventos de hoje.
   if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
-    instala_timer_waha
+    instala_timer_waha || true
+    reconfigura_sessoes_waha
   fi
   tela_handoff_pendente
   mostra_resumo
