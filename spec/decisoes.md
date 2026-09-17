@@ -2,6 +2,15 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Calculadora para qualquer conta (v0.8.7)
+
+- **Pedido do operador: a calculadora serve para qualquer cálculo e o modelo nunca calcula sozinho.** Até a v0.8.6 ela só fazia as quatro operações, potência e parênteses; conta de porcentagem, parcela ou data o modelo fazia de cabeça.
+- **`ia/calculadora.py`**, ainda sem `eval`: lista fechada de funções (raiz, abs, arredonda, piso, teto, min, max, soma, media, log, ln, exp, sen, cos, tan, radianos, fatorial, porcentagem, variacao_percentual, juros_compostos, parcela pela tabela Price, hoje, dias_entre, soma_dias), constantes pi e e, `^`, `√`, `x` entre números e `15%` como porcentagem (`7 % 2` continua resto). Datas "dd/mm/aaaa" entre aspas; "hoje" no fuso de Brasília fixo (UTC-3, sem horário de verão desde 2019).
+- **Argumentos separados por `;`**, como no Excel em português: a vírgula é decimal. `, ` com espaço também separa, porque o modelo escreve assim por hábito.
+- **`arredonda` é meio para cima**, como em dinheiro: 1.299,90 × 0,85 = 1.104,915 vira 1.104,92 (o `round` do Python daria 1.104,91).
+- **Teto de tamanho**: resultado inteiro até 14 mil bits (abaixo do limite de 4.300 dígitos do Python para virar texto). Um contato podia pedir `((fatorial(170)^100)^100)^100` e travar o worker.
+- **Instrução**: toda conta passa pela calculadora, inclusive as simples; nunca escrever número que saiu de conta sem vir dela; usar o resultado como veio; erro volta ao modelo em português para corrigir e chamar de novo. É instrução: a garantia de que o modelo obedece vem do teste na VPS e do `tools_chamadas` no consumo.
+
 ## 2026-09-17: Calculadora no formato brasileiro (v0.8.6)
 
 - **Testes do operador na VPS com a v0.8.5**: busca da cotação de ontem funcionou (2 buscas, 20 s). A calculadora foi chamada uma vez por conta, mas o modelo leu o ponto como decimal: "918.273 dividido por 47,6" deu 19,29 (certo: 19.291,45) e "(3.847 × 219) − (15.632 / 8) + 2.901²" deu 848,95 (certo: 9.256.340). A calculadora trocava vírgula por ponto e juntava as duas leituras.
