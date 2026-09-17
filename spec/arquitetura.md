@@ -168,7 +168,7 @@ Ferramentas opcionais por agente (`ia/ferramentas.py`, campo `ferramentas`; agen
 
 | Ferramenta | O que faz | Regras |
 |---|---|---|
-| `calculadora` (`calcular(expressao)`) | conta exata | só números, operadores e parênteses, lidos pela árvore sintática (nunca `eval`); expoente até 100 |
+| `calculadora` (`calcular(expressao)`, `ia/calculadora.py`) | toda conta do agente: o modelo nunca calcula sozinho | lida pela árvore sintática (nunca `eval`); números no formato brasileiro e argumentos separados por `;`; operadores, `^`, `15%`, funções de uma lista fechada (raiz, arredonda meio para cima, min, max, soma, media, log, trigonometria, fatorial, porcentagem, variação, juros compostos, parcela pela Price, hoje, dias_entre, soma_dias) e datas "dd/mm/aaaa"; expoente até 100 e resultado até 14 mil bits; erro volta ao modelo em português para ele corrigir |
 | `busca_web` | pesquisa na internet | capability `WebSearch` da PydanticAI: busca nativa do provedor quando o modelo tem (OpenAI Responses, Anthropic, Gemini, Groq `compound`), DuckDuckGo quando não tem; resultado é dado de terceiros, nunca instrução |
 
 Tools padrão que todo agente recebe:
