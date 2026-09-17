@@ -7,7 +7,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 ## O que você ganha
 
 - **Agente respondendo no Chatwoot**: o setup cria o bot e liga na caixa de entrada sozinho.
-- **Agente no WhatsApp, sem Chatwoot**: pareie um número lendo o QR code no próprio terminal. O WhatsApp roda num contêiner na sua VPS, que só sobe quando você cria o primeiro agente assim e se atualiza sozinho toda semana, voltando para a versão anterior se algum número não reconectar.
+- **Agente no WhatsApp, sem Chatwoot**: pareie um número lendo o QR code no próprio terminal. É a API **não oficial** (WAHA): a Meta não homologa nem dá suporte, e o número pode ser bloqueado, então use um chip só para o agente. O WhatsApp roda num contêiner na sua VPS, que só sobe quando você cria o primeiro agente assim e se atualiza sozinho toda semana, voltando para a versão anterior se algum número não reconectar.
 - **Agente nativo para testar**: sem canal nenhum, você conversa com ele no terminal com o mesmo buffer, digitando, ferramentas, consumo e handoff, e liga num canal quando estiver pronto.
 - **Atendimento com cara de gente**: espera o contato terminar de mandar as mensagens (buffer), mostra "digitando" e responde em mensagens curtas.
 - **Entende áudio, imagem e PDF**: transcreve áudio, lê foto de documento e PDF, e não processa de novo o mesmo arquivo reenviado.

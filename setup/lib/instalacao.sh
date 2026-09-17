@@ -65,7 +65,7 @@ migra() { dc run --rm api alembic upgrade head; }
 sobe_servicos() { dc up -d api worker caddy; }
 
 espera_url() {
-  local url=$1 tentativas=$2
+  local url=$1 tentativas=${2:-24}
   for _ in $(seq 1 "$tentativas"); do
     curl -fsS --max-time 10 "$url" && return 0
     sleep 5
