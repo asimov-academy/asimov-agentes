@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.4.1` em `asimov-academy/asimov-agentes` (público). `main` tem também o README.
+- `v0.5.0` em `asimov-academy/asimov-agentes` (público). `main` tem também o README.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `ASIMOV_ATUALIZAR=1` antes do mesmo comando, ou `asimov atualizar`.
 
@@ -15,7 +15,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real (texto respondido pelo Chatwoot com WhatsApp) |
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2): áudio, imagem e PDF respondidos; 4 áudios seguidos numa resposta só; reenvio dos mesmos áudios sem nova transcrição |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1): conversa atribuída com resumo em nota privada, agente calado com a conversa Aberta, volta ao marcar Pendente |
-| 4. Menu do operador | **Próxima**. Parcial: `asimov novo-agente` e `asimov agentes` prontos; faltam editar, remover e consumo |
+| 4. Menu do operador | **Construída (v0.5.0)**, falta o critério de aceite numa VPS real |
 | 5. WhatsApp oficial e Telegram diretos | Não iniciada |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup e domínio próprio do setup |
@@ -46,13 +46,22 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Validada na VPS em 2026-09-16. O teste achou a nota longa demais, encurtada na v0.4.1 (spec/decisoes.md). O debug confirmou a retomada pelo evento do Chatwoot (log `handoff_retomado` no `api`), nenhuma Falha e um handoff aberto por conversa.
 - Prompt de resumo de agente já criado não muda com atualização: o setup nunca sobrescreve prompt.
 
-## Para a fase 4
+## Como a fase 4 ficou
 
-- `PATCH` do agente já existe só com `handoff_destino`; completar com os demais campos.
-- A pergunta de handoff da atualização pede o token uma vez por agente sem destino; no menu, pedir uma vez por Chatwoot.
-- Teste de dois clientes precisa de um segundo Agent Bot e uma segunda caixa no Chatwoot.
-- `modelo_auxiliar` hoje é igual ao `modelo_conversa` (padrão em `ia/provedores.py`): no teste, o resumo com `gpt-5.5` custou cerca de US$ 0,0125 e 3,5 s por handoff. Permitir escolher um modelo mais barato no editar agente ou no setup.
-- Log `handoff_retomado` do webhook sai sem `conversa_id` (`conversas/webhook.py`, `_retoma`); os do worker têm.
+- Menu em `setup/lib/menu.sh`: abre ao rodar o setup de novo e com `asimov`; subcomandos `editar`, `remover`, `consumo`. Seleção de agente em `escolhe_agente` (`agente.sh`).
+- API: `PATCH` do agente com nome, buffer, mensagens, modelos (inclui `modelo_auxiliar`), destino e retomada; `DELETE` de agente (com token opcional para apagar o bot) e de empresa sem agentes; `GET /admin/consumo`; `POST .../conversas/{id}/retomar` (sem opção no menu).
+- Contrato do canal ganhou `retoma_por_tempo` e `devolver_ao_agente`; `desconectar` do Chatwoot usa só o token de administrador.
+- Log `handoff_retomado` do webhook agora sai com `conversa_id`.
+- Decisões em spec/decisoes.md (2026-09-16, fase 4).
+
+## Para validar a fase 4 na VPS
+
+1. `asimov atualizar`, depois `bash ~/asimov-agentes/setup/instalar.sh`: resumo e menu aparecem.
+2. Segundo cliente: no Chatwoot, uma segunda caixa (o setup cria o bot). Menu > Criar agente > nova empresa. Mandar mensagem nas duas caixas e conferir que cada agente responde só na sua.
+3. Menu > Editar > Tempo de buffer (ex.: 20 s) e conferir a espera na próxima mensagem.
+4. Menu > Editar > Modelos > Resumo do handoff com um modelo barato; forçar um handoff e ver o Turno `resumo_handoff` no consumo.
+5. Menu > Remover, com o token de administrador: o bot some da caixa e o agente não responde mais.
+6. Menu > Ver consumo e falhas: totais de 7 e 30 dias por empresa.
 
 ## Fluxo de publicação combinado com o operador
 

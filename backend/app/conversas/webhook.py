@@ -151,6 +151,7 @@ async def _retoma(
     try:
         conversa = await repo.conversa_por_externo(s, cliente_id, agente_id, conversa_externa)
         if conversa is not None:
+            structlog.contextvars.bind_contextvars(conversa_id=str(conversa.id))
             await handoff.retomar(s, cliente_id, conversa.id, canal)
             await s.commit()
     except Exception as erro:

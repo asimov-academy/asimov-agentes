@@ -68,6 +68,9 @@ preferidos() {
     openai:conversa) echo "gpt-5.5 gpt-5.1 gpt-5 gpt-4.1" ;;
     openai:visao) echo "gpt-5-mini gpt-5.1 gpt-4.1-mini" ;;
     openai:transcricao) echo "gpt-4o-transcribe whisper-1 gpt-4o-mini-transcribe" ;;
+    openai:auxiliar) echo "gpt-5-mini gpt-5-nano gpt-4.1-mini" ;;
+    anthropic:auxiliar) echo "claude-haiku-4-5 claude-sonnet-5" ;;
+    groq:auxiliar) echo "llama-3.1-8b-instant llama-3.3-70b-versatile openai/gpt-oss-20b" ;;
     anthropic:*) echo "claude-sonnet-5 claude-opus-5 claude-haiku-4-5" ;;
     gemini:conversa) echo "gemini-2.5-pro gemini-2.5-flash" ;;
     gemini:*) echo "gemini-2.5-flash gemini-2.5-pro" ;;
@@ -109,45 +112,55 @@ lista_modelos() {
   fi
 }
 
-# escolhe_modelo VAR_ENV "rótulo" função [opcional]
-escolhe_modelo() {
-  local var=$1 rotulo=$2 funcao=$3 opcional=${4:-} op i provedor modelo linha
-  local -a provedores nomes modelos
-  if [ "$funcao" = transcricao ]; then
-    provedores=(openai groq gemini)
-  else
-    provedores=(openai anthropic gemini groq)
-  fi
-  nomes=()
-  [ -n "$opcional" ] && nomes+=("Sem fallback")
-  for provedor in "${provedores[@]}"; do nomes+=("$(nome_bonito "$provedor")"); done
+# escolhe_modelo_em VAR "rótulo" função opcional provedor...: define VAR como provedor:modelo.
+# Com opcional não vazio, a primeira opção é ficar sem modelo (VAR vazia).
+escolhe_modelo_em() {
+  local __destino=$1 __rotulo=$2 __funcao=$3 __opcional=$4 __op __indice __provedor __modelo __linha
+  shift 4
+  local -a __provedores=() __nomes=() __modelos=()
+  for __provedor in "$@"; do
+    [ "$__funcao" = transcricao ] && [ "$__provedor" = anthropic ] && continue
+    __provedores+=("$__provedor")
+  done
+  [ -n "$__opcional" ] && __nomes+=("Sem fallback")
+  for __provedor in "${__provedores[@]}"; do __nomes+=("$(nome_bonito "$__provedor")"); done
 
   echo
-  escolha op "$rotulo" "${nomes[@]}"
-  if [ -n "$opcional" ]; then
-    if [ "$op" = 1 ]; then
-      env_set "$var" ""
+  escolha __op "$__rotulo" "${__nomes[@]}"
+  if [ -n "$__opcional" ]; then
+    if [ "$__op" = 1 ]; then
+      printf -v "$__destino" '%s' ""
       return 0
     fi
-    op=$((op - 1))
+    __op=$((__op - 1))
   fi
-  provedor=${provedores[$((op - 1))]}
-  pede_chave "$provedor"
+  __provedor=${__provedores[$((__op - 1))]}
+  pede_chave "$__provedor"
 
-  modelos=()
-  while IFS= read -r linha; do modelos+=("$linha"); done < <(lista_modelos "$provedor" "$funcao")
-  if [ "${#modelos[@]}" -eq 0 ]; then
-    dica "Não consegui listar os modelos da $(nome_bonito "$provedor"); digite o nome."
-    pergunta modelo "Modelo"
+  while IFS= read -r __linha; do __modelos+=("$__linha"); done < <(lista_modelos "$__provedor" "$__funcao")
+  if [ "${#__modelos[@]}" -eq 0 ]; then
+    dica "Não consegui listar os modelos da $(nome_bonito "$__provedor"); digite o nome."
+    pergunta __modelo "Modelo"
   else
-    escolha i "Modelo" "${modelos[@]}" "${CINZA}outro (digitar)${NORMAL}"
-    if [ "$i" -gt "${#modelos[@]}" ]; then
-      pergunta modelo "Nome do modelo"
+    escolha __indice "Modelo" "${__modelos[@]}" "${CINZA}outro (digitar)${NORMAL}"
+    if [ "$__indice" -gt "${#__modelos[@]}" ]; then
+      pergunta __modelo "Nome do modelo"
     else
-      modelo=${modelos[$((i - 1))]}
+      __modelo=${__modelos[$((__indice - 1))]}
     fi
   fi
-  env_set "$var" "$provedor:$modelo"
+  printf -v "$__destino" '%s' "$__provedor:$__modelo"
+}
+
+# escolhe_modelo VAR_ENV "rótulo" função [opcional]: padrão da instalação, gravado no .env.
+escolhe_modelo() {
+  local var=$1 rotulo=$2 funcao=$3 opcional=${4:-} valor
+  if [ "$funcao" = transcricao ]; then
+    escolhe_modelo_em valor "$rotulo" "$funcao" "$opcional" openai groq gemini
+  else
+    escolhe_modelo_em valor "$rotulo" "$funcao" "$opcional" openai anthropic gemini groq
+  fi
+  env_set "$var" "$valor"
 }
 
 valida_dominio() {

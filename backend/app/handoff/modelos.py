@@ -36,4 +36,4 @@ class Handoff(ComId, Base):
     retomar_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     retomado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     retomado_por: Mapped[str | None] = mapped_column(String(20))
-    """`chatwoot`, `comando` ou `tempo`."""
+    """`chatwoot`, `comando`, `tempo` ou `operador` (menu)."""

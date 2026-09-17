@@ -95,7 +95,7 @@ Commit: `feat: handoff para humano no Chatwoot`
 
 ## Fase 4: Menu do operador
 
-Situação: parcial, `asimov novo-agente` e `asimov agentes` prontos.
+Situação: construída (v0.5.0), aguardando o critério de aceite numa VPS real.
 
 Objetivo: rodar o setup de novo abre um menu para operar agentes e ver consumo.
 

@@ -78,16 +78,16 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 
 - Objetivo: operar os agentes sem front.
 - Quem acessa: operador.
-- Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo, modelos), reconstrói se o código mudou e mostra o resumo.
-- `asimov novo-agente` e `asimov agentes` existem desde a v0.2.0; `asimov handoff` (trocar o destino do handoff, pedindo o token de administrador do Chatwoot) desde a v0.4.0. As ações abaixo que ainda não existem entram como subcomandos do `asimov`.
+- Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo, modelos), reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
+- `asimov` sem argumento abre o mesmo menu. Cada ação também existe como subcomando: `novo-agente`, `agentes`, `editar`, `remover`, `consumo`, `handoff` (desde a v0.4.0), `atualizar` e `ajuda`.
 - Atualizar para a v0.4.0 pergunta uma vez o destino do handoff dos agentes que não têm.
-- Ações:
+- Ações do menu:
   - Criar agente (mesmo fluxo da tela 6).
-  - Listar agentes: cliente, nome, canal, destino do handoff, URL do webhook e status.
-  - Editar agente: nome, credenciais do canal, destino do handoff, tempo de retomada automática.
-  - Remover agente: pede confirmação digitando o nome do agente.
-  - Subir base de conhecimento: escolher o agente e a pasta ou arquivo; listar e remover documentos já carregados.
-  - Ver consumo e falhas: por cliente e agente, nos últimos 7 e 30 dias, total de turnos, tokens, custo estimado e últimas falhas (derivado).
+  - Listar agentes: por empresa, nome, canal, modelo de resposta, destino do handoff, status e URL do webhook.
+  - Editar agente: escolhe o agente, vê a configuração e muda nome, tempo de buffer, mensagens por resposta, modelos (resposta, fallback, resumo do handoff, visão, áudio; só provedores com chave) ou destino do handoff. Vale na próxima mensagem. Credenciais do canal e tempo de retomada automática entram com os canais diretos (fase 5): no Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente.
+  - Remover agente: pede o nome do agente para confirmar e, opcionalmente, o token de administrador do Chatwoot para apagar o bot. No modo revenda, empresa que ficou sem agentes pode ser removida junto.
+  - Subir base de conhecimento (fase 6): escolher o agente e a pasta ou arquivo; listar e remover documentos já carregados.
+  - Ver consumo e falhas: por empresa e agente, últimos 7 e 30 dias lado a lado, com turnos, tokens e custo estimado em dólar, e as últimas falhas (derivado).
   - Sair.
 
 ### Tratamento de erro (vale para todas as telas)

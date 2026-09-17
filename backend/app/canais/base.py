@@ -73,6 +73,8 @@ class Canal(Protocol):
     campos_secretos: frozenset[str]
     responde_200_em_assinatura_invalida: bool
     """True quando o canal pune resposta de erro (Chatwoot silencia o bot na conversa)."""
+    retoma_por_tempo: bool
+    """True quando o agente volta sozinho depois de `retomada_automatica_horas` (canais diretos)."""
 
     async def descobrir(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Com o acesso do operador, lista o que dá para conectar (contas, caixas, números)."""
@@ -88,7 +90,11 @@ class Canal(Protocol):
         ...
 
     async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
-        """Desfaz `conectar` quando o agente não chega a ser gravado."""
+        """Desfaz `conectar`: na criação que não chegou a gravar e na remoção do agente.
+
+        `dados` é o acesso do operador (no Chatwoot, só o token de administrador basta).
+        Conexão que já não existe no canal não é erro; acesso recusado levanta CredencialInvalida.
+        """
         ...
 
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool: ...
@@ -122,6 +128,10 @@ class Canal(Protocol):
 
         Levanta se a pausa falhar. Devolve o que deu errado sem impedir a pausa (nota, atribuição).
         """
+        ...
+
+    async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
+        """Operador retomou pelo menu: o canal volta a deixar o agente falar na conversa."""
         ...
 
     async def baixar_midia(

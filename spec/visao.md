@@ -28,7 +28,7 @@ Hoje a VPS e o projeto de cada agente são montados à mão ou com um script sim
 12. Base de conhecimento com RAG por agente.
 13. Handoff para humano: no Chatwoot, transferência da conversa; no WhatsApp e Telegram diretos, pausa do agente para o contato, aviso com resumo para o número ou grupo da empresa e retomada por comando ou por tempo.
 14. Tratamento de erro: repetição automática de falhas passageiras; se persistir, para com `[ ERRO ]`, motivo, o que fazer e log em arquivo; ao rodar de novo, retoma de onde parou.
-15. Comando `asimov` na VPS: `asimov novo-agente` (para empresa nova ou existente, conforme o modo), `asimov agentes` e `asimov atualizar`. Editar e remover agente, consumo e base de conhecimento entram no mesmo comando nas fases 4 e 6.
+15. Comando `asimov` na VPS: sem argumento abre o menu (criar, listar, editar e remover agente, ver consumo e falhas); também `asimov novo-agente` (para empresa nova ou existente, conforme o modo), `asimov handoff` e `asimov atualizar`. Base de conhecimento entra no mesmo comando na fase 6.
 16. Resumo final com o que foi instalado, webhooks e próximos passos para abrir o projeto no Claude Code ou no Codex.
 17. Registro de consumo e falha por turno (modelo, tokens, custo, latência, erro), para saber o custo por cliente e depurar (assumido).
 18. Geração de `AGENTS.md` (fonte única) e `CLAUDE.md` (uma linha, `@AGENTS.md`) no projeto instalado, ao final do setup, curtos e só com o que o agente de código não descobre lendo o código, para o operador evoluir o agente em vibecoding com Claude Code ou Codex.

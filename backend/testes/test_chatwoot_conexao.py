@@ -185,3 +185,23 @@ def test_devolucao_para_pendente_vira_retomada_e_atribuicao_nao() -> None:
     assert canal.interpretar(_evento_de_status("conversation_status_changed", "open", abriu), CREDENCIAIS).acao is Acao.IGNORAR
     outra_caixa = {**_evento_de_status("conversation_status_changed", "pending", mudou_status), "inbox_id": 9}
     assert canal.interpretar(outra_caixa, CREDENCIAIS).acao is Acao.IGNORAR
+
+
+async def test_desconectar_apaga_o_bot_com_o_token_do_administrador() -> None:
+    canal = ChatwootHttp(chatwoot_real)
+    await canal.desconectar({"token_admin": ADMIN}, CREDENCIAIS)
+    assert canal.chamadas == [("DELETE", "/api/v1/accounts/1/agent_bots/99", None)]
+
+    # Bot já apagado no Chatwoot não impede a remoção.
+    canal = ChatwootHttp(lambda req, corpo: httpx.Response(404))
+    await canal.desconectar({"token_admin": ADMIN}, CREDENCIAIS)
+
+    canal = ChatwootHttp(lambda req, corpo: httpx.Response(401))
+    with pytest.raises(CredencialInvalida, match="administrador"):
+        await canal.desconectar({"token_admin": "de-atendente"}, CREDENCIAIS)
+
+
+async def test_devolver_ao_agente_marca_pendente_com_token_do_bot() -> None:
+    canal = ChatwootHttp(lambda req, corpo: httpx.Response(200, json={}))
+    await canal.devolver_ao_agente(CREDENCIAIS, "12")
+    assert canal.chamadas == [("POST", "/api/v1/accounts/1/conversations/12/toggle_status", {"status": "pending"})]

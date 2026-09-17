@@ -12,6 +12,7 @@ from app.clientes import repo as clientes_repo
 from app.clientes.modelos import Cliente
 from app.ia.provedores import modelos_padrao, valida_modelos
 from app.plataforma import cripto
+from app.plataforma.banco import agora
 from app.plataforma.config import config
 from app.plataforma.textos import slug
 
@@ -27,6 +28,24 @@ class NaoEncontrado(LookupError):
 
 class Conflito(ValueError):
     pass
+
+
+class CampoInvalido(ValueError):
+    """Mensagem em português, pronta para o menu mostrar."""
+
+
+CAMPOS_MODELO = ("modelo_conversa", "modelo_fallback", "modelo_auxiliar", "modelo_visao", "modelo_transcricao")
+CAMPOS_EDITAVEIS = frozenset(
+    {"nome", "handoff_destino", "buffer_segundos", "max_mensagens_por_resposta", "retomada_automatica_horas", *CAMPOS_MODELO}
+)
+PODEM_FICAR_VAZIOS = frozenset({"handoff_destino", "retomada_automatica_horas", "modelo_fallback"})
+
+
+def _valida_retomada(canal: Any, horas: int | None) -> None:
+    if horas is not None and not canal.retoma_por_tempo:
+        raise CampoInvalido(
+            f"no {canal.nome} o agente volta quando o atendente devolve a conversa; retomada por tempo não se aplica"
+        )
 
 
 def _cria_prompts(cliente: Cliente, nome_agente: str, slug_agente: str) -> tuple[str, str]:
@@ -75,6 +94,7 @@ async def criar_agente(
 
     canal_obj = obter_canal(canal)
     opcoes["handoff_destino"] = canal_obj.valida_destino_handoff(opcoes.get("handoff_destino"))
+    _valida_retomada(canal_obj, opcoes.get("retomada_automatica_horas"))
     token = cripto.novo_token()
     credenciais_ok = await canal_obj.conectar(conexao, config().url_webhook(canal, token), nome)
 
@@ -108,16 +128,71 @@ async def criar_agente(
 async def editar_agente(
     sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID, campos: dict[str, Any]
 ) -> Agente:
-    """Por enquanto só o destino do handoff; o resto da edição entra com o menu (fase 4)."""
+    """Altera só os campos enviados. O slug e a pasta de prompts não mudam com o nome.
+
+    Vale na próxima mensagem: webhook e turno releem o agente a cada chamada.
+    """
     agente = await repo.obter(sessao, cliente_id, agente_id)
     if agente is None:
         raise NaoEncontrado("agente não encontrado")
+    desconhecidos = set(campos) - CAMPOS_EDITAVEIS
+    if desconhecidos:
+        raise CampoInvalido(f"campos que não podem ser editados: {', '.join(sorted(desconhecidos))}")
+    vazios = sorted(c for c, v in campos.items() if v is None and c not in PODEM_FICAR_VAZIOS)
+    if vazios:
+        raise CampoInvalido(f"campos obrigatórios não podem ficar vazios: {', '.join(vazios)}")
+
+    canal = obter_canal(agente.canal)
+    if "nome" in campos:
+        campos["nome"] = campos["nome"].strip()
+        if not campos["nome"]:
+            raise CampoInvalido("nome do agente vazio")
     if "handoff_destino" in campos:
-        agente.handoff_destino = obter_canal(agente.canal).valida_destino_handoff(
-            campos["handoff_destino"]
-        )
+        campos["handoff_destino"] = canal.valida_destino_handoff(campos["handoff_destino"])
+    if "retomada_automatica_horas" in campos:
+        _valida_retomada(canal, campos["retomada_automatica_horas"])
+    valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
+
+    for campo, valor in campos.items():
+        setattr(agente, campo, valor)
     await sessao.commit()
+    log.info("agente_editado", agente_id=str(agente.id), campos=sorted(campos))
     return agente
+
+
+async def remover_agente(
+    sessao: AsyncSession,
+    cliente_id: uuid.UUID,
+    agente_id: uuid.UUID,
+    confirmacao: str,
+    acesso: dict[str, Any] | None = None,
+) -> bool:
+    """Exclusão lógica: webhook invalidado e credenciais apagadas. Conversas e consumo ficam.
+
+    `confirmacao` é o nome (ou slug) do agente. Com `acesso` do operador, desfaz a conexão no canal
+    antes (no Chatwoot, apaga o Agent Bot); se o canal recusar, nada é removido. Devolve se desfez.
+    """
+    agente = await repo.obter(sessao, cliente_id, agente_id)
+    if agente is None:
+        raise NaoEncontrado("agente não encontrado")
+    if slug(confirmacao) != agente.slug:
+        raise CampoInvalido(f"confirmação não confere: digite o nome do agente, {agente.nome}")
+
+    desconectado = False
+    if acesso:
+        await obter_canal(agente.canal).desconectar(acesso, credenciais(agente))
+        desconectado = True
+
+    # Slug liberado: um agente novo com o mesmo nome reaproveita a pasta de prompts.
+    agente.slug = f"{agente.slug}~removido-{agente.id.hex[:8]}"
+    agente.ativo = False
+    agente.removido_em = agora()
+    agente.credenciais_cifradas = cripto.cifra({})
+    agente.token_webhook_hash = cripto.hash_token(cripto.novo_token())
+    agente.token_webhook_cifrado = ""
+    await sessao.commit()
+    log.info("agente_removido", agente_id=str(agente.id), desconectado=desconectado)
+    return desconectado
 
 
 def url_webhook(agente: Agente) -> str:

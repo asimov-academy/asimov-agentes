@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agentes import repo, servico
@@ -39,7 +39,33 @@ class NovoAgente(BaseModel):
 
 
 class EdicaoAgente(BaseModel):
+    """Só os campos enviados mudam. `null` esvazia o que pode ficar vazio (fallback, destino, retomada)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nome: str | None = Field(default=None, min_length=1, max_length=200)
     handoff_destino: dict[str, Any] | None = None
+    buffer_segundos: int | None = Field(default=None, ge=1, le=60)
+    max_mensagens_por_resposta: int | None = Field(default=None, ge=1, le=10)
+    retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
+    modelo_conversa: str | None = None
+    modelo_fallback: str | None = None
+    modelo_auxiliar: str | None = None
+    modelo_visao: str | None = None
+    modelo_transcricao: str | None = None
+
+
+class Remocao(BaseModel):
+    confirmacao: str = Field(min_length=1, max_length=200, description="Nome do agente.")
+    conexao: dict[str, Any] | None = Field(
+        default=None,
+        description="Acesso do operador para desfazer a conexão no canal (Chatwoot: token_admin). Nunca é guardado.",
+    )
+
+
+class RemocaoSaida(BaseModel):
+    removido: bool
+    canal_desconectado: bool
 
 
 class AgenteSaida(BaseModel):
@@ -111,7 +137,7 @@ async def criar(
         raise HTTPException(status_code=404, detail=str(erro)) from erro
     except servico.Conflito as erro:
         raise HTTPException(status_code=409, detail=str(erro)) from erro
-    except (CredencialInvalida, ModeloInvalido, DestinoInvalido) as erro:
+    except (CredencialInvalida, ModeloInvalido, DestinoInvalido, servico.CampoInvalido) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
 
@@ -148,6 +174,21 @@ async def editar(
         )
     except servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
-    except DestinoInvalido as erro:
+    except (DestinoInvalido, ModeloInvalido, servico.CampoInvalido) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
+
+
+@router.delete("/clientes/{cliente_id}/agentes/{agente_id}", response_model=RemocaoSaida)
+async def remover(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, dados: Remocao, s: AsyncSession = Depends(sessao)
+) -> RemocaoSaida:
+    try:
+        desconectado = await servico.remover_agente(
+            s, cliente_id, agente_id, dados.confirmacao, dados.conexao
+        )
+    except servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except (CredencialInvalida, servico.CampoInvalido) as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
+    return RemocaoSaida(removido=True, canal_desconectado=desconectado)

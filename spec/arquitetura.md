@@ -95,7 +95,7 @@ backend/app/
 ├── clientes/       rotas.py, servico.py, repo.py, modelos.py
 ├── agentes/        rotas.py, servico.py, repo.py, modelos.py
 ├── canais/
-│   ├── base.py     interface: verificar, normalizar entrada, enviar, digitando, baixar mídia, transferir
+│   ├── base.py     interface: conectar e desconectar, verificar, normalizar entrada, enviar, digitando, baixar mídia, transferir, devolver ao agente
 │   ├── whatsapp/
 │   ├── telegram/
 │   └── chatwoot/
@@ -130,15 +130,16 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, token de administrador, conta, caixas), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook e liga nas caixas; se a gravação falhar, apaga o bot); guarda só o token e o secret do bot; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; no Telegram registra o webhook |
 | Listar agentes | `GET /admin/agentes?cliente_id=` | filtro opcional | lista com canal, destino de handoff, URL do webhook, ativo | credenciais nunca devolvidas |
 | Ver agente | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}` | ids | agente | agente pertence ao cliente |
-| Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | campos alterados (hoje só `handoff_destino`; o resto na fase 4) | agente | agente pertence ao cliente; destino validado pelo canal; credencial alterada é testada antes |
-| Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmação com o slug | ok | agente pertence ao cliente; remove webhook no Telegram; apaga credenciais |
+| Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | só os campos alterados: nome, handoff_destino, buffer_segundos, max_mensagens_por_resposta, retomada_automatica_horas, modelo_conversa, modelo_fallback, modelo_auxiliar, modelo_visao, modelo_transcricao; `null` esvazia fallback, destino e retomada | agente | agente pertence ao cliente; campo fora da lista é recusado; destino validado pelo canal; modelos só de provedores com chave; retomada por tempo só em canal que retoma por tempo; slug e pasta de prompts não mudam; credencial de canal editável entra com a fase 5 |
+| Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmacao (nome do agente) e conexao opcional (Chatwoot: token_admin) | removido e canal_desconectado | agente pertence ao cliente; com conexao, desfaz no canal antes (Chatwoot apaga o Agent Bot) e, se o canal recusar, não remove; exclusão lógica: webhook invalidado, credenciais apagadas, slug liberado; no Telegram remove o webhook |
+| Remover empresa | `DELETE /admin/clientes/{cliente_id}` | confirmacao (nome da empresa) | nada (204) | só sem agentes (409); exclusão lógica com slug liberado |
 | Listar empresas | `GET /admin/clientes` | nada | lista | usada pelo `asimov novo-agente` no modo revenda |
 | Descobrir no canal | `POST /admin/canais/{canal}/descobrir` | acesso do operador (Chatwoot: url e token de administrador) | contas, caixas de entrada, atendentes e times | não grava nada; acesso não é guardado |
 | Enviar documento | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/documentos` | caminho do arquivo na VPS ou upload multipart | documento com status `processando` | formato aceito (PDF, DOCX, TXT, MD); hash repetido no mesmo agente é recusado; enfileira ingestão |
 | Listar documentos | `GET .../agentes/{agente_id}/documentos` | ids | lista com status e trechos | agente pertence ao cliente |
 | Remover documento | `DELETE .../documentos/{documento_id}` | ids | ok | documento pertence ao agente e ao cliente; apaga trechos |
-| Ver consumo e falhas | `GET /admin/consumo?cliente_id=&agente_id=&dias=` | filtros | turnos, tokens, custo estimado, últimas falhas | filtro por cliente obrigatório quando informado |
-| Retomar agente | `POST /admin/clientes/{cliente_id}/conversas/{conversa_id}/retomar` | ids | ok | conversa pertence ao cliente; fecha handoff aberto |
+| Ver consumo e falhas | `GET /admin/consumo?cliente_id=&agente_id=&dias=` | filtros; `dias` de 1 a 365, padrão 7 | por agente: turnos (resposta), chamadas, tokens, custo estimado e chamadas sem preço; até 10 últimas falhas | cliente informado é conferido no banco; `agente_id` exige `cliente_id`; sem cliente, a instalação inteira |
+| Retomar agente | `POST /admin/clientes/{cliente_id}/conversas/{conversa_id}/retomar` | ids | retomado (false se não havia handoff aberto) | conversa pertence ao cliente; o canal devolve a conversa ao agente antes (Chatwoot: status pendente) e, se recusar, 502 sem fechar; `retomado_por` `operador` |
 
 Webhooks, chamados pelos canais:
 

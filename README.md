@@ -46,8 +46,12 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde.
 
 | Comando | O que faz |
 |---|---|
+| `asimov` | Menu: criar, listar, editar e remover agentes, ver consumo e falhas |
 | `asimov novo-agente` | Cria outro agente, para empresa nova ou existente |
-| `asimov agentes` | Lista agentes e empresas |
+| `asimov agentes` | Lista agentes, empresas e webhooks |
+| `asimov editar` | Muda nome, tempo de buffer, mensagens por resposta, modelos ou handoff de um agente |
+| `asimov remover` | Remove um agente (e o bot no Chatwoot, com o token de administrador) |
+| `asimov consumo` | Turnos, tokens, custo estimado e falhas dos últimos 7 e 30 dias |
 | `asimov handoff` | Troca quem recebe a conversa passada pelo agente |
 | `asimov atualizar` | Baixa a versão nova e republica |
 
@@ -84,10 +88,8 @@ Chatwoot ◄──────────────────── respost
 
 ## O que vem por aí
 
-- Passar a conversa para um humano no Chatwoot
 - WhatsApp oficial e Telegram direto, sem Chatwoot
 - Base de conhecimento (RAG) por agente
-- Editar e remover agentes e ver consumo pelo `asimov`
 
 ## Licença
 

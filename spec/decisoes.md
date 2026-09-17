@@ -2,6 +2,19 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Menu do operador (fase 4, v0.5.0)
+
+- **O menu abre ao rodar o setup de novo e com `asimov` sem argumento.** Cada ação também é subcomando (`editar`, `remover`, `consumo`), para quem prefere ir direto. `asimov atualizar` para no resumo, sem menu. spec/telas.md, tela 8.
+- **Editar não troca credenciais do canal nem retomada por tempo no Chatwoot.** As credenciais do Chatwoot são do bot que o setup cria, e a retomada é devolver a conversa para pendente. Trocar de Chatwoot ou de caixa é remover e criar de novo; o prompt volta junto (item abaixo). A edição de credenciais entra com os canais diretos (fase 5). A API recusa `retomada_automatica_horas` em canal que não retoma por tempo (`retoma_por_tempo` em `canais/base.py`). spec/arquitetura.md.
+- **Nome editado não muda slug nem pasta de prompts**, e o bot no Chatwoot mantém o nome antigo: renomear lá exige token de administrador.
+- **Modelo do resumo do handoff escolhível no menu**, com sugestões baratas primeiro. Só aparecem provedores com chave no `.env`: chave nova só vale depois de reconstruir a plataforma.
+- **Remover pede o nome do agente e, opcionalmente, o token de administrador do Chatwoot para apagar o Agent Bot.** Sem o token, o bot fica ligado na caixa e o webhook dele cai em Falha `webhook_token_desconhecido`; o menu avisa para tirar o bot da caixa. Se o Chatwoot recusar o token, nada é removido. O contrato pedia confirmação pelo slug; a API compara o slug do nome digitado.
+- **Slug do removido ganha `~removido-<id>`**: cliente e agente novos com o mesmo nome podem ser criados, e o agente novo reaproveita a pasta de prompts do removido (o setup nunca sobrescreve prompt). spec/dados.md.
+- **Empresa só sai sem agentes** (`DELETE /admin/clientes/{id}`, 409 com agentes). No modo revenda o menu oferece remover a empresa que ficou sem agentes. Rota nova no contrato.
+- **Consumo agrupado por agente**, com `turnos` (só `resposta`), `chamadas` (inclui leitura de mídia e resumo), tokens, custo e `sem_custo` (chamadas sem preço conhecido, marcadas com `*` no menu). Turno não tem `agente_id`: a consulta junta pela Conversa filtrando `cliente_id` nos dois lados.
+- **Retomar pelo operador devolve no canal antes de fechar o handoff** (Chatwoot: status pendente com o token do bot), com `retomado_por` `operador`. Sem opção no menu por enquanto: falta listar conversas em handoff.
+- **Fim da entrada (Ctrl+D) encerra o setup**: as perguntas repetiam sem parar quando a leitura voltava vazia.
+
 ## 2026-09-16: Nota de handoff curta (v0.4.1)
 
 - **Primeiro teste na VPS: nota longa demais** para o atendente ler no meio da conversa. Agora é só `Motivo:` e o resumo, sem título nem instrução de devolver. O prompt padrão `resumo_handoff.md` pede até 2 linhas e não repete o motivo. Agentes já criados mantêm o próprio arquivo: o setup nunca sobrescreve prompt.
