@@ -69,7 +69,7 @@ Commit: `feat: agente entende áudio, imagem e documento`
 
 ## Fase 3: Handoff no Chatwoot
 
-Situação: construída (v0.4.0), aguardando validação em VPS real.
+Situação: concluída e validada em VPS real (v0.4.1).
 
 Objetivo: o agente passa a conversa para um humano no Chatwoot e volta quando devolvida.
 
