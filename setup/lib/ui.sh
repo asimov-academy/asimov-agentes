@@ -159,9 +159,10 @@ pergunta_secreta() {
 # arquivo de respostas, usado na simulação), a resposta é uma linha com o número ou S/N.
 tem_terminal() { [ -t 3 ] && [ -t 1 ]; }
 
-# Esc sozinho chega como um byte só; setas chegam como Esc seguido da sequência no mesmo instante.
+# Esc sozinho é um byte só; setas e teclas com Shift chegam como Esc seguido de uma sequência.
+# Terminal no navegador (painel da Hostinger) pode entregar a sequência atrasada: a espera cobre isso.
 ESPERA_SEQUENCIA=1
-[ "${BASH_VERSINFO[0]}" -ge 4 ] && ESPERA_SEQUENCIA=0.1
+[ "${BASH_VERSINFO[0]}" -ge 4 ] && ESPERA_SEQUENCIA=0.4
 SAIDA_VOLTAR=20
 
 # volta_se_puder: Esc dentro de `com_voltar` (base.sh) encerra a ação e volta à tela anterior.
@@ -174,32 +175,19 @@ volta_se_puder() {
 
 # ler_linha VAR [secreta]: resposta digitada tecla a tecla, para o Esc voltar. Backspace apaga.
 ler_linha() {
-  local __destino=$1 __secreta=${2:-} __digitado="" __letra __sequencia
+  local __destino=$1 __secreta=${2:-} __digitado="" __letra
   while true; do
-    if ! IFS= read -rsn1 __letra <&3; then
-      printf '\033[?25h\n'
-      exit 1
-    fi
+    le_tecla __letra
     case "$__letra" in
-      "") break ;;
-      $'\033')
-        __sequencia=""
-        IFS= read -rsn2 -t "$ESPERA_SEQUENCIA" __sequencia <&3 || true
-        if [ -z "$__sequencia" ]; then
-          volta_se_puder
-        elif [[ "$__sequencia" =~ [0-9]$ ]]; then
-          # Delete, Page Up e parecidas terminam em ~: descarta o resto.
-          IFS= read -rsn1 -t "$ESPERA_SEQUENCIA" __sequencia <&3 || true
-        fi
-        ;;
-      $'\177' | $'\b')
+      enter) break ;;
+      esc) volta_se_puder ;;
+      apagar)
         if [ -n "$__digitado" ]; then
           __digitado=${__digitado%?}
           [ -n "$__secreta" ] || printf '\b \b'
         fi
         ;;
-      [[:cntrl:]]) ;;
-      *)
+      ?)
         __digitado+=$__letra
         [ -n "$__secreta" ] || printf '%s' "$__letra"
         ;;
@@ -212,28 +200,80 @@ if tem_terminal; then
   trap 'printf "\033[?25h"' EXIT
 fi
 
-# le_tecla VAR: cima, baixo, esquerda, direita, enter, ou o próprio caractere.
+# le_tecla VAR: um caractere digitado, ou enter, esc, apagar, cima, baixo, esquerda, direita,
+# ignorar. Lê a sequência de escape inteira: sobra dela nunca vira texto nem Esc falso.
 le_tecla() {
-  local __lida="" __sequencia=""
+  local __lida="" __proximo="" __parametros="" __final=""
   if ! IFS= read -rsn1 __lida <&3; then
     printf '\033[?25h\n'
     exit 1
   fi
   case "$__lida" in
     "") __lida=enter ;;
+    $'\177' | $'\b') __lida=apagar ;;
     $'\033')
-      IFS= read -rsn2 -t "$ESPERA_SEQUENCIA" __sequencia <&3 || true
-      case "$__sequencia" in
-        "") __lida=esc ;;
-        "[A" | "OA") __lida=cima ;;
-        "[B" | "OB") __lida=baixo ;;
-        "[C" | "OC") __lida=direita ;;
-        "[D" | "OD") __lida=esquerda ;;
-        *) __lida=outra ;;
-      esac
+      if ! IFS= read -rsn1 -t "$ESPERA_SEQUENCIA" __proximo <&3 || [ -z "$__proximo" ]; then
+        __lida=esc
+      elif [ "$__proximo" = "[" ] || [ "$__proximo" = O ]; then
+        # Parâmetros (dígitos, ; e :) até o byte final (letra ou ~).
+        while IFS= read -rsn1 -t "$ESPERA_SEQUENCIA" __final <&3; do
+          case "$__final" in
+            [0-9\;:?]) __parametros+=$__final ;;
+            *) break ;;
+          esac
+          __final=""
+        done
+        __lida=$(traduz_sequencia "$__proximo" "$__parametros" "$__final")
+      else
+        __lida=ignorar
+      fi
       ;;
+    [[:cntrl:]]) __lida=ignorar ;;
   esac
   printf -v "$1" '%s' "$__lida"
+}
+
+# traduz_sequencia "[" parâmetros final: setas, e Shift+letra nos formatos que terminais modernos
+# mandam (kitty `CSI código;mod u` e xterm `CSI 27;mod;código ~`). O resto é ignorado e vai para o log.
+traduz_sequencia() {
+  local inicio=$1 parametros=$2 final=$3 codigo="" mods=1 base
+  case "$final" in
+    A) echo cima; return ;;
+    B) echo baixo; return ;;
+    C) echo direita; return ;;
+    D) echo esquerda; return ;;
+    u)
+      base=${parametros%%;*}
+      codigo=${base%%:*}
+      [[ "$base" == *:* ]] && [ -n "${base#*:}" ] && codigo=${base#*:} && codigo=${codigo%%:*}
+      [[ "$parametros" == *\;* ]] && mods=${parametros#*;} && mods=${mods%%[;:]*}
+      ;;
+    "~")
+      if [[ "$parametros" == 27\;*\;* ]]; then
+        mods=${parametros#27;}
+        mods=${mods%%;*}
+        codigo=${parametros##*;}
+      fi
+      ;;
+  esac
+  case "$codigo" in
+    27) echo esc; return ;;
+    13) echo enter; return ;;
+    8 | 127) echo apagar; return ;;
+  esac
+  if [[ "$codigo" =~ ^[0-9]+$ ]] && [ "$codigo" -ge 32 ] && [ "$codigo" -lt 57344 ] && [ "$codigo" -ne 127 ]; then
+    local letra
+    # shellcheck disable=SC2059  # o formato é o próprio \U com o código da letra
+    printf -v letra "\\U$(printf '%08x' "$codigo")"
+    # Shift ligado (bit 1 do modificador) e o terminal mandou a letra minúscula.
+    if [ $(((${mods:-1} - 1) & 1)) -eq 1 ] && [[ "$letra" == [a-z] ]]; then
+      letra=$(printf '%s' "$letra" | tr '[:lower:]' '[:upper:]')
+    fi
+    echo "$letra"
+    return
+  fi
+  printf 'tecla ignorada: ESC %q\n' "$inicio$parametros$final" >>"${LOG:-/dev/null}" 2>/dev/null || true
+  echo ignorar
 }
 
 # escolha VAR "texto" opção1 opção2 ...: devolve o número escolhido.
@@ -325,7 +365,7 @@ confirma() {
     fi
     le_tecla __tecla
     case "$__tecla" in
-      cima | baixo | esquerda | direita | $'\t') __sim=$((1 - __sim)) ;;
+      cima | baixo | esquerda | direita) __sim=$((1 - __sim)) ;;
       [SsYy]) __sim=1 && break ;;
       [Nn]) __sim=0 && break ;;
       enter) break ;;
