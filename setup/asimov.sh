@@ -16,7 +16,6 @@ ajuda() {
   printf '    %sconsumo%s       turnos, tokens, custo e falhas em 7 e 30 dias\n' "$CIANO" "$NORMAL"
   printf '    %shandoff%s       troca quem recebe a conversa passada pelo agente\n' "$CIANO" "$NORMAL"
   printf '    %satualizar%s     baixa a versão nova e republica\n' "$CIANO" "$NORMAL"
-  printf '    %steclas%s        mostra o que o terminal manda em cada tecla (diagnóstico)\n' "$CIANO" "$NORMAL"
   echo
 }
 
@@ -43,7 +42,6 @@ case "${1:-menu}" in
   remover) roda fluxo_remover_agente ;;
   consumo) roda mostra_consumo ;;
   handoff) roda fluxo_handoff ;;
-  teclas) diagnostico_teclas ;;
   atualizar)
     # O install.sh local tem fixa a versão já instalada: baixa o da main.
     mkdir -p "$DIR_ESTADO"
