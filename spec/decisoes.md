@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Calculadora no formato brasileiro (v0.8.6)
+
+- **Testes do operador na VPS com a v0.8.5**: busca da cotação de ontem funcionou (2 buscas, 20 s). A calculadora foi chamada uma vez por conta, mas o modelo leu o ponto como decimal: "918.273 dividido por 47,6" deu 19,29 (certo: 19.291,45) e "(3.847 × 219) − (15.632 / 8) + 2.901²" deu 848,95 (certo: 9.256.340). A calculadora trocava vírgula por ponto e juntava as duas leituras.
+- **A calculadora lê o formato brasileiro, número a número**: com vírgula, ponto é milhar e vírgula é decimal; só pontos em grupos de 3 depois de um primeiro grupo sem zero à esquerda (87.432, 1.500.000) é milhar; o resto (0.9, 0.125, 3.14) continua decimal, porque o modelo às vezes escreve assim. Aceita ×, ÷, − e ². Devolve no formato brasileiro (462.602.712; 19.291,4495798319), sem notação científica.
+- **Instrução da calculadora**: números do contato estão no formato brasileiro; passar como o contato escreveu e responder no formato brasileiro.
+- **Ambiguidade aceita**: "1.250" vira mil duzentos e cinquenta. Num atendimento em português é a leitura certa.
+
 ## 2026-09-17: Raciocínio baixo nos modelos da OpenAI que vêm sem ele (v0.8.5)
 
 - **Achado na VPS, mesmo com a v0.8.4**: o gpt-5.1 buscava a cotação e respondia que não conseguia ver o valor em tempo real, ou prometia "já te respondo" sem dar o valor.
