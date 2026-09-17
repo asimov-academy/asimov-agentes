@@ -4,10 +4,10 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.8.7` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno e calculadora completa no formato brasileiro.
+- `v0.8.8` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno calculadora completa no formato brasileiro e uma ferramenta por arquivo.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 171 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 172 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
 
 ## Fases
 
@@ -17,7 +17,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.7). Validado na VPS: conversa no terminal com ritmo rápido, conectar nativo ao Chatwoot com as conversas de teste separadas, handoff e devolução no Chatwoot, busca na web pelo Chatwoot numa conversa devolvida (v0.8.5), calculadora chamada só com conta de verdade. Falta confirmar na v0.8.7 que toda conta passa pela calculadora (contas com ponto de milhar, porcentagem, parcela, datas) e o `/retomar` no terminal; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.8). Validado na VPS: conversa no terminal com ritmo rápido, conectar nativo ao Chatwoot com as conversas de teste separadas, handoff e devolução no Chatwoot, busca na web pelo Chatwoot numa conversa devolvida (v0.8.5), calculadora chamada só com conta de verdade. Falta confirmar na v0.8.7 que toda conta passa pela calculadora (contas com ponto de milhar, porcentagem, parcela, datas) e o `/retomar` no terminal; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -46,7 +46,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Turno (`conversas/turno.py`): buffer por conversa, lock de 240 s, mídia antes do modelo, resposta descartada se chegar mensagem nova antes do envio, digitando com o tempo de uma pessoa digitar (6 caracteres/s, variação de 15%, teto de 20 s por mensagem, soma até 90 s; editável por agente).
 - Mídia: transcrição, visão e PDF com texto, cache por cliente e hash, limites de 20 MB e 5 minutos.
 - Handoff no Chatwoot: nota privada curta, atribuição, status aberto; retomada pelo status pendente; falha do modelo e arquivo grande também transferem. Retomada pelo operador existe na API (`POST .../conversas/{id}/retomar`), sem opção no menu.
-- Ferramentas por agente (`ia/ferramentas.py`): calculadora (`ia/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), ligadas por padrão. OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
+- Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), ligadas por padrão. OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
 - Migrações até `0008` (canal da conversa).

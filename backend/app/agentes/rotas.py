@@ -298,6 +298,6 @@ class FerramentaSaida(BaseModel):
 async def listar_ferramentas() -> list[FerramentaSaida]:
     """Catálogo que o menu mostra para ligar e desligar por agente."""
     return [
-        FerramentaSaida(nome=nome, rotulo=f.rotulo, descricao=f.descricao, padrao=nome in ferramentas.PADRAO)
-        for nome, f in ferramentas.CATALOGO.items()
+        FerramentaSaida(nome=f.nome, rotulo=f.rotulo, descricao=f.descricao, padrao=f.padrao)
+        for f in ferramentas.CATALOGO.values()
     ]

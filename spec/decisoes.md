@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Uma ferramenta por arquivo (v0.8.8)
+
+- **Pedido do operador**: toda ferramenta dos agentes num `.py` separado, para ir adicionando ferramentas novas. `ia/ferramentas.py` virou o pacote `ia/ferramentas/`: `base.py` (ficha `Ferramenta`), `calculadora.py`, `busca_web.py` e `registro.py` (catálogo, padrão, valida, monta).
+- **A ficha mora com a ferramenta**: nome (igual ao do arquivo e ao que fica gravado no agente), rótulo e descrição do menu, instrução de quando usar, se vem ligada no agente novo, tools e capabilities. O padrão do agente novo sai das fichas, não de uma lista à parte.
+- **Registro explícito**, como `canais/registro.py`: a ordem é a do menu. Um teste falha se um arquivo da pasta não estiver no registro ou se a ficha tiver nome diferente do arquivo. Regra em AGENTS.md e no AGENTS.md gerado para o projeto instalado.
+- Sem mudança de comportamento: mesmas ferramentas, instruções e nomes gravados.
+
 ## 2026-09-17: Calculadora para qualquer conta (v0.8.7)
 
 - **Pedido do operador: a calculadora serve para qualquer cálculo e o modelo nunca calcula sozinho.** Até a v0.8.6 ela só fazia as quatro operações, potência e parênteses; conta de porcentagem, parcela ou data o modelo fazia de cabeça.
