@@ -47,7 +47,13 @@ def _config_webhook(url_webhook: str, chave_hmac: str) -> dict[str, Any]:
 
 
 def cabecalho() -> dict[str, str]:
-    return {"X-Api-Key": config().waha_api_key, "Accept": "application/json"}
+    """Só a chave: serve para baixar arquivo, que não é JSON."""
+    return {"X-Api-Key": config().waha_api_key}
+
+
+def cabecalho_json() -> dict[str, str]:
+    """Para as chamadas da API. O `Accept` é o que faz o QR code vir em texto em vez de imagem."""
+    return {**cabecalho(), "Accept": "application/json"}
 
 
 def raiz() -> str:
@@ -55,7 +61,7 @@ def raiz() -> str:
 
 
 def _http() -> httpx.AsyncClient:
-    return httpx.AsyncClient(timeout=TIMEOUT, headers=cabecalho(), base_url=raiz())
+    return httpx.AsyncClient(timeout=TIMEOUT, headers=cabecalho_json(), base_url=raiz())
 
 
 def _erro(acao: str, erro: Exception) -> CredencialInvalida:
