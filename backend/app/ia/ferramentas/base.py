@@ -18,7 +18,7 @@ class Ferramenta:
     instrucao: str
     """Quando usar, no prompt de sistema. Sem ela o modelo pode ter a ferramenta e não usar (v0.8.3)."""
     padrao: bool = False
-    """Vem ligada no agente novo."""
+    """Vem ligada no agente novo criado sem escolher ferramentas. Nenhuma vem: o agente nasce cru (v0.8.11)."""
     tools: Callable[[], list[Any]] = field(default=lambda: [])
     """Funções que o modelo chama (tools da PydanticAI)."""
     capabilities: Callable[[], list[Any]] = field(default=lambda: [])

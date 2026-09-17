@@ -64,7 +64,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
   - Nome do agente.
   - Empresa: no modo empresa, a primeira vez pede o nome da empresa (sugere o nome da conta do Chatwoot) e depois usa sempre a mesma; no modo revenda, menu com as empresas existentes e "nova empresa".
 - Mostra ao final: uma linha confirmando o agente no ar, a caixa e a empresa, e outra com o destino do handoff. A API cria o Agent Bot já com a URL do webhook e liga na caixa.
-- A partir da fase 5 a tela começa pelo canal: Chatwoot (este fluxo), WhatsApp oficial (credenciais da Meta e template de handoff), WhatsApp não oficial pela WAHA (número ou grupo do handoff, QR code desenhado no terminal até conectar, aviso de risco de bloqueio do número) ou nativo (nome, empresa e ajustes: ritmo das respostas "Rápido, para testar" com buffer de 2 s e 1 s de digitando por mensagem, "Como no WhatsApp" com os padrões dos canais, ou tempos escolhidos; mensagens por resposta; ferramentas; modelo de resposta, padrão da instalação ou outro). Mostra onde fica o prompt.
+- A partir da fase 5 a tela começa pelo canal: Chatwoot (este fluxo), WhatsApp oficial (credenciais da Meta e template de handoff), WhatsApp não oficial pela WAHA (número ou grupo do handoff, QR code desenhado no terminal até conectar, aviso de risco de bloqueio do número) ou nativo (nome, empresa e ritmo das respostas: "Rápido, para testar" com buffer de 2 s e 1 s de digitando por mensagem, "Como no WhatsApp" com os padrões dos canais, ou tempos escolhidos; mostra onde fica o prompt). Todo canal termina na lista de ferramentas, toda desmarcada: o agente nasce cru, com `persona.md` de uma linha, e se ajusta depois em Editar agente ou em vibecoding (v0.8.11).
 
 ### 7. Resumo final
 

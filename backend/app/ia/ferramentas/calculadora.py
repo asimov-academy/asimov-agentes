@@ -287,6 +287,5 @@ FERRAMENTA = Ferramenta(
         "(87.432 é oitenta e sete mil, 47,6 é quarenta e sete e seis décimos). Passe os números como o contato "
         "escreveu, separe argumentos de função com ; e responda no formato brasileiro."
     ),
-    padrao=True,
     tools=lambda: [calcular],
 )

@@ -39,7 +39,7 @@ class Agente(ComId, ComCriacao, Base):
     """Velocidade com que o agente "digita": define quanto o digitando dura antes de cada mensagem."""
     digitacao_maximo_segundos: Mapped[int] = mapped_column(default=20, server_default="20")
     ferramentas: Mapped[list[str]] = mapped_column(
-        JSONB, default=lambda: list(ferramentas.PADRAO), server_default='["calculadora", "busca_web"]'
+        JSONB, default=lambda: list(ferramentas.PADRAO), server_default="[]"
     )
     """Nomes do catálogo de `ia/ferramentas/registro.py` ligados neste agente."""
 
