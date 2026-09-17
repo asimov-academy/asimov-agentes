@@ -34,7 +34,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Leitura de mídia registra Turno com `funcao` `transcricao` ou `visao`; mídia do cache não registra.
 - Arquivos em volume Docker `midia` (`/var/lib/asimov/midia`). Retenção de 90 dias fica para a fase 7.
 - Validada na VPS em 2026-09-16. O teste achou a mensagem perdida durante o turno, corrigida na v0.3.2 (spec/decisoes.md).
-- O agente às vezes cita a mecânica ("recebi as transcrições"): ajustar `INSTRUCAO_DE_MIDIA` em `ia/agente.py` para responder como quem ouviu e viu.
+- O agente às vezes citava a mecânica ("recebi as transcrições"): `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0; ainda não conferido na VPS.
 
 ## Como a fase 3 ficou
 
@@ -43,14 +43,16 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Falha do modelo depois das tentativas e arquivo acima do limite também transferem.
 - Destino por agente: usuário, time ou caixa. `asimov handoff` troca; a atualização pergunta uma vez para agentes antigos. `PATCH` do agente aceita só `handoff_destino` por enquanto.
 - Ainda sem tool que altera estado além do handoff: a regra de turno com mídia continua sem efeito prático.
-
-- Validada na VPS em 2026-09-16. O teste achou a nota longa demais, encurtada na v0.4.1 (spec/decisoes.md).
+- Validada na VPS em 2026-09-16. O teste achou a nota longa demais, encurtada na v0.4.1 (spec/decisoes.md). O debug confirmou a retomada pelo evento do Chatwoot (log `handoff_retomado` no `api`), nenhuma Falha e um handoff aberto por conversa.
+- Prompt de resumo de agente já criado não muda com atualização: o setup nunca sobrescreve prompt.
 
 ## Para a fase 4
 
 - `PATCH` do agente já existe só com `handoff_destino`; completar com os demais campos.
 - A pergunta de handoff da atualização pede o token uma vez por agente sem destino; no menu, pedir uma vez por Chatwoot.
 - Teste de dois clientes precisa de um segundo Agent Bot e uma segunda caixa no Chatwoot.
+- `modelo_auxiliar` hoje é igual ao `modelo_conversa` (padrão em `ia/provedores.py`): no teste, o resumo com `gpt-5.5` custou cerca de US$ 0,0125 e 3,5 s por handoff. Permitir escolher um modelo mais barato no editar agente ou no setup.
+- Log `handoff_retomado` do webhook sai sem `conversa_id` (`conversas/webhook.py`, `_retoma`); os do worker têm.
 
 ## Fluxo de publicação combinado com o operador
 
