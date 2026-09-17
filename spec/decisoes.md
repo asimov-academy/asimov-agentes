@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Fase 5 sem Telegram; WAHA e agente nativo
+
+- **Telegram saiu**, decisão do operador. No lugar: WhatsApp não oficial e um agente nativo, sem canal, para conversar no terminal. O WhatsApp oficial continua. spec/visao.md, spec/usuarios.md, spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/fases.md.
+- **WhatsApp não oficial pela WAHA com motor GOWS** (whatsmeow). Comparados: Evolution API (Baileys; manutenção do projeto dela, mas 300 a 500 MB e licença Apache 2.0 com aviso obrigatório e licença comercial se não cumprir), Baileys direto (MIT e leve, mas serviço Node nosso para manter), GoWA e WuzAPI (Go, MIT, leves, comunidades menores). WAHA: maior comunidade, empresa por trás, Apache 2.0 sem condições e, desde a 2026.6.1, várias sessões e mídia na versão gratuita. Container subido só no primeiro agente WAHA, sem porta pública, com webhook pela rede interna.
+- **Agente nativo** serve para testar e conversar no terminal (`asimov conversar`), com o mesmo buffer, turno, ferramentas, consumo e handoff dos outros canais. Não atende ninguém de fora.
+- **Ordem na fase: nativo, WAHA, oficial.** O nativo não depende de canal externo e já serve para testar prompt e ferramentas; o oficial depende de template aprovado pela Meta.
+
 ## 2026-09-17: Digitação humanizada, ferramentas por agente e consumo por empresa (v0.7.0)
 
 - **Digitando pelo ritmo de uma pessoa**, pedido do operador: caracteres / velocidade do agente (padrão 6 por segundo, editável de 1 a 30), variação de 15%, entre 1 s e o teto por mensagem (padrão 20 s). O tempo que o turno já levou (mídia, modelo) conta como digitação da primeira mensagem. A soma fica em até 90 s, abaixo do lock de 240 s que também cobre mídia e modelo. Substitui o atraso fixo de 1 a 4 s. spec/dados.md, spec/arquitetura.md.

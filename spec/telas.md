@@ -64,7 +64,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
   - Nome do agente.
   - Empresa: no modo empresa, a primeira vez pede o nome da empresa (sugere o nome da conta do Chatwoot) e depois usa sempre a mesma; no modo revenda, menu com as empresas existentes e "nova empresa".
 - Mostra ao final: uma linha confirmando o agente no ar, a caixa e a empresa, e outra com o destino do handoff. A API cria o Agent Bot já com a URL do webhook e liga na caixa.
-- WhatsApp e Telegram diretos entram na fase 5.
+- A partir da fase 5 a tela começa pelo canal: Chatwoot (este fluxo), WhatsApp oficial (credenciais da Meta e template de handoff), WhatsApp não oficial pela WAHA (número ou grupo do handoff, QR code desenhado no terminal até conectar, aviso de risco de bloqueio do número) ou nativo (só nome e empresa).
 
 ### 7. Resumo final
 
@@ -83,6 +83,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Atualizar para a v0.4.0 pergunta uma vez o destino do handoff dos agentes que não têm.
 - Ações do menu:
   - Criar agente (mesmo fluxo da tela 6).
+  - Conversar com agente (fase 5): escolhe um agente nativo e conversa no terminal; cada linha é uma mensagem do contato, a resposta aparece depois do digitando; `/nova` começa outra conversa e Esc volta.
   - Listar agentes: por empresa, nome, canal, modelo de resposta, destino do handoff, status e URL do webhook.
   - Editar agente: escolhe o agente, vê a configuração e muda nome (também o nome do bot no Chatwoot; se o Chatwoot estiver fora, oferece salvar só na plataforma), tempo de buffer, mensagens por resposta, digitação (caracteres por segundo e teto por mensagem), ferramentas (lista de marcar: calculadora e busca na web), modelos (resposta, fallback, resumo do handoff, visão, áudio; só provedores com chave) ou destino do handoff. Vale na próxima mensagem. Credenciais do canal e tempo de retomada automática entram com os canais diretos (fase 5): no Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente.
   - Remover agente: pede o nome do agente para confirmar e apaga o bot no Chatwoot junto; se o Chatwoot estiver fora, oferece remover deixando o bot lá. No modo revenda, empresa que ficou sem agentes pode ser removida junto.
@@ -145,7 +146,7 @@ Adicionada na verificação de consistência da etapa 5:
 
 ## Critério de sucesso
 
-Um aluno parte de uma VPS Ubuntu 24.04 vazia com domínio e, em menos de 1 hora e sem editar código, tem um agente respondendo no WhatsApp, Telegram ou Chatwoot, com áudio, imagem, base de conhecimento e handoff funcionando (assumido). Uma semana depois, está evoluindo o agente em vibecoding no projeto gerado.
+Um aluno parte de uma VPS Ubuntu 24.04 vazia com domínio e, em menos de 1 hora e sem editar código, tem um agente respondendo no WhatsApp (oficial ou WAHA) ou no Chatwoot, com áudio, imagem, base de conhecimento e handoff funcionando (assumido). Uma semana depois, está evoluindo o agente em vibecoding no projeto gerado.
 
 ## Implicações técnicas
 
@@ -155,10 +156,11 @@ Um aluno parte de uma VPS Ubuntu 24.04 vazia com domínio e, em menos de 1 hora 
   - criar agente; listar agentes; ver agente com URL de webhook; editar agente; remover agente
   - descobrir o que o acesso do operador enxerga no canal (contas e caixas de entrada no Chatwoot)
   - conectar o canal ao criar o agente (criar e ligar o Agent Bot no Chatwoot)
-  - registrar webhook no Telegram
+  - criar sessão na WAHA e mostrar o QR code até conectar
+  - conversar com agente nativo pelo terminal
   - enviar documento para a base de conhecimento; listar documentos; remover documento
   - ver consumo e falhas por cliente e agente
-  - receber webhook do WhatsApp (incluindo o GET de verificação da Meta), do Telegram e do Chatwoot
+  - receber webhook do WhatsApp oficial (incluindo o GET de verificação da Meta), da WAHA e do Chatwoot
   - pausar agente para um contato (handoff); retomar agente para um contato
 - Operações do próprio script (sem API, pois a API ainda não existe nesse momento): checar sistema, instalar pacotes, testar chaves de IA, checar DNS, emitir SSL, subir serviços, gerar `CLAUDE.md` e `AGENTS.md`, iniciar o git do projeto.
 - Regras de negócio verificadas no backend:
@@ -174,7 +176,7 @@ Um aluno parte de uma VPS Ubuntu 24.04 vazia com domínio e, em menos de 1 hora 
   - fim do buffer: processamento atrasado por alguns segundos após a última mensagem do contato, reiniciado a cada nova mensagem
   - retomada automática após handoff: agendada pelo tempo configurado no agente
   - renovação do SSL: automática pelo proxy, sem job próprio
-  - digitando: enviado ao canal durante o processamento (Telegram `sendChatAction`, WhatsApp indicador de digitação, Chatwoot `toggle_typing`)
+  - digitando: enviado ao canal durante o processamento (WAHA `startTyping`, WhatsApp oficial indicador de digitação, Chatwoot `toggle_typing`, nativo no terminal)
 - Uploads: documentos da base de conhecimento enviados pelo operador a partir de arquivos na VPS; mídias recebidas dos contatos (áudio, imagem, documento) baixadas das APIs dos canais para processamento.
 - Tempo real: nenhuma tela exige atualização em tempo real. O setup mostra progresso local do script.
 - Script: estado de progresso gravado em arquivo na VPS para permitir retomada; toda etapa idempotente; saída de log completa em arquivo, tela mostra só o resumo por passo.

@@ -16,7 +16,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2): áudio, imagem e PDF respondidos; 4 áudios seguidos numa resposta só; reenvio dos mesmos áudios sem nova transcrição |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1): conversa atribuída com resumo em nota privada, agente calado com a conversa Aberta, volta ao marcar Pendente |
 | 4. Menu do operador | **Construída (v0.5.0)**, falta o critério de aceite numa VPS real |
-| 5. WhatsApp oficial e Telegram diretos | Não iniciada |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | Não iniciada; spec reescrita em 2026-09-17 (sem Telegram) |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup e domínio próprio do setup |
 

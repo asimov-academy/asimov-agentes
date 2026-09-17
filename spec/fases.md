@@ -119,30 +119,40 @@ O que o operador precisa fazer:
 
 Commit: `feat: menu do operador com agentes e consumo`
 
-## Fase 5: WhatsApp oficial e Telegram diretos
+## Fase 5: WhatsApp direto (oficial e WAHA) e agente nativo
 
-Objetivo: agentes ligados direto no WhatsApp Cloud API e no Telegram, com handoff por aviso.
+Situação: não iniciada. O Telegram saiu antes de começar (spec/decisoes.md).
+
+Objetivo: agentes ligados direto no WhatsApp, pela Cloud API oficial ou pela WAHA instalada na VPS, com handoff por aviso; e agentes nativos, sem canal, para conversar no terminal.
+
+Ordem de construção: nativo (base para testar prompt e ferramentas), WAHA, WhatsApp oficial.
 
 O que entra:
-- Implementações de `canais/whatsapp/` e `canais/telegram/` na mesma interface do Chatwoot: verificação de assinatura, verificação da Meta, normalização, envio, digitando, download de mídia.
-- Registro automático do webhook no Telegram ao criar e remoção ao apagar agente.
-- Handoff direto: pausa por contato, aviso com resumo e código para o `handoff_destino` (template `handoff_template` no WhatsApp), comando `/retomar <código>` só aceito do destino.
+- `canais/nativo/`: sem conexão; enviar e digitando guardados no Redis para o terminal ler; handoff registra e o terminal mostra.
+- Opção "Conversar com agente" no menu e `asimov conversar`.
+- Container `waha` (WAHA com GOWS, versão fixada, sem porta pública, `WAHA_API_KEY` gerada, painel e Swagger desligados, volume de sessões), subido pelo setup no primeiro agente WAHA.
+- `canais/waha/`: sessão por agente com webhook interno assinado; QR code desenhado no terminal (`qrencode`); normalização (ignora `fromMe` e grupos, exceto o de handoff); envio; digitando; marcar como lida; download de mídia; remoção faz logout e apaga a sessão.
+- `canais/whatsapp/`: verificação da Meta, assinatura, normalização, envio, digitando, download de mídia, template de handoff fora da janela de 24 horas.
+- Handoff direto (WAHA e oficial): pausa por contato, aviso com resumo e código ao `handoff_destino`, `/retomar <código>` só aceito do destino.
 - Job `retomada_automatica` a cada minuto e aviso de retomada.
 - Canal escolhível nas telas 6 e 8.
-- Testes: assinaturas dos dois canais; `/retomar` de outro número vira mensagem comum; retomada automática no horário; deduplicação por canal.
+- Testes: assinaturas da Cloud API e da WAHA; `/retomar` de outro número vira mensagem comum; retomada automática no horário; deduplicação por canal; mensagem de grupo e `fromMe` na WAHA ignoradas; conversa do terminal isolada por cliente.
 
 Dependências: Fases 2, 3 e 4.
 
 Critério de aceite:
-- Crio pelo menu um agente no Telegram e outro no WhatsApp oficial, e os dois respondem texto, áudio e imagem.
-- Peço humano no Telegram, o grupo da empresa recebe o aviso com o resumo, o agente para de responder e volta quando mando `/retomar` com o código.
-- Peço humano no WhatsApp, o número da empresa recebe o aviso e, sem comando, o agente volta sozinho depois do tempo configurado.
+- Crio pelo menu um agente nativo e converso com ele no terminal, com digitando, ferramentas e consumo registrado.
+- Crio um agente na WAHA, escaneio o QR code no terminal e ele responde texto, áudio e imagem.
+- Crio um agente no WhatsApp oficial e ele responde texto, áudio e imagem.
+- Peço humano no agente da WAHA: o número ou grupo da empresa recebe o aviso com o resumo e o código, o agente para de responder e volta quando mando `/retomar` com o código.
+- Peço humano no WhatsApp oficial: o número da empresa recebe o aviso e, sem comando, o agente volta sozinho depois do tempo configurado.
+- Removo o agente da WAHA e o aparelho some da lista de aparelhos conectados do WhatsApp.
 
 O que o operador precisa fazer:
-- Criar o bot no BotFather e o grupo de handoff com o bot dentro.
+- Um número de WhatsApp de teste para a WAHA (de preferência um chip que possa ser bloqueado) e o número ou grupo que recebe o handoff.
 - Criar o app na Meta, número de teste, token permanente, app secret e o template de aviso de handoff aprovado.
 
-Commit: `feat: canais diretos WhatsApp oficial e Telegram com handoff`
+Commit: `feat: WhatsApp direto oficial e WAHA, handoff por aviso e agente nativo`
 
 ## Fase 6: Base de conhecimento
 
