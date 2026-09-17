@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.acessos.servico import usa_acesso
 from app.agentes import repo
 from app.agentes.modelos import Agente
+from app.canais.base import Canal
 from app.canais.registro import obter_canal
 from app.clientes import repo as clientes_repo
 from app.clientes.modelos import Cliente
@@ -17,6 +18,9 @@ from app.plataforma import cripto
 from app.plataforma.banco import agora
 from app.plataforma.config import config
 from app.plataforma.textos import slug
+
+if TYPE_CHECKING:
+    from app.conversas.modelos import Conversa
 
 log = structlog.get_logger()
 
@@ -163,6 +167,55 @@ async def criar_agente(
     return agente, token
 
 
+async def conectar_canal(
+    sessao: AsyncSession,
+    cliente_id: uuid.UUID,
+    agente_id: uuid.UUID,
+    canal: str,
+    conexao: dict[str, Any],
+    handoff_destino: dict[str, Any] | None,
+) -> Agente:
+    """Liga num canal externo um agente criado sem canal (nativo).
+
+    Prompt, modelos, ajustes e conversas ficam; o webhook passa a ser o do canal novo, com o mesmo
+    token. As conversas de teste do terminal continuam no nativo. Se a gravação falhar depois de
+    conectar, a conexão é desfeita.
+    """
+    agente = await repo.obter(sessao, cliente_id, agente_id)
+    if agente is None or not agente.ativo:
+        raise NaoEncontrado("agente não encontrado")
+    if obter_canal(agente.canal).externo:
+        raise Conflito(
+            f"o agente já está no {agente.canal}; para trocar de canal, remova e crie de novo (o prompt volta junto)"
+        )
+    novo = obter_canal(canal)
+    if not novo.externo:
+        raise CampoInvalido(f"{canal} não é um canal para ligar o agente")
+    destino = novo.valida_destino_handoff(handoff_destino)
+    token = cripto.decifra_texto(agente.token_webhook_cifrado)
+    acesso: dict[str, Any] = {}
+
+    async def conecta(informado: dict[str, Any]) -> dict[str, Any]:
+        acesso.update(informado)
+        return await novo.conectar({**conexao, **informado}, config().url_webhook(canal, token), agente.nome)
+
+    credenciais_ok = await usa_acesso(sessao, novo, novo.endereco(conexao), conexao, conecta)
+    try:
+        agente.canal = canal
+        agente.credenciais_cifradas = cripto.cifra(credenciais_ok)
+        agente.handoff_destino = destino
+        await sessao.commit()
+    except Exception:
+        await sessao.rollback()
+        try:
+            await novo.desconectar({**conexao, **acesso}, credenciais_ok)
+        except Exception as erro:
+            log.error("desconectar_falhou", canal=canal, erro=repr(erro))
+        raise
+    log.info("agente_conectado", agente_id=str(agente.id), canal=canal)
+    return agente
+
+
 async def editar_agente(
     sessao: AsyncSession,
     cliente_id: uuid.UUID,
@@ -260,3 +313,12 @@ def url_webhook(agente: Agente) -> str:
 
 def credenciais(agente: Agente) -> dict[str, Any]:
     return cripto.decifra(agente.credenciais_cifradas)
+
+
+def canal_da_conversa(agente: Agente, conversa: "Conversa") -> tuple[Canal, dict[str, Any]]:
+    """A conversa de teste no terminal fala pelo canal nativo, qualquer que seja o canal do agente.
+
+    As credenciais do agente só servem ao canal dele.
+    """
+    canal = obter_canal(conversa.canal)
+    return canal, credenciais(agente) if conversa.canal == agente.canal else {}

@@ -84,8 +84,12 @@ fluxo_editar_agente() {
     echo
     rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Modelos")
     acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_modelo)
-    # No nativo o handoff aparece no próprio terminal: não há destino para escolher.
-    if [ "$(jq -r '.canal' <<<"$AGENTE")" != nativo ]; then
+    # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
+    # ligar o agente num canal.
+    if [ "$(jq -r '.canal' <<<"$AGENTE")" = nativo ]; then
+      rotulos+=("Conectar a um canal")
+      acoes+=(conecta_canal)
+    else
       rotulos+=("Handoff")
       acoes+=(edita_handoff)
     fi
@@ -147,6 +151,43 @@ edita_ferramentas() {
 edita_modelo() {
   escolhe_modelo_do_agente
   salva_agente "$CORPO_MODELO"
+}
+
+# conecta_canal: liga o AGENTE nativo num canal. Prompt, modelos, ferramentas e conversas ficam.
+conecta_canal() {
+  local nome corpo rapido=""
+  nome=$(jq -r '.nome' <<<"$AGENTE")
+  echo
+  dica "$nome passa a atender pelo canal com o mesmo prompt, modelos e ferramentas."
+  dica "A conversa de teste aqui no terminal continua funcionando."
+  dica "Por enquanto o canal disponível é o Chatwoot; WhatsApp oficial e WAHA entram aqui nas próximas versões."
+  ok "Canal: $(destaque Chatwoot)"
+  escolhe_caixa_chatwoot
+  if [ "$(jq -r '.buffer_segundos < 8 or .digitacao_maximo_segundos < 20' <<<"$AGENTE")" = true ]; then
+    echo
+    dica "O ritmo de teste (buffer e digitando curtos) parece robô para quem escreve no WhatsApp."
+    confirma "Usar o ritmo do WhatsApp (espera 8 s e digita como uma pessoa)?" && rapido=1
+  fi
+
+  corpo=$(jq -n --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
+    '{canal: "chatwoot", conexao: $conexao, handoff_destino: $destino}')
+  api_com_token POST "$(caminho_do_agente "$AGENTE")/canal" "$corpo" "Criando o bot no Chatwoot…"
+  if [ "$API_STATUS" != 200 ]; then
+    RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
+    devolve AGENTE RESULTADO
+    return 0
+  fi
+  AGENTE=$API_RESPOSTA
+  RESULTADO=$(ok "$(destaque "$nome") no ar na caixa $(destaque "$AGENTE_CAIXA") ${CINZA}· handoff para $(nome_do_destino "$HANDOFF_DESTINO")${NORMAL}")
+  if [ -n "$rapido" ]; then
+    api PATCH "$(caminho_do_agente "$AGENTE")" '{"buffer_segundos": 8, "digitacao_caracteres_por_segundo": 6, "digitacao_maximo_segundos": 20}'
+    if [ "$API_STATUS" = 200 ]; then
+      AGENTE=$API_RESPOSTA
+    else
+      RESULTADO+=$'\n'$(falha "Ritmo não mudou: $(detalhe_erro "$API_RESPOSTA")")
+    fi
+  fi
+  devolve AGENTE RESULTADO
 }
 
 edita_handoff() {

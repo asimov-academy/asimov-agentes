@@ -71,6 +71,15 @@ class EdicaoAgente(BaseModel):
     renomear_no_canal: bool = Field(default=True, description="Leva o nome novo ao canal (nome do bot no Chatwoot).")
 
 
+class NovaConexao(BaseModel):
+    canal: str
+    conexao: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Acesso do operador ao canal, como na criação (Chatwoot: url, conta, caixas e token_admin se não houver guardado).",
+    )
+    handoff_destino: dict[str, Any] | None = None
+
+
 class Remocao(BaseModel):
     confirmacao: str = Field(min_length=1, max_length=200, description="Nome do agente.")
     conexao: dict[str, Any] | None = Field(
@@ -216,6 +225,28 @@ async def editar(
     except AcessoNecessario as erro:
         raise precisa_acesso(erro) from erro
     except (DestinoInvalido, ModeloInvalido, servico.CampoInvalido, CredencialInvalida) as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
+    return _saida(agente)
+
+
+@router.post("/clientes/{cliente_id}/agentes/{agente_id}/canal", response_model=AgenteSaida)
+async def conectar(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, dados: NovaConexao, s: AsyncSession = Depends(sessao)
+) -> AgenteSaida:
+    """Liga num canal externo um agente criado sem canal (nativo)."""
+    if dados.canal not in CANAIS:
+        raise HTTPException(status_code=422, detail=f"canal não suportado: {dados.canal}")
+    try:
+        agente = await servico.conectar_canal(
+            s, cliente_id, agente_id, dados.canal, dados.conexao, dados.handoff_destino
+        )
+    except servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except servico.Conflito as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except AcessoNecessario as erro:
+        raise precisa_acesso(erro) from erro
+    except (CredencialInvalida, DestinoInvalido, servico.CampoInvalido) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
 

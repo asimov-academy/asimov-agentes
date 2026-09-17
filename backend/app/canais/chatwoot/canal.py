@@ -157,6 +157,7 @@ class Chatwoot:
     responde_200_em_assinatura_invalida = True
     retoma_por_tempo = False
     pede_acesso_do_operador = True
+    externo = True
     """A conversa volta ao agente quando o atendente a devolve para pendente."""
 
     def _http(self) -> httpx.AsyncClient:

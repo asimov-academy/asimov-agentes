@@ -23,6 +23,7 @@ class Nativo:
     responde_200_em_assinatura_invalida = False
     retoma_por_tempo = False
     pede_acesso_do_operador = False
+    externo = False
 
     def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
         return {}

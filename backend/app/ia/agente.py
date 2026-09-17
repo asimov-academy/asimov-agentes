@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
+    BaseToolCallPart,
     ModelMessage,
     ModelRequest,
     ModelResponse,
     TextPart,
-    ToolCallPart,
     UserPromptPart,
 )
 
@@ -182,7 +182,8 @@ async def roda_turno(
             for m in novas
             if isinstance(m, ModelResponse)
             for parte in m.parts
-            if isinstance(parte, ToolCallPart) and not parte.tool_name.startswith("final_result")
+            # Base inclui a busca nativa do provedor, que não passa por tool nossa.
+            if isinstance(parte, BaseToolCallPart) and not parte.tool_name.startswith("final_result")
         ],
         motivo_handoff=contexto.motivo_handoff,
     )

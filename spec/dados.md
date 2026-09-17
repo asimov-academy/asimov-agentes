@@ -106,6 +106,7 @@ Acesso do operador a um canal, pedido uma vez e reaproveitado (no Chatwoot, o to
 | agente_id | referência a Agente | sim |
 | contato_id | referência a Contato | sim |
 | id_externo | texto (display_id no Chatwoot, telefone na Cloud API, chat id na WAHA, id da conversa do terminal no nativo) | sim |
+| canal | por onde a conversa acontece: o canal do agente, ou `nativo` na conversa de teste do terminal (vale para agente de qualquer canal) | sim |
 | status | `agente` ou `humano` | sim |
 | respondido_ate | data e hora da última mensagem do contato respondida por um turno | não |
 | criado_em, atualizado_em | data e hora | sim |
