@@ -350,3 +350,72 @@ async def test_resposta_fora_do_formato_e_corrigida_e_registrada(http, canal, fi
     async with sessao() as s:
         [falha] = list(await s.scalars(select(Falha).where(Falha.tipo == "resposta_corrigida")))
     assert falha.detalhe["avisos"] and falha.agente_id is not None
+
+
+def test_fala_de_atendente_entra_no_historico_marcada() -> None:
+    """O contato pode voltar dias depois: o agente precisa saber o que a equipe combinou com ele."""
+    from datetime import UTC, datetime, timedelta
+
+    from pydantic_ai.messages import ModelRequest, ModelResponse, SystemPromptPart, TextPart, UserPromptPart
+
+    from app.conversas.modelos import Mensagem
+    from app.ia.agente import MARCO_FALA_DE_HUMANO, PREFIXO_HUMANO, historico
+
+    inicio = datetime(2026, 9, 17, 12, 0, tzinfo=UTC)
+    mensagens = [
+        Mensagem(autor="contato", direcao="entrada", texto="quero trocar o produto", criado_em=inicio),
+        Mensagem(
+            autor="humano",
+            direcao="saida",
+            texto="pode trazer amanhã que eu troco",
+            criado_em=inicio + timedelta(minutes=1),
+        ),
+        Mensagem(autor="contato", direcao="entrada", texto="cheguei", criado_em=inicio + timedelta(days=2)),
+    ]
+
+    resultado = historico(mensagens)
+
+    avisos = [
+        p.content
+        for m in resultado
+        if isinstance(m, ModelRequest)
+        for p in m.parts
+        if isinstance(p, SystemPromptPart)
+    ]
+    falas_do_assistente = [
+        p.content for m in resultado if isinstance(m, ModelResponse) for p in m.parts if isinstance(p, TextPart)
+    ]
+    do_contato = [
+        p.content
+        for m in resultado
+        if isinstance(m, ModelRequest)
+        for p in m.parts
+        if isinstance(p, UserPromptPart)
+    ]
+    assert MARCO_FALA_DE_HUMANO in avisos, "o modelo precisa saber que aquela fala não foi dele"
+    assert falas_do_assistente == [f"{PREFIXO_HUMANO}pode trazer amanhã que eu troco"]
+    assert do_contato == ["quero trocar o produto", "cheguei"]
+
+
+def test_conversa_sem_atendente_nao_gasta_o_aviso() -> None:
+    from datetime import UTC, datetime
+
+    from pydantic_ai.messages import ModelRequest, SystemPromptPart
+
+    from app.conversas.modelos import Mensagem
+    from app.ia.agente import MARCO_FALA_DE_HUMANO, historico
+
+    mensagens = [
+        Mensagem(autor="contato", direcao="entrada", texto="oi", criado_em=datetime(2026, 9, 17, tzinfo=UTC))
+    ]
+
+    resultado = historico(mensagens)
+
+    avisos = [
+        p.content
+        for m in resultado
+        if isinstance(m, ModelRequest)
+        for p in m.parts
+        if isinstance(p, SystemPromptPart)
+    ]
+    assert MARCO_FALA_DE_HUMANO not in avisos

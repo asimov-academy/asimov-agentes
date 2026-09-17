@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.10.0` em `asimov-academy/asimov-agentes` (público): no WhatsApp, responder pelo aparelho cala o agente na hora (handoff sem IA e sem aviso, com o prazo do agente) e reagir com 👍 na conversa o traz de volta.
+- `v0.10.0` em `asimov-academy/asimov-agentes` (público): no WhatsApp, responder pelo aparelho cala o agente na hora (handoff sem IA e sem aviso, com o prazo do agente) e reagir com 👍 na conversa o traz de volta. O que a equipe respondeu entra na memória do agente marcado como fala de atendente, em todo canal que tem atendente.
 - `v0.9.3`: destino do handoff da WAHA em dois passos (número ou grupo), com busca pelo nome do grupo.
 - `v0.9.2`: o agente pode atender só os números listados (`contatos_permitidos`), escolhido na criação e em Editar agente; grupos continuam sempre ignorados.
 - `v0.9.1`: aviso de API não oficial com confirmação antes de parear, correção do fluxo que voltava ao menu quando o systemd recusava o timer, e nomes dos passos da instalação do WhatsApp.

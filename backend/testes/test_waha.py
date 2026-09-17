@@ -524,3 +524,35 @@ async def test_joinha_com_tom_de_pele_vale(http, fila, waha, sessao) -> None:  #
 
     async with sessao() as s:
         assert (await s.scalars(select(Handoff))).one().retomado_em is not None
+
+
+async def test_o_que_a_equipe_respondeu_chega_ao_modelo_quando_o_agente_volta(http, fila, waha, redis, sessao, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Continuidade: o contato some, volta depois, e o agente precisa saber o que a equipe combinou."""
+    from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
+    from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+    from app.ia.agente import MARCO_FALA_DE_HUMANO, PREFIXO_HUMANO
+    from testes.conftest import e_resposta, resposta_falsa
+
+    visto: list[list[ModelMessage]] = []
+
+    def responde(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        visto.append(mensagens)
+        if not e_resposta(info):
+            return ModelResponse(parts=[TextPart("resumo")])
+        return resposta_falsa(info, ["Claro!"])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+    agente = await cria_waha(http)
+
+    await manda(http, agente, waha, payload_waha("quero trocar o produto"))
+    await manda(
+        http, agente, waha, payload_waha("pode trazer amanhã que eu troco", minha=True, id_mensagem="true_x_HHH")
+    )
+    await manda(http, agente, waha, payload_reacao())
+    await manda(http, agente, waha, payload_waha("cheguei", id_mensagem="false_y_III"))
+    assert await roda_turno(fila, redis) == "respondido"
+
+    conversa = "\n".join(str(p.content) for m in visto[0] for p in m.parts if hasattr(p, "content"))
+    assert f"{PREFIXO_HUMANO}pode trazer amanhã que eu troco" in conversa
+    assert MARCO_FALA_DE_HUMANO in conversa
