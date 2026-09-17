@@ -17,7 +17,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Nativo construído (v0.8.11). Isa na v0.8.9: busca sem o erro de JSON. Validado na VPS: conversa no terminal com ritmo rápido, conectar nativo ao Chatwoot com as conversas de teste separadas, handoff e devolução no Chatwoot, busca na web pelo Chatwoot numa conversa devolvida (v0.8.5), calculadora chamada só com conta de verdade. Falta confirmar na v0.8.11 a criação crua (ferramentas desmarcadas, prompt de uma linha), a citação da busca sem markdown, que toda conta passa pela calculadora (contas com ponto de milhar, porcentagem, parcela, datas) e o `/retomar` no terminal; **próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. **Parte 1 (agente nativo) concluída e validada em VPS real na v0.8.11**; o que falta conferir está em Pendências. **Próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -53,6 +53,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Pendências conhecidas
 
+- Da parte 1, não conferido na VPS depois das correções: contas pela calculadora nova (v0.8.7: ponto de milhar, porcentagem, parcela, datas), citação da busca sem markdown (v0.8.10) e `/retomar` no terminal. Cobertos por teste automatizado.
 - Mídia (visão e PDF) na OpenAI Responses ainda não conferida na VPS.
 - Uma mensagem digitada no terminal da VPS chegou como "Ol�a" (byte inválido antes do "a"). Suspeita: apagar uma letra acentuada; não reproduzido local com bash 5.
 - `INSTRUCAO_DE_MIDIA` ajustada na v0.4.0 para o agente não citar a mecânica ("recebi a transcrição"): não conferido na VPS.
@@ -62,7 +63,9 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Para a fase 5
 
-Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo (feito, v0.8.0), WAHA, WhatsApp oficial**, uma versão por parte, com validação na VPS entre elas.
+Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo (feito, v0.8.0 a v0.8.11), WAHA, WhatsApp oficial**, uma versão por parte, com validação na VPS entre elas.
+
+Validado na VPS na parte 1 (2026-09-17): conversa no terminal com ritmo rápido e etapas; nativo conectado ao Chatwoot com as conversas de teste separadas; handoff e devolução no Chatwoot; busca na web usada quando precisa (v0.8.5) e sem o erro de JSON (v0.8.9); data do dia respondida sem ferramenta (v0.8.10); agente novo cru, sem ferramentas e com prompt de uma linha, gastando uns 550 tokens por turno contra uns 5.600 com busca ligada (v0.8.11).
 
 O que reaproveitar:
 - WAHA e oficial entram também em "Conectar a um canal" (`conecta_canal` em `menu.sh`, hoje fixo no Chatwoot) e precisam de `externo = True`.
