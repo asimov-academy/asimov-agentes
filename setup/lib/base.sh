@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034  # variáveis usadas pelas telas e pelo comando asimov
 # Caminhos, versão, sudo e bibliotecas. Carregado por setup/instalar.sh e setup/asimov.sh.
 
-VERSAO="0.5.1"
+VERSAO="0.5.2"
 # O instalador da main aponta sempre para a última versão marcada.
 URL_INSTALL="https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh"
 
@@ -53,4 +53,46 @@ erro_inesperado() {
   erro_fatal "Erro inesperado (código $codigo) em ${arquivo#"$RAIZ_PROJETO"/}, linha $linha" \
     "Rode o mesmo comando de novo; se repetir, envie as últimas linhas do log."
 }
-trap 'erro_inesperado "$LINENO" "${BASH_SOURCE[0]:-setup}"' ERR
+arma_erro() { trap 'erro_inesperado "$LINENO" "${BASH_SOURCE[0]:-setup}"' ERR; }
+arma_erro
+
+# com_voltar comando...: roda a ação num subshell. Esc em qualquer pergunta encerra só a ação e
+# volta para quem chamou. Depois, VOLTOU=1 se foi Esc e FALHOU=1 se a ação parou com erro.
+# O que a ação precisa deixar para quem chamou sai por `devolve VAR...`.
+# shellcheck disable=SC2030  # ARQ_DEVOLVE e VOLTA_ATIVA só valem dentro do subshell, de propósito
+com_voltar() {
+  local __status __arquivo
+  __arquivo=$(mktemp)
+  # Dentro de `if` ou `||` o set -e do subshell ficaria desligado: desliga só aqui fora.
+  set +e
+  trap - ERR
+  (
+    set -e
+    arma_erro
+    VOLTA_ATIVA=1
+    ARQ_DEVOLVE=$__arquivo
+    "$@"
+  )
+  __status=$?
+  set -e
+  arma_erro
+  VOLTOU=0 FALHOU=0
+  if [ "$__status" -eq 0 ]; then
+    # shellcheck source=/dev/null
+    [ -s "$__arquivo" ] && source "$__arquivo"
+  elif [ "$__status" -eq "$SAIDA_VOLTAR" ]; then
+    VOLTOU=1
+  else
+    FALHOU=1
+  fi
+  rm -f "$__arquivo"
+}
+
+# shellcheck disable=SC2031
+devolve() {
+  local __nome
+  [ -n "${ARQ_DEVOLVE:-}" ] || return 0
+  for __nome in "$@"; do
+    printf '%s=%q\n' "$__nome" "${!__nome}" >>"$ARQ_DEVOLVE"
+  done
+}

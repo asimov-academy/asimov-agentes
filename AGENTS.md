@@ -62,7 +62,8 @@ Fale com o operador em português, curto e direto.
 - Bash com `set -e`: consulta que pode voltar vazia (`grep`, `dig`, `curl`) termina com `|| true`, senão o setup cai calado.
 - `exec 3<arquivo 2>/dev/null` silencia o stderr do script inteiro; use `{ exec 3<arquivo; } 2>/dev/null`.
 - Helpers de tela (`pergunta`, `escolha`, `le_tecla`) usam locais com prefixo `__`; nome igual ao da variável de quem chama quebra o `printf -v`.
-- Setas só com terminal (`tem_terminal`); com `ASIMOV_TTY` apontando para arquivo a leitura é por linha. Teste de teclas: pty com `pyte`.
+- Setas só com terminal (`tem_terminal`); com `ASIMOV_TTY` apontando para arquivo a leitura é por linha. Teste de teclas: pty com `pyte`, esperando o script carregar antes da primeira tecla.
+- Ação do menu roda em `com_voltar` (subshell, para o Esc voltar): variável alterada lá dentro some, a não ser que saia por `devolve`.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.
 - Chatwoot: conversa Aberta é humano conduzindo, o agente fica calado; só Pendente gera turno.

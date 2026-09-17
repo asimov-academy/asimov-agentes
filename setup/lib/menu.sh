@@ -26,6 +26,7 @@ salva_agente() {
   else
     RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
   fi
+  devolve AGENTE RESULTADO
 }
 
 # escolhe_modelo_do_agente: pergunta a função e o modelo; define CORPO_MODELO para o PATCH.
@@ -58,11 +59,14 @@ escolhe_modelo_do_agente() {
     '{($campo): (if $modelo == "" then null else $modelo end)}')
 }
 
+# Cada mudança roda em `com_voltar`: Esc no meio volta para a ficha sem salvar.
 fluxo_editar_agente() {
-  local op valor
+  local op
   secao "Editar agente"
-  # Sem agentes devolve 1: o menu segura a tela com a dica.
-  escolhe_agente || return 1
+  if ! escolhe_agente; then
+    pausa
+    return 0
+  fi
   RESULTADO=""
   while true; do
     secao "Editar $(jq -r '.nome' <<<"$AGENTE")"
@@ -73,30 +77,47 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    escolha op "O que mudar?" "Nome" "Tempo de buffer" "Mensagens por resposta" "Modelos" "Handoff" "Voltar"
+    ESC_ESCOLHE=6 escolha op "O que mudar?" "Nome" "Tempo de buffer" "Mensagens por resposta" "Modelos" "Handoff" "Voltar"
     case "$op" in
-      1)
-        dica "O nome do bot no Chatwoot e a pasta do prompt continuam os mesmos."
-        pergunta valor "Nome" "$(jq -r '.nome' <<<"$AGENTE")"
-        salva_agente "$(jq -n --arg v "$valor" '{nome: $v}')"
-        ;;
-      2)
-        dica "Quanto o agente espera o contato parar de mandar mensagens antes de responder."
-        pergunta_numero valor "Segundos (1 a 60)" 1 60 "$(jq -r '.buffer_segundos' <<<"$AGENTE")"
-        salva_agente "$(jq -n --argjson v "$valor" '{buffer_segundos: $v}')"
-        ;;
-      3)
-        pergunta_numero valor "Máximo de mensagens por resposta (1 a 10)" 1 10 "$(jq -r '.max_mensagens_por_resposta' <<<"$AGENTE")"
-        salva_agente "$(jq -n --argjson v "$valor" '{max_mensagens_por_resposta: $v}')"
-        ;;
-      4)
-        escolhe_modelo_do_agente
-        salva_agente "$CORPO_MODELO"
-        ;;
-      5) configura_handoff "$AGENTE" ;;
+      1) com_voltar edita_nome ;;
+      2) com_voltar edita_buffer ;;
+      3) com_voltar edita_mensagens ;;
+      4) com_voltar edita_modelo ;;
+      5) com_voltar edita_handoff ;;
       *) return 0 ;;
     esac
+    [ "$FALHOU" = 0 ] || pausa
   done
+}
+
+edita_nome() {
+  local valor
+  dica "O nome do bot no Chatwoot e a pasta do prompt continuam os mesmos."
+  pergunta valor "Nome" "$(jq -r '.nome' <<<"$AGENTE")"
+  salva_agente "$(jq -n --arg v "$valor" '{nome: $v}')"
+}
+
+edita_buffer() {
+  local valor
+  dica "Quanto o agente espera o contato parar de mandar mensagens antes de responder."
+  pergunta_numero valor "Segundos (1 a 60)" 1 60 "$(jq -r '.buffer_segundos' <<<"$AGENTE")"
+  salva_agente "$(jq -n --argjson v "$valor" '{buffer_segundos: $v}')"
+}
+
+edita_mensagens() {
+  local valor
+  pergunta_numero valor "Máximo de mensagens por resposta (1 a 10)" 1 10 "$(jq -r '.max_mensagens_por_resposta' <<<"$AGENTE")"
+  salva_agente "$(jq -n --argjson v "$valor" '{max_mensagens_por_resposta: $v}')"
+}
+
+edita_modelo() {
+  escolhe_modelo_do_agente
+  salva_agente "$CORPO_MODELO"
+}
+
+edita_handoff() {
+  configura_handoff "$AGENTE"
+  devolve AGENTE RESULTADO
 }
 
 fluxo_remover_agente() {
@@ -214,33 +235,38 @@ mostra_consumo() {
   echo
 }
 
+# Cada opção roda em `com_voltar`: Esc em qualquer pergunta volta para este menu, e erro no meio
+# mostra o motivo e volta também, em vez de fechar o menu.
 menu_operador() {
   local op
   while true; do
     secao "Menu"
-    escolha op "O que fazer?" "Criar agente" "Listar agentes" "Editar agente" "Remover agente" \
+    ESC_ESCOLHE=6 escolha op "O que fazer?" "Criar agente" "Listar agentes" "Editar agente" "Remover agente" \
       "Ver consumo e falhas" "Sair"
     case "$op" in
-      1)
-        secao "Novo agente"
-        fluxo_novo_agente
-        dica "Mande uma mensagem na caixa de entrada para testar."
-        pausa
-        ;;
-      2)
-        lista_agentes
-        pausa
-        ;;
-      3) fluxo_editar_agente || pausa ;;
-      4)
-        fluxo_remover_agente
-        pausa
-        ;;
-      5)
-        mostra_consumo
-        pausa
-        ;;
+      1) com_voltar acao_novo_agente ;;
+      2) com_voltar com_pausa lista_agentes ;;
+      3) com_voltar fluxo_editar_agente ;;
+      4) com_voltar com_pausa fluxo_remover_agente ;;
+      5) com_voltar com_pausa mostra_consumo ;;
       *) return 0 ;;
     esac
+    [ "$FALHOU" = 0 ] || pausa
   done
+}
+
+com_pausa() {
+  "$@"
+  pausa
+}
+
+novo_agente() {
+  secao "Novo agente"
+  fluxo_novo_agente
+  dica "Mande uma mensagem na caixa de entrada para testar."
+}
+
+acao_novo_agente() {
+  novo_agente
+  pausa
 }

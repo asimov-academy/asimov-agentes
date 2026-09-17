@@ -24,40 +24,24 @@ exige_instalacao() {
   erro_fatal "A instalação ainda não terminou" "Rode o setup: bash ~/asimov-agentes/setup/instalar.sh"
 }
 
+# Esc em qualquer pergunta encerra o comando sem mudar nada.
+roda() {
+  exige_instalacao
+  com_voltar "$@"
+  [ "$FALHOU" = 0 ] || exit 1
+}
+
 case "${1:-menu}" in
   menu)
     exige_instalacao
     menu_operador
     ;;
-  novo-agente)
-    exige_instalacao
-    secao "Novo agente"
-    fluxo_novo_agente
-    echo
-    dica "Mande uma mensagem na caixa de entrada para testar."
-    echo
-    ;;
-  agentes)
-    exige_instalacao
-    lista_agentes
-    ;;
-  editar)
-    exige_instalacao
-    fluxo_editar_agente || true
-    ;;
-  remover)
-    exige_instalacao
-    fluxo_remover_agente
-    echo
-    ;;
-  consumo)
-    exige_instalacao
-    mostra_consumo
-    ;;
-  handoff)
-    exige_instalacao
-    fluxo_handoff
-    ;;
+  novo-agente) roda novo_agente ;;
+  agentes) roda lista_agentes ;;
+  editar) roda fluxo_editar_agente ;;
+  remover) roda fluxo_remover_agente ;;
+  consumo) roda mostra_consumo ;;
+  handoff) roda fluxo_handoff ;;
   atualizar)
     # O install.sh local tem fixa a versão já instalada: baixa o da main.
     mkdir -p "$DIR_ESTADO"

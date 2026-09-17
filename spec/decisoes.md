@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Esc volta à tela anterior (v0.5.2)
+
+- **Pedido do operador.** Cada ação do menu roda num subshell (`com_voltar` em `setup/lib/base.sh`); Esc em qualquer pergunta encerra só a ação, sem salvar, e volta para quem chamou. Na ficha de edição cada mudança é uma ação; na ficha e no menu o Esc escolhe Voltar ou Sair. spec/telas.md.
+- **Perguntas digitadas passaram a ser lidas tecla a tecla** com terminal (`ler_linha`), para o Esc chegar antes do Enter. Backspace apaga; setas e teclas de controle são ignoradas.
+- **Erro no meio de uma ação do menu volta ao menu** depois de mostrar o motivo, em vez de fechar o comando.
+- **O que a ação muda e a tela precisa** (ficha do agente, resultado) sai do subshell por `devolve`.
+
 ## 2026-09-16: Setas e telas limpas (v0.5.1)
 
 - **Escolhas com setas e Enter**, pedido do operador, em todo o setup: listas (`escolha`) e Sim/Não (`confirma`), inclusive o aceite da tela 1. Números de 1 a 9 e S/N continuam como atalho. A lista escolhida vira uma linha com a resposta.
