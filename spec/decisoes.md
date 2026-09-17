@@ -2,6 +2,11 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Shift não volta mais ao menu (v0.5.3)
+
+- **Achado pelo operador no terminal do navegador da Hostinger**: ao usar Shift para digitar o nome do agente na remoção, o menu voltava. Reproduzido no bash 5: quando a sequência de escape da tecla chega mais de 0,1 s depois do Esc, era lida como Esc sozinho.
+- **`le_tecla` lê a sequência inteira** até o byte final e espera até 0,4 s pelo resto. Shift+letra nos formatos kitty (`CSI código;mod u`) e xterm (`CSI 27;mod;código ~`) vira a letra; Esc nesses formatos continua voltando. Sequência desconhecida é ignorada e registrada no log do setup como `tecla ignorada`.
+
 ## 2026-09-16: Esc volta à tela anterior (v0.5.2)
 
 - **Pedido do operador.** Cada ação do menu roda num subshell (`com_voltar` em `setup/lib/base.sh`); Esc em qualquer pergunta encerra só a ação, sem salvar, e volta para quem chamou. Na ficha de edição cada mudança é uma ação; na ficha e no menu o Esc escolhe Voltar ou Sair. spec/telas.md.
