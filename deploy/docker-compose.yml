@@ -90,6 +90,10 @@ services:
       WAHA_API_KEY: ${WAHA_API_KEY}
       WAHA_DASHBOARD_ENABLED: "false"
       WHATSAPP_SWAGGER_ENABLED: "false"
+      # Nome que aparece em Aparelhos conectados no celular. `Desktop` no GOWS mostra só o nome,
+      # sem "Firefox" na frente. O setup grava o nome do agente antes de cada pareamento.
+      WAHA_CLIENT_DEVICE_NAME: ${WAHA_CLIENT_DEVICE_NAME:-Asimov Agentes}
+      WAHA_CLIENT_BROWSER_NAME: ${WAHA_CLIENT_BROWSER_NAME:-Desktop}
       WAHA_EVENTS_DOWNLOAD_MEDIA: "true"
       WAHA_API_DOWNLOAD_MEDIA: "true"
       # O arquivo precisa durar do webhook até o fim do turno (buffer, fila e lock de 240 s).

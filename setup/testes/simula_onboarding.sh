@@ -20,6 +20,7 @@ consulta_provedor() {
 ip_publico() { echo 203.0.113.10; }
 # WAHA: o contêiner e o desenho do QR code não existem aqui.
 garante_waha() { ok "WAHA no ar (simulado)"; }
+espera_waha_no_ar() { :; }
 # Docker Hub e Compose não existem aqui: a tag nova vem de mentira e o `dc` só registra.
 curl() { case "$*" in *hub.docker.com*) echo '{"results":[{"name":"gows-2026.9.1"},{"name":"gows-arm-2026.9.1"},{"name":"gows-2026.8.2"},{"name":"gows-arm-2026.8.2"},{"name":"gows"},{"name":"dev"}]}' ;; *) return 1 ;; esac; }
 dc() { echo "dc $*" >>"$DIR/dc.log"; }

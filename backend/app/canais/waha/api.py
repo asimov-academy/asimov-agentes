@@ -96,6 +96,12 @@ async def _chama(
     return _corpo(resposta)
 
 
+async def versao() -> dict[str, Any]:
+    """Responde quando a WAHA está no ar. Também diz a versão e a engine que estão rodando."""
+    resposta = await _chama("GET", "/api/server/version", "falar com a WAHA")
+    return resposta if isinstance(resposta, dict) else {}
+
+
 async def cria_sessao(nome: str, url_webhook: str, chave_hmac: str) -> None:
     """Cria a sessão já com o webhook assinado e a inicia. Sessão que já existe é atualizada."""
     corpo = {"name": nome, "start": True, "config": _config_webhook(url_webhook, chave_hmac)}
