@@ -336,7 +336,7 @@ class Chatwoot:
 
         inbox = _id_inbox(payload)
         if inbox is not None and inbox not in credenciais.get("inbox_ids", []):
-            return Evento(Acao.IGNORAR, f"inbox {inbox} não é deste agente")
+            return Evento(Acao.IGNORAR, f"inbox {inbox} não é deste agente ({credenciais.get('inbox_ids')})")
 
         conversa = _id_conversa(payload)
         if conversa is None:
@@ -368,7 +368,11 @@ class Chatwoot:
                 "contato_telefone": remetente.get("phone_number"),
             }
             if contato["contato_externo"] is None:
-                return Evento(Acao.IGNORAR, "mensagem de entrada sem remetente", conversa)
+                return Evento(
+                    Acao.IGNORAR,
+                    f"mensagem de entrada sem remetente (sender do tipo {remetente.get('type')!r}, campos {sorted(remetente)})",
+                    conversa,
+                )
             if _conversa(payload).get("status") != "pending":
                 return Evento(Acao.REGISTRAR, "humano conduz a conversa", **base, **contato)
             if not (payload.get("content") or "").strip() and not base["anexos"]:

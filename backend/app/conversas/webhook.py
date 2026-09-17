@@ -89,7 +89,8 @@ async def receber(
 
     evento = canal_obj.interpretar(payload, credenciais)
     if evento.acao is Acao.IGNORAR:
-        log.debug("webhook_ignorado", motivo=evento.motivo)
+        # Info de propósito: evento ignorado sem motivo visível é o que mais atrasa o debug de canal novo.
+        log.info("webhook_ignorado", motivo=evento.motivo)
         return Response(status_code=200)
 
     assert evento.conversa_externa is not None
