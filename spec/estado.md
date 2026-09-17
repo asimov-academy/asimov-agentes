@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.11.0` em `asimov-academy/asimov-agentes` (público): no Chatwoot, atendente que responde fica com a conversa (aberta e atribuída a ele) e o agente volta sozinho no prazo do onboarding, com a conversa de volta para Pendente e sem atribuição.
+- `v0.11.1` em `asimov-academy/asimov-agentes` (público): contato que chega por `@lid` (número escondido pelo WhatsApp) passa a ser reconhecido pelo telefone de verdade, o nono dígito deixou de separar o mesmo número, e contato barrado pela lista vira falha visível.
+- `v0.11.0`: no Chatwoot, atendente que responde fica com a conversa (aberta e atribuída a ele) e o agente volta sozinho no prazo do onboarding, com a conversa de volta para Pendente e sem atribuição.
 - `v0.10.0`: no WhatsApp, responder pelo aparelho cala o agente na hora (handoff sem IA e sem aviso, com o prazo do agente) e reagir com 👍 na conversa o traz de volta. O que a equipe respondeu entra na memória do agente marcado como fala de atendente, em todo canal que tem atendente.
 - `v0.9.3`: destino do handoff da WAHA em dois passos (número ou grupo), com busca pelo nome do grupo.
 - `v0.9.2`: o agente pode atender só os números listados (`contatos_permitidos`), escolhido na criação e em Editar agente; grupos continuam sempre ignorados.
@@ -61,7 +62,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Pendências conhecidas
 
-- **Parte 2 (WAHA) ainda não rodou numa VPS**: falta parear um número de verdade, conferir texto, áudio e imagem, o aviso de handoff e o `/retomar`, a remoção tirando o aparelho da lista do WhatsApp e o timer de atualização (`systemctl list-timers asimov-waha.timer`). O que o operador precisa: um chip de teste que possa ser bloqueado e o número ou grupo que recebe o handoff.
+- Primeiro teste de ponta a ponta na VPS (2026-09-17, agente Spencer): sessão pareada, webhook chegando e a conversa barrada pela lista de contatos por causa do `@lid` (corrigido na v0.11.1). Falta refazer o teste com o amigo respondendo, mídia, handoff, `/retomar`, joinha e remoção.
+- **Parte 2 (WAHA) ainda não rodou inteira numa VPS**: falta parear um número de verdade, conferir texto, áudio e imagem, o aviso de handoff e o `/retomar`, a remoção tirando o aparelho da lista do WhatsApp e o timer de atualização (`systemctl list-timers asimov-waha.timer`). O que o operador precisa: um chip de teste que possa ser bloqueado e o número ou grupo que recebe o handoff.
 - Da parte 1, não conferido na VPS depois das correções: contas pela calculadora nova (v0.8.7: ponto de milhar, porcentagem, parcela, datas), citação da busca sem markdown (v0.8.10) e `/retomar` no terminal. Cobertos por teste automatizado.
 - Mídia (visão e PDF) na OpenAI Responses ainda não conferida na VPS.
 - Uma mensagem digitada no terminal da VPS chegou como "Ol�a" (byte inválido antes do "a"). Suspeita: apagar uma letra acentuada; não reproduzido local com bash 5.

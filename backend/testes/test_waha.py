@@ -19,7 +19,8 @@ from app.canais.waha import api
 from app.canais.waha.assinatura import assina
 from app.canais.waha.canal import numero_legivel
 from app.conversas import turno
-from app.conversas.modelos import Conversa, Mensagem
+from app.consumo.modelos import Falha
+from app.conversas.modelos import Contato, Conversa, Mensagem
 from app.handoff import repo as handoff_repo
 from app.handoff import servico as handoff
 from app.handoff.modelos import Handoff
@@ -115,6 +116,7 @@ def payload_waha(
     midia: dict[str, Any] | None = None,
     evento: str = "message.any",
     origem: str | None = None,
+    telefone_oculto: str | None = None,
 ) -> dict[str, Any]:
     mensagem: dict[str, Any] = {
         "id": id_mensagem,
@@ -129,6 +131,9 @@ def payload_waha(
         mensagem["from"] = "5511900000000@c.us"
         mensagem["to"] = de
         mensagem["source"] = origem or "app"
+    if telefone_oculto:
+        # Como o GOWS entrega quando o WhatsApp esconde o número atrás de um @lid.
+        mensagem["_data"] = {"Info": {"SenderAlt": f"{telefone_oculto}@s.whatsapp.net"}}
     if midia is not None:
         mensagem["media"] = midia
     return {"event": evento, "payload": mensagem}
@@ -558,3 +563,46 @@ async def test_o_que_a_equipe_respondeu_chega_ao_modelo_quando_o_agente_volta(ht
     conversa = "\n".join(str(p.content) for m in visto[0] for p in m.parts if hasattr(p, "content"))
     assert f"{PREFIXO_HUMANO}pode trazer amanhã que eu troco" in conversa
     assert MARCO_FALA_DE_HUMANO in conversa
+
+
+# ── Número escondido atrás de um @lid ──────────────────────────────────────
+
+
+async def test_contato_que_chega_por_lid_e_atendido_pelo_numero_de_verdade(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
+    """O WhatsApp esconde o número atrás de um id; sem resolver, a lista barrava quem podia falar."""
+    agente = await cria_waha(http, contatos_permitidos=["5551999998888"])
+
+    resposta = await manda(
+        http,
+        agente,
+        waha,
+        payload_waha("oi", de="229536625127609@lid", telefone_oculto="5551999998888"),
+    )
+
+    assert resposta.status_code == 200
+    assert len(fila.jobs) == 1, "o contato está na lista, mesmo chegando por @lid"
+    async with sessao() as s:
+        conversa = (await s.scalars(select(Conversa))).one()
+        contato = (await s.scalars(select(Contato))).one()
+    assert conversa.id_externo == "229536625127609@lid", "responder é pelo id da conversa"
+    assert contato.telefone == "5551999998888", "o número de verdade fica guardado no contato"
+
+
+async def test_lid_sem_numero_resolvido_vira_falha_com_o_identificador(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
+    """Sem o número, o operador precisa ao menos ver quem foi barrado para decidir o que fazer."""
+    agente = await cria_waha(http, contatos_permitidos=["5551999998888"])
+
+    await manda(http, agente, waha, payload_waha("oi", de="229536625127609@lid"))
+
+    assert fila.jobs == []
+    async with sessao() as s:
+        falha = (await s.scalars(select(Falha).where(Falha.tipo == "contato_fora_da_lista"))).one()
+    assert falha.detalhe["de"] == "229536625127609@lid"
+
+
+async def test_numero_com_e_sem_o_nono_digito_e_o_mesmo(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http, contatos_permitidos=["555186389892"])
+
+    await manda(http, agente, waha, payload_waha("oi", de="5551986389892@c.us"))
+
+    assert len(fila.jobs) == 1

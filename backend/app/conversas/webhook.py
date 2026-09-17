@@ -100,7 +100,13 @@ async def receber(
 
     if not _contato_permitido(agente, evento):
         # Agente em teste: só os números da lista são atendidos, o resto nem vira conversa.
-        log.info("webhook_ignorado", motivo="contato fora da lista do agente")
+        # Vai para Falha com o identificador: sem isso, o operador só vê o agente mudo e não sabe
+        # que barrou nem quem barrou (o WhatsApp esconde o número atrás de um id).
+        de = evento.contato_telefone or evento.contato_externo
+        log.info("webhook_ignorado", motivo="contato fora da lista do agente", de=de)
+        await registra_falha(
+            "contato_fora_da_lista", {"de": de}, agente.cliente_id, agente.id
+        )
         return Response(status_code=200)
 
     assert evento.conversa_externa is not None

@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Número escondido atrás de @lid barrava quem podia falar (v0.11.1)
+
+- **Achado no primeiro teste de ponta a ponta**: o agente não respondeu a um número liberado na lista. O log mostrou `contato fora da lista do agente`, e o log da WAHA mostrou a razão: o WhatsApp entrega a conversa endereçada por `@lid` (id oculto), não pelo telefone. A comparação não tinha como bater.
+- **O telefone de verdade vem resolvido pela WAHA** (2026.8.1+) em `pn` ou, no GOWS, em `_data.Info.SenderAlt`; em grupo, no participante. `telefone_do_contato` procura nesses campos e guarda o número no Contato; a conversa continua endereçada pelo `@lid`, que é por onde se responde. `@lid` nunca é lido como telefone: os dígitos dele não são o número de ninguém.
+- **Nono dígito**: a comparação passou a aceitar o mesmo celular com e sem o 9 (`555186389892` e `5551986389892`), que é como o mesmo número aparece conforme a idade do cadastro. DDDs diferentes continuam diferentes.
+- **Contato barrado vira Falha** com o identificador, visível em Ver consumo e falhas. Antes só havia uma linha de log em nível info: o operador via o agente mudo e não tinha como saber que a lista tinha barrado, nem quem.
+
 ## 2026-09-17: Atendente assume a conversa no Chatwoot, com prazo de volta (v0.11.0)
 
 - **Pedido do operador**: no Chatwoot, mensagem de atendente (outgoing que não é do bot) tem de abrir a conversa, tirar o bot e atribuir a quem respondeu; passado o prazo do onboarding, a conversa volta para Pendente com o bot conduzindo.
