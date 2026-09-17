@@ -11,6 +11,7 @@ from app.agentes.modelos import Agente
 from app.canais.registro import obter_canal
 from app.clientes import repo as clientes_repo
 from app.clientes.modelos import Cliente
+from app.ia import ferramentas
 from app.ia.provedores import modelos_padrao, valida_modelos
 from app.plataforma import cripto
 from app.plataforma.banco import agora
@@ -37,9 +38,26 @@ class CampoInvalido(ValueError):
 
 CAMPOS_MODELO = ("modelo_conversa", "modelo_fallback", "modelo_auxiliar", "modelo_visao", "modelo_transcricao")
 CAMPOS_EDITAVEIS = frozenset(
-    {"nome", "handoff_destino", "buffer_segundos", "max_mensagens_por_resposta", "retomada_automatica_horas", *CAMPOS_MODELO}
+    {
+        "nome",
+        "handoff_destino",
+        "buffer_segundos",
+        "max_mensagens_por_resposta",
+        "retomada_automatica_horas",
+        "digitacao_caracteres_por_segundo",
+        "digitacao_maximo_segundos",
+        "ferramentas",
+        *CAMPOS_MODELO,
+    }
 )
 PODEM_FICAR_VAZIOS = frozenset({"handoff_destino", "retomada_automatica_horas", "modelo_fallback"})
+
+
+def _valida_ferramentas(nomes: list[str]) -> list[str]:
+    try:
+        return ferramentas.valida(nomes)
+    except ferramentas.FerramentaDesconhecida as erro:
+        raise CampoInvalido(str(erro)) from erro
 
 
 def _valida_retomada(canal: Any, horas: int | None) -> None:
@@ -107,6 +125,8 @@ async def criar_agente(
     canal_obj = obter_canal(canal)
     opcoes["handoff_destino"] = canal_obj.valida_destino_handoff(opcoes.get("handoff_destino"))
     _valida_retomada(canal_obj, opcoes.get("retomada_automatica_horas"))
+    if opcoes.get("ferramentas") is not None:
+        opcoes["ferramentas"] = _valida_ferramentas(opcoes["ferramentas"])
     token = cripto.novo_token()
     acesso: dict[str, Any] = {}
 
@@ -177,6 +197,8 @@ async def editar_agente(
     if "retomada_automatica_horas" in campos:
         _valida_retomada(canal, campos["retomada_automatica_horas"])
     valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
+    if "ferramentas" in campos:
+        campos["ferramentas"] = _valida_ferramentas(campos["ferramentas"])
     if no_canal and "nome" in campos and campos["nome"] != agente.nome:
         cred = credenciais(agente)
         await usa_acesso(

@@ -35,6 +35,8 @@ class Config(BaseSettings):
     # Cobre ler mídia e responder no mesmo turno; abaixo do job_timeout do worker.
     lock_ttl_segundos: int = 240
     tentativas_extra_modelo: int = 2
+    # Soma do digitando de uma resposta; abaixo do lock, que também cobre mídia e modelo.
+    digitacao_total_maximo_segundos: int = 90
 
     midia_limite_bytes: int = 20 * 1024 * 1024
     midia_limite_audio_segundos: int = 5 * 60

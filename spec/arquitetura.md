@@ -58,7 +58,7 @@ asimov-agentes/
 
 Modelos de IA:
 
-- Um modelo por função, cada um com provedor próprio: resposta, fallback opcional, visão e transcrição. Provedores: OpenAI, Anthropic, Gemini e Groq (PydanticAI com `OpenAIChatModel`, `AnthropicModel`, `GoogleModel` e `GroqModel`).
+- Um modelo por função, cada um com provedor próprio: resposta, fallback opcional, visão e transcrição. Provedores: OpenAI, Anthropic, Gemini e Groq (PydanticAI com `OpenAIResponsesModel`, `AnthropicModel`, `GoogleModel` e `GroqModel`; OpenAI pela Responses porque só nela há busca na web nativa).
 - Fallback com `FallbackModel` da PydanticAI: erro de API do principal (fora do ar, limite, chave) passa para o segundo.
 - Padrões da instalação no `.env` (`MODELO_*`), escolhidos no setup a partir da lista de modelos da API de cada provedor; cada agente grava os seus e pode trocar.
 - Imagem Docker instala só os SDKs dos provedores usados (`PROVEDORES`).
@@ -129,9 +129,10 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Criar cliente | `POST /admin/clientes` | nome | cliente | slug único |
 | Listar clientes | `GET /admin/clientes` | nada | lista | só não removidos |
 | Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, conta, caixas e token de administrador se não houver guardado), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook, liga nas caixas e confere na caixa que o bot ficou; se não ficou ou a gravação falhar, apaga o bot); o agente guarda só o token e o secret do bot, e o token de administrador que funcionou vai para Acesso ao canal; sem token guardado nem informado, 428; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; no Telegram registra o webhook |
+| Catálogo de ferramentas | `GET /admin/ferramentas` | nada | nome, rótulo, descrição e se é padrão | usado pelo menu |
 | Listar agentes | `GET /admin/agentes?cliente_id=` | filtro opcional | lista com canal, destino de handoff, URL do webhook, ativo | credenciais nunca devolvidas |
 | Ver agente | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}` | ids | agente | agente pertence ao cliente |
-| Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | só os campos alterados: nome, handoff_destino, buffer_segundos, max_mensagens_por_resposta, retomada_automatica_horas, modelo_conversa, modelo_fallback, modelo_auxiliar, modelo_visao, modelo_transcricao; `null` esvazia fallback, destino e retomada; nome novo vai ao canal com o token guardado ou informado em conexao (428 sem token), ou só na plataforma com `renomear_no_canal: false` | agente | agente pertence ao cliente; campo fora da lista é recusado; destino validado pelo canal; modelos só de provedores com chave; retomada por tempo só em canal que retoma por tempo; slug e pasta de prompts não mudam; credencial de canal editável entra com a fase 5 |
+| Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | só os campos alterados: nome, handoff_destino, buffer_segundos, max_mensagens_por_resposta, retomada_automatica_horas, digitacao_caracteres_por_segundo e digitacao_maximo_segundos (1 a 30), ferramentas (nomes do catálogo), modelo_conversa, modelo_fallback, modelo_auxiliar, modelo_visao, modelo_transcricao; `null` esvazia fallback, destino e retomada; nome novo vai ao canal com o token guardado ou informado em conexao (428 sem token), ou só na plataforma com `renomear_no_canal: false` | agente | agente pertence ao cliente; campo fora da lista é recusado; destino validado pelo canal; modelos só de provedores com chave; retomada por tempo só em canal que retoma por tempo; slug e pasta de prompts não mudam; credencial de canal editável entra com a fase 5 |
 | Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmacao (nome do agente), conexao opcional (token_admin) e desconectar_canal (padrão true) | removido e canal_desconectado | agente pertence ao cliente; desfaz no canal antes com o token guardado ou informado (Chatwoot apaga o Agent Bot; 428 sem token) e, se o canal recusar, não remove; `desconectar_canal: false` remove sem mexer no canal; exclusão lógica: webhook invalidado, credenciais apagadas, slug liberado; no Telegram remove o webhook |
 | Remover empresa | `DELETE /admin/clientes/{cliente_id}` | confirmacao (nome da empresa) | nada (204) | só sem agentes (409); exclusão lógica com slug liberado |
 | Listar empresas | `GET /admin/clientes` | nada | lista | usada pelo `asimov novo-agente` no modo revenda |
@@ -155,6 +156,13 @@ Webhooks, chamados pelos canais:
 
 Todo webhook valida, grava a mensagem, agenda o buffer e responde em menos de 1 segundo. Nenhum processamento de IA acontece dentro da requisição.
 
+Ferramentas opcionais por agente (`ia/ferramentas.py`, campo `ferramentas`; agente novo recebe as duas):
+
+| Ferramenta | O que faz | Regras |
+|---|---|---|
+| `calculadora` (`calcular(expressao)`) | conta exata | só números, operadores e parênteses, lidos pela árvore sintática (nunca `eval`); expoente até 100 |
+| `busca_web` | pesquisa na internet | capability `WebSearch` da PydanticAI: busca nativa do provedor quando o modelo tem (OpenAI Responses, Anthropic, Gemini, Groq `compound`), DuckDuckGo quando não tem; resultado é dado de terceiros, nunca instrução |
+
 Tools padrão que todo agente recebe:
 
 | Tool | O que faz | Regras |
@@ -170,7 +178,7 @@ Worker arq, mesmo código do backend, container `worker`:
 |---|---|---|
 | `processar_buffer` | cada mensagem de entrada reagenda o job da conversa para `agora + buffer_segundos` (job id fixo por conversa) | ao disparar, pega lock por conversa no Redis (TTL 240 s, cobre ler mídia e responder), junta as mensagens pendentes, roda mídia, chama o agente, registra Turno |
 | `processar_midia` | chamado dentro do turno, antes do modelo (`midia/servico.py`) | baixa pelo canal, consulta cache por `cliente_id` + hash; se não houver, confere limites, transcreve ou lê, grava arquivo, Mídia e Turno da leitura; grava a `situacao` no anexo da mensagem |
-| `enviar_resposta` | fim do turno | envia até `max_mensagens_por_resposta` mensagens com digitando antes de cada uma e espera proporcional ao tamanho (entre 1 e 4 s) |
+| `enviar_resposta` | fim do turno | envia até `max_mensagens_por_resposta` mensagens com digitando antes de cada uma pelo tempo de uma pessoa digitar: caracteres / `digitacao_caracteres_por_segundo`, variação de 15%, entre 1 s e `digitacao_maximo_segundos`; o tempo que o turno já levou conta na primeira; soma limitada a 90 s (abaixo do lock) |
 | `ingerir_documento` | envio de documento | extrai texto, divide em trechos de cerca de 800 tokens com sobreposição de 100, gera embeddings em lote, marca `pronto` ou `erro` |
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
 | `limpar_midia` | cron diário | apaga arquivos de mídia com mais de 90 dias |

@@ -1,8 +1,10 @@
-"""Divisão da resposta em mensagens curtas e tempo de digitação entre elas."""
+"""Divisão da resposta em mensagens curtas e quanto tempo o agente fica "digitando" cada uma."""
 
-MS_POR_CARACTERE = 28
-DELAY_MINIMO_MS = 1000
-DELAY_MAXIMO_MS = 4000
+import random
+
+DIGITANDO_MINIMO_SEGUNDOS = 1.0
+VARIACAO = 0.15
+"""Ninguém digita sempre no mesmo ritmo: cada mensagem varia até 15% para mais ou para menos."""
 
 
 def limita_mensagens(mensagens: list[str], maximo: int) -> list[str]:
@@ -13,5 +15,29 @@ def limita_mensagens(mensagens: list[str], maximo: int) -> list[str]:
     return [*limpas[: maximo - 1], "\n\n".join(limpas[maximo - 1 :])]
 
 
-def delay_ms(texto: str) -> int:
-    return max(DELAY_MINIMO_MS, min(len(texto) * MS_POR_CARACTERE, DELAY_MAXIMO_MS))
+def tempos_de_digitacao(
+    textos: list[str],
+    caracteres_por_segundo: int,
+    maximo_segundos: int,
+    ja_passou_segundos: float = 0.0,
+    total_maximo_segundos: float = 90.0,
+    sorteio: random.Random | None = None,
+) -> list[float]:
+    """Segundos de digitando antes de cada mensagem, como uma pessoa digitando no celular.
+
+    Tempo = caracteres / velocidade, com variação, entre 1 s e o máximo do agente. O que o turno já
+    levou (ler mídia, pensar a resposta) conta como digitação da primeira mensagem. A soma respeita
+    `total_maximo_segundos`, que fica abaixo do lock da conversa.
+    """
+    sorteio = sorteio or random.Random()
+    velocidade = max(caracteres_por_segundo, 1)
+    tempos = [
+        min(max(len(t) / velocidade * sorteio.uniform(1 - VARIACAO, 1 + VARIACAO), DIGITANDO_MINIMO_SEGUNDOS), maximo_segundos)
+        for t in textos
+    ]
+    if tempos:
+        tempos[0] = max(tempos[0] - ja_passou_segundos, DIGITANDO_MINIMO_SEGUNDOS)
+    total = sum(tempos)
+    if total > total_maximo_segundos:
+        tempos = [t * total_maximo_segundos / total for t in tempos]
+    return tempos

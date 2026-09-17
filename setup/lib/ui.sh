@@ -339,6 +339,65 @@ escolha() {
   printf -v "$__var" '%s' "$__atual"
 }
 
+# marca VAR "texto" "1 0 1" opção1 opção2 opção3: lista de marcar. O terceiro argumento diz quais
+# começam marcadas. Devolve em VAR os números marcados, separados por espaço (vazio = nenhum).
+# Setas andam, Espaço marca e desmarca, Enter confirma, Esc volta. Sem terminal: números numa linha.
+marca() {
+  local __var=$1 __texto=$2 __atual=1 __tecla __i __item __resposta __numero
+  local -a __marcadas
+  read -r -a __marcadas <<<"$3"
+  shift 3
+  if ! tem_terminal; then
+    _prompt "$__texto"
+    echo
+    __i=1
+    for __item in "$@"; do
+      printf '    %s%s%s  [%s] %s\n' "$CIANO" "$__i" "$NORMAL" "$([ "${__marcadas[$((__i - 1))]:-0}" = 1 ] && echo x || echo ' ')" "$__item"
+      __i=$((__i + 1))
+    done
+    printf '  %sNúmeros marcados (Enter mantém, 0 desmarca todas):%s ' "$CINZA" "$NORMAL"
+    __resposta=""
+    ler __resposta
+    if [ -n "$__resposta" ]; then
+      __marcadas=()
+      for __i in $(seq 1 "$#"); do __marcadas+=(0); done
+      for __numero in ${__resposta//,/ }; do
+        [[ "$__numero" =~ ^[0-9]+$ ]] && [ "$__numero" -ge 1 ] && [ "$__numero" -le "$#" ] && __marcadas[__numero - 1]=1
+      done
+    fi
+  else
+    descarta_pendentes
+    _prompt "$__texto"
+    printf '  %s↑ ↓, Espaço marca, Enter confirma%s%s\n' "$CINZA" "$([ -n "${VOLTA_ATIVA:-}" ] && echo ' · Esc volta')" "$NORMAL"
+    printf '\033[?25l'
+    while true; do
+      __i=1
+      for __item in "$@"; do
+        printf '\r\033[K  %s %s %s\n' \
+          "$([ "$__i" -eq "$__atual" ] && printf '%s❯%s' "$CIANO" "$NORMAL" || echo ' ')" \
+          "$([ "${__marcadas[$((__i - 1))]:-0}" = 1 ] && printf '%s[x]%s' "$VERDE" "$NORMAL" || echo '[ ]')" \
+          "$__item"
+        __i=$((__i + 1))
+      done
+      le_tecla __tecla
+      case "$__tecla" in
+        cima | k) __atual=$((__atual == 1 ? $# : __atual - 1)) ;;
+        baixo | j) __atual=$((__atual == $# ? 1 : __atual + 1)) ;;
+        " ") __marcadas[__atual - 1]=$((1 - ${__marcadas[$((__atual - 1))]:-0})) ;;
+        enter) break ;;
+        esc) volta_se_puder ;;
+      esac
+      printf '\033[%sA' "$#"
+    done
+    printf '\033[?25h'
+  fi
+  __resposta=""
+  for __i in $(seq 1 "$#"); do
+    [ "${__marcadas[$((__i - 1))]:-0}" = 1 ] && __resposta+="$__i "
+  done
+  printf -v "$__var" '%s' "${__resposta% }"
+}
+
 escolha_digitada() {
   local __var=$1 __texto=$2 __resposta __i __item
   shift 2

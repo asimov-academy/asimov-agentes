@@ -25,7 +25,7 @@ from app.canais.registro import obter_canal
 from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import buffer, repo
-from app.conversas.divisao import delay_ms, limita_mensagens
+from app.conversas.divisao import limita_mensagens, tempos_de_digitacao
 from app.conversas.modelos import Conversa, Mensagem
 from app.handoff import servico as handoff
 from app.ia.agente import ResultadoTurno, roda_turno
@@ -95,6 +95,7 @@ async def processar_turno(ctx: dict[str, Any], cliente_id: str, conversa_id: str
 async def _turno(
     cliente_id: uuid.UUID, conversa_id: uuid.UUID, sem_mensagem_nova: Callable[[], Awaitable[bool]]
 ) -> str:
+    comeco = time.monotonic()
     async with fabrica_sessao()() as s:
         conversa = await repo.obter_conversa(s, cliente_id, conversa_id)
         if conversa is None:
@@ -142,7 +143,7 @@ async def _turno(
             )
             await s.commit()
             await registra_falha("turno_modelo_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id)
-            await _envia(s, canal, credenciais, agente, conversa, [handoff.MENSAGEM_DE_EXPECTATIVA])
+            await _envia(s, canal, credenciais, agente, conversa, [handoff.MENSAGEM_DE_EXPECTATIVA], comeco)
             await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
             await handoff.transferir(s, agente, canal, credenciais, conversa, handoff.MOTIVO_FALHA_NO_TURNO)
             await s.commit()
@@ -174,6 +175,7 @@ async def _turno(
             agente,
             conversa,
             limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta),
+            comeco,
         )
         await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
 
@@ -207,13 +209,29 @@ def _motivo_por_midia(pendentes: list[Mensagem]) -> str | None:
 
 
 async def _envia(
-    s: Any, canal: Any, credenciais: dict[str, Any], agente: Any, conversa: Conversa, textos: list[str]
+    s: Any,
+    canal: Any,
+    credenciais: dict[str, Any],
+    agente: Any,
+    conversa: Conversa,
+    textos: list[str],
+    comeco: float,
 ) -> int:
-    """Envia na ordem com digitando antes de cada uma; para na primeira que falhar."""
+    """Envia na ordem com digitando antes de cada uma; para na primeira que falhar.
+
+    O digitando dura o tempo de uma pessoa digitar a mensagem (`tempos_de_digitacao`).
+    """
+    tempos = tempos_de_digitacao(
+        textos,
+        agente.digitacao_caracteres_por_segundo,
+        agente.digitacao_maximo_segundos,
+        ja_passou_segundos=time.monotonic() - comeco,
+        total_maximo_segundos=config().digitacao_total_maximo_segundos,
+    )
     enviadas = 0
-    for texto in textos:
+    for texto, segundos in zip(textos, tempos, strict=True):
         await _digitando(canal, credenciais, conversa.id_externo, True)
-        await asyncio.sleep(delay_ms(texto) / 1000)
+        await asyncio.sleep(segundos)
         try:
             id_externo = await canal.enviar_texto(credenciais, conversa.id_externo, texto)
         except Exception as erro:

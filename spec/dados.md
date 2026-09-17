@@ -56,6 +56,9 @@ A empresa atendida pelo operador.
 | modelo_transcricao | texto | sim |
 | buffer_segundos | inteiro | sim, padrão 8 |
 | max_mensagens_por_resposta | inteiro | sim, padrão 3 (derivado) |
+| digitacao_caracteres_por_segundo | inteiro, 1 a 30 | sim, padrão 6 |
+| digitacao_maximo_segundos | inteiro, 1 a 30; teto do digitando por mensagem | sim, padrão 20 |
+| ferramentas | lista de nomes do catálogo (`calculadora`, `busca_web`) | sim, padrão as duas |
 | handoff_destino | estruturado por canal: número WhatsApp, chat id do grupo Telegram, ou no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
 | handoff_template | nome do template aprovado na Meta para o aviso de handoff | sim no canal WhatsApp; vazio nos outros |
 | retomada_automatica_horas | inteiro | não; vazio no Chatwoot (retomada é devolver a conversa para pendente) |
