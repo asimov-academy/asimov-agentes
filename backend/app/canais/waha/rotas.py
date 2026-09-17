@@ -47,6 +47,15 @@ class NumeroSaida(BaseModel):
     telefone: str | None
 
 
+@router.get("/canais/waha", response_model=dict)
+async def saude() -> dict[str, Any]:
+    """Se a WAHA está no ar e em que versão. O setup espera por aqui depois de recriar o contêiner."""
+    try:
+        return {"no_ar": True, **await api.versao()}
+    except CredencialInvalida as erro:
+        return {"no_ar": False, "erro": str(erro)}
+
+
 async def _agente_waha(s: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID) -> Agente:
     agente = await agentes_repo.obter(s, cliente_id, agente_id)
     if agente is None or not agente.ativo:

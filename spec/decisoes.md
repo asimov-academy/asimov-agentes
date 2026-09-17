@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Aparelho conectado com o nome do agente (v0.12.2)
+
+- **Pedido do operador**: no celular, o aparelho conectado aparecia como "Ubuntu Firefox". Quem abre Aparelhos conectados precisa reconhecer qual agente é aquele.
+- **`WAHA_CLIENT_DEVICE_NAME` e `WAHA_CLIENT_BROWSER_NAME`**: o nome vira `Agente (Empresa)`, com `Desktop` como navegador, que no GOWS faz o WhatsApp mostrar só o nome, sem "Firefox" na frente. Outros valores fora da lista (Chrome, Firefox, Safari, Edge, Opera, IE, Desktop) fazem o WhatsApp mostrar "Outro dispositivo" e jogar o nome fora.
+- **O nome é da instalação inteira e vale no instante da leitura do QR code**, não por sessão: o setup grava o nome do agente e recria o contêiner da WAHA antes de cada pareamento. Sessão já pareada volta sozinha em segundos, e o nome dela no celular não muda (ficou gravado no aparelho quando foi lida).
+- **`GET /admin/canais/waha`** diz se a WAHA está no ar e em que versão: é por onde o setup espera o contêiner voltar depois de recriado, em vez de dormir um tempo fixo.
+
 ## 2026-09-17: Quem diz o id do número do handoff é o WhatsApp (v0.12.1)
 
 - **Achado no teste**: o handoff abriu (o agente calou), mas o aviso não chegou: `handoff_incompleto` com "aviso de handoff não chegou: CredencialInvalida". Os números que apareceram nas falhas do mesmo teste (`555197035844`, `555186389892`) mostraram a causa provável: naquela região o WhatsApp usa o número **sem** o nono dígito, e o destino estava cadastrado com ele.

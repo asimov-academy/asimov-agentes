@@ -212,6 +212,7 @@ conecta_waha() {
   local nome=$1 rapido=""
   aviso_nao_oficial || return 0
   garante_waha
+  prepara_aparelho "$nome" "$AGENTE_EMPRESA"
   pergunta_retomada
   ritmo_do_whatsapp && rapido=1
 

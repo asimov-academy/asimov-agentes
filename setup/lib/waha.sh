@@ -275,6 +275,33 @@ avisa_numeros_fora_do_ar() {
   return 0
 }
 
+# prepara_aparelho NOME [EMPRESA]: nome que o celular mostra em Aparelhos conectados.
+# O nome é da instalação inteira e vale no instante da leitura do QR code, então o contêiner é
+# recriado antes de cada pareamento. Sessão já pareada volta sozinha em segundos.
+prepara_aparelho() {
+  local nome=$1 empresa=${2:-} aparelho
+  aparelho=$(printf '%s%s' "$nome" "${empresa:+ ($empresa)}" | cut -c1-40)
+  [ "$(env_get WAHA_CLIENT_DEVICE_NAME)" = "$aparelho" ] && return 0
+  env_set WAHA_CLIENT_DEVICE_NAME "$aparelho"
+  env_set WAHA_CLIENT_BROWSER_NAME Desktop
+  printf '  %sPreparando o aparelho como %s…%s' "$CINZA" "$aparelho" "$NORMAL"
+  dc up -d waha >>"$LOG" 2>&1 || true
+  espera_waha_no_ar
+  printf '\r\033[K'
+  return 0
+}
+
+# espera_waha_no_ar: até a WAHA voltar a responder depois de subir ou reiniciar.
+espera_waha_no_ar() {
+  local tentativa
+  for tentativa in $(seq 1 30); do
+    api GET /admin/canais/waha
+    [ "$API_STATUS" = 200 ] && [ "$(jq -r '.no_ar' <<<"$API_RESPOSTA")" = true ] && return 0
+    sleep 2
+  done
+  return 1
+}
+
 # waha_situacao AGENTE_JSON: consulta a sessão. Define WAHA_STATUS, WAHA_QR e WAHA_NUMERO.
 waha_situacao() {
   api GET "$(caminho_do_agente "$1")/waha"
@@ -516,6 +543,7 @@ fluxo_agente_waha() {
   escolhe_ferramentas ferramentas ""
   pergunta_retomada
   escolhe_contatos_permitidos
+  prepara_aparelho "$nome" "$EMPRESA_NOME"
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" \
@@ -578,8 +606,9 @@ edita_waha() {
       if [ "$WAHA_STATUS" = WORKING ]; then
         aviso "Parear de novo desconecta o número que está no ar agora."
         confirma "Trocar o número?" || return 0
-        api POST "$(caminho_do_agente "$AGENTE")/waha/reiniciar" '{}'
       fi
+      prepara_aparelho "$nome" "$AGENTE_EMPRESA"
+      api POST "$(caminho_do_agente "$AGENTE")/waha/reiniciar" '{}'
       espera_waha "$AGENTE" || true
       ;;
     2)
