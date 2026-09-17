@@ -43,7 +43,7 @@ Fale com o operador em português, curto e direto.
 
 ## Regras que não mudam
 
-- Todo repositório recebe `cliente_id` obrigatório e toda consulta filtra por ele. NUNCA use `cliente_id` vindo do corpo da requisição: nos webhooks ele sai do `token_webhook`, nas rotas admin da URL conferida no banco.
+- Todo repositório recebe `cliente_id` obrigatório e toda consulta filtra por ele. Única exceção: `acessos/` (token do operador no canal, da instalação). NUNCA use `cliente_id` vindo do corpo da requisição: nos webhooks ele sai do `token_webhook`, nas rotas admin da URL conferida no banco.
 - Busca vetorial filtra `cliente_id` e `agente_id` no `WHERE`.
 - Webhook do Chatwoot com assinatura inválida responde 200 e registra Falha. NUNCA 401: o Chatwoot silencia o bot na conversa.
 - Webhook só valida, grava e agenda. NUNCA chame IA dentro da requisição.

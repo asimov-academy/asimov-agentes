@@ -66,7 +66,19 @@ Credenciais por canal:
 
 - WhatsApp oficial: phone_number_id, business_account_id, access_token, app_secret, verify_token.
 - Telegram: bot_token, secret_token (gerado pelo setup).
-- Chatwoot: url, account_id, inbox_ids, api_access_token (token do Agent Bot), bot_id, bot_secret. O token do administrador usado para criar o bot não é guardado.
+- Chatwoot: url, account_id, inbox_ids, api_access_token (token do Agent Bot), bot_id, bot_secret. O token do administrador não fica nas credenciais do agente: fica em Acesso ao canal.
+
+### Acesso ao canal
+
+Acesso do operador a um canal, pedido uma vez e reaproveitado (no Chatwoot, o token de administrador, usado para criar, renomear e apagar bots e para listar contas, caixas e atendentes). É da instalação, não de um cliente: o mesmo Chatwoot atende empresas diferentes na revenda.
+
+| Atributo | Tipo | Obrigatório |
+|---|---|---|
+| id | identificador | sim |
+| canal | `chatwoot` | sim |
+| endereco | URL do Chatwoot | sim, único por canal |
+| acesso | segredo estruturado (token_admin), criptografado | sim |
+| criado_em, atualizado_em | data e hora | sim |
 
 ### Contato
 
@@ -260,7 +272,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 
 ## Implicações técnicas
 
-- Dono dos dados: toda entidade do banco carrega `cliente_id`, inclusive as filhas (Mensagem, Trecho, Turno), para que o filtro por cliente seja direto em toda consulta sem depender de join. Entidades de agente carregam também `agente_id`. Instalação não pertence a cliente.
+- Dono dos dados: toda entidade do banco carrega `cliente_id` (exceto Acesso ao canal, que é da instalação), inclusive as filhas (Mensagem, Trecho, Turno), para que o filtro por cliente seja direto em toda consulta sem depender de join. Entidades de agente carregam também `agente_id`. Instalação não pertence a cliente.
 - Isolamento: toda consulta de repositório exige `cliente_id`. A busca vetorial do RAG filtra por `cliente_id` e `agente_id` antes da similaridade. O cache de Mídia é por cliente: o mesmo hash em clientes diferentes gera registros separados, para que o resultado extraído de um cliente nunca apareça em outro.
 - Resolução do dono no webhook: a URL do webhook contém o `token_webhook` do agente, que identifica agente e cliente antes de qualquer leitura; a verificação de assinatura usa a credencial desse agente.
 - Proteção de dados sensíveis: credenciais de canal criptografadas na aplicação com a chave da Instalação; segredos nunca em log; logs de mensagens sem conteúdo integral em nível informativo (derivado); `.env` com permissão 600.

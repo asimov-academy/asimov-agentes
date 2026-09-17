@@ -1,10 +1,13 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.acessos import servico as acessos_servico
+from app.acessos.servico import AcessoNecessario
 from app.agentes import repo, servico
 from app.agentes.modelos import Agente
 from app.canais.base import CredencialInvalida, DestinoInvalido
@@ -28,7 +31,7 @@ class NovoAgente(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     canal: str
     conexao: dict[str, Any] = Field(
-        description="Acesso do operador ao canal. Usado para conectar e descartado; nunca é guardado."
+        description="Acesso do operador ao canal (Chatwoot: url, conta, caixas e, se não houver guardado, token_admin). O token que funcionar fica guardado cifrado."
     )
     modelos: Modelos = Modelos()
     handoff_destino: dict[str, Any] | None = None
@@ -55,15 +58,19 @@ class EdicaoAgente(BaseModel):
     modelo_transcricao: str | None = None
     conexao: dict[str, Any] | None = Field(
         default=None,
-        description="Acesso do operador para levar o nome novo ao canal (Chatwoot: token_admin). Nunca é guardado.",
+        description="Acesso do operador (Chatwoot: token_admin); sem ele, vale o guardado. Funcionando, fica guardado.",
     )
+    renomear_no_canal: bool = Field(default=True, description="Leva o nome novo ao canal (nome do bot no Chatwoot).")
 
 
 class Remocao(BaseModel):
     confirmacao: str = Field(min_length=1, max_length=200, description="Nome do agente.")
     conexao: dict[str, Any] | None = Field(
         default=None,
-        description="Acesso do operador para desfazer a conexão no canal (Chatwoot: token_admin). Nunca é guardado.",
+        description="Acesso do operador (Chatwoot: token_admin); sem ele, vale o guardado. Funcionando, fica guardado.",
+    )
+    desconectar_canal: bool = Field(
+        default=True, description="Desfaz a conexão no canal (apaga o bot no Chatwoot). False só com o canal fora do ar."
     )
 
 
@@ -106,13 +113,20 @@ class Acesso(BaseModel):
     conexao: dict[str, Any]
 
 
+def precisa_acesso(erro: AcessoNecessario) -> HTTPException:
+    """428: o menu pede o token de administrador e repete a chamada com ele."""
+    return HTTPException(status_code=428, detail=str(erro))
+
+
 @router.post("/canais/{canal}/descobrir")
-async def descobrir(canal: str, dados: Acesso) -> dict[str, Any]:
-    """Lista o que o acesso do operador enxerga no canal. Não grava nada."""
+async def descobrir(canal: str, dados: Acesso, s: AsyncSession = Depends(sessao)) -> dict[str, Any]:
+    """Lista o que o acesso do operador enxerga no canal. Grava só o acesso, se era novo."""
     if canal not in CANAIS:
         raise HTTPException(status_code=404, detail="canal não suportado")
     try:
-        return await obter_canal(canal).descobrir(dados.conexao)
+        return await servico.descobrir(s, canal, dados.conexao)
+    except AcessoNecessario as erro:
+        raise precisa_acesso(erro) from erro
     except CredencialInvalida as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
 
@@ -141,6 +155,8 @@ async def criar(
         raise HTTPException(status_code=404, detail=str(erro)) from erro
     except servico.Conflito as erro:
         raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except AcessoNecessario as erro:
+        raise precisa_acesso(erro) from erro
     except (CredencialInvalida, ModeloInvalido, DestinoInvalido, servico.CampoInvalido) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
@@ -174,10 +190,17 @@ async def editar(
 ) -> AgenteSaida:
     try:
         agente = await servico.editar_agente(
-            s, cliente_id, agente_id, dados.model_dump(exclude_unset=True, exclude={"conexao"}), dados.conexao
+            s,
+            cliente_id,
+            agente_id,
+            dados.model_dump(exclude_unset=True, exclude={"conexao", "renomear_no_canal"}),
+            dados.conexao,
+            dados.renomear_no_canal,
         )
     except servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except AcessoNecessario as erro:
+        raise precisa_acesso(erro) from erro
     except (DestinoInvalido, ModeloInvalido, servico.CampoInvalido, CredencialInvalida) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
@@ -189,10 +212,31 @@ async def remover(
 ) -> RemocaoSaida:
     try:
         desconectado = await servico.remover_agente(
-            s, cliente_id, agente_id, dados.confirmacao, dados.conexao
+            s, cliente_id, agente_id, dados.confirmacao, dados.conexao, dados.desconectar_canal
         )
     except servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except AcessoNecessario as erro:
+        raise precisa_acesso(erro) from erro
     except (CredencialInvalida, servico.CampoInvalido) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return RemocaoSaida(removido=True, canal_desconectado=desconectado)
+
+
+class AcessoGuardado(BaseModel):
+    endereco: str
+    atualizado_em: datetime
+
+
+@router.get("/canais/{canal}/acessos", response_model=list[AcessoGuardado])
+async def acessos(canal: str, s: AsyncSession = Depends(sessao)) -> list[AcessoGuardado]:
+    """Onde há acesso do operador guardado. O token nunca sai."""
+    return [AcessoGuardado(**a) for a in await acessos_servico.enderecos(s, canal)]
+
+
+@router.delete("/canais/{canal}/acessos", status_code=204)
+async def esquecer_acesso(
+    canal: str, endereco: str = Query(min_length=1), s: AsyncSession = Depends(sessao)
+) -> None:
+    if not await acessos_servico.esquecer(s, canal, endereco.rstrip("/")):
+        raise HTTPException(status_code=404, detail="nenhum acesso guardado nesse endereço")

@@ -19,7 +19,7 @@ mostra_agente() {
 # salva_agente JSON: PATCH só com os campos do JSON; atualiza AGENTE e deixa o RESULTADO para a
 # tela redesenhada mostrar.
 salva_agente() {
-  api PATCH "$(caminho_do_agente "$AGENTE")" "$1"
+  api_com_token PATCH "$(caminho_do_agente "$AGENTE")" "$1" "Salvando…"
   if [ "$API_STATUS" = 200 ]; then
     AGENTE=$API_RESPOSTA
     RESULTADO=$(ok "Salvo. Vale a partir da próxima mensagem.")
@@ -91,17 +91,16 @@ fluxo_editar_agente() {
 }
 
 edita_nome() {
-  local valor token conexao=null
-  dica "A pasta do prompt continua a mesma."
+  local valor
+  dica "Muda também o nome do bot, que aparece nas mensagens no Chatwoot. A pasta do prompt continua a mesma."
   pergunta valor "Nome" "$(jq -r '.nome' <<<"$AGENTE")"
-  echo
-  dica "O nome aparece nas mensagens do agente no Chatwoot. Trocar lá pede o token de administrador."
-  if confirma "Trocar o nome do bot no Chatwoot também?"; then
-    pergunta_secreta token "Token de acesso"
-    conexao=$(jq -n --arg token "$token" '{token_admin: $token}')
-    unset token
+  salva_agente "$(jq -n --arg v "$valor" '{nome: $v}')"
+  if [ "$API_STATUS" = 422 ]; then
+    printf '%s\n' "$RESULTADO"
+    if confirma "Salvar o nome só aqui, sem mudar no Chatwoot?"; then
+      salva_agente "$(jq -n --arg v "$valor" '{nome: $v, renomear_no_canal: false}')"
+    fi
   fi
-  salva_agente "$(jq -n --arg v "$valor" --argjson conexao "$conexao" '{nome: $v, conexao: $conexao}')"
 }
 
 edita_buffer() {
@@ -128,15 +127,15 @@ edita_handoff() {
 }
 
 fluxo_remover_agente() {
-  local nome confirmacao conexao=null corpo token cliente_id
+  local nome confirmacao corpo cliente_id
   secao "Remover agente"
   escolhe_agente || return 0
   nome=$(jq -r '.nome' <<<"$AGENTE")
   cliente_id=$(jq -r '.cliente_id' <<<"$AGENTE")
   echo
   aviso "$(destaque "$nome") para de responder na hora e o webhook deixa de valer."
-  dica "Conversas e consumo ficam guardados. O prompt fica em prompts/ e volta se você criar"
-  dica "um agente com o mesmo nome nessa empresa."
+  dica "O bot sai do Chatwoot. Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
+  dica "volta se você criar um agente com o mesmo nome nessa empresa."
   echo
   pergunta confirmacao "Para confirmar, digite $(destaque "$nome")"
   if [ "$(normaliza "$confirmacao")" != "$(normaliza "$nome")" ]; then
@@ -144,17 +143,13 @@ fluxo_remover_agente() {
     return 0
   fi
 
-  echo
-  dica "Com o token de administrador do Chatwoot, o bot também sai da caixa de entrada."
-  if confirma "Apagar o bot no Chatwoot?"; then
-    pergunta_secreta token "Token de acesso"
-    conexao=$(jq -n --arg token "$token" '{token_admin: $token}')
-    unset token
+  corpo=$(jq -n --arg c "$confirmacao" '{confirmacao: $c}')
+  api_com_token DELETE "$(caminho_do_agente "$AGENTE")" "$corpo" "Removendo e apagando o bot no Chatwoot…"
+  if [ "$API_STATUS" = 422 ]; then
+    falha "$(detalhe_erro "$API_RESPOSTA")"
+    confirma "Remover mesmo assim, deixando o bot no Chatwoot?" || return 0
+    api DELETE "$(caminho_do_agente "$AGENTE")" "$(jq -c '. + {desconectar_canal: false}' <<<"$corpo")"
   fi
-  corpo=$(jq -n --arg c "$confirmacao" --argjson conexao "$conexao" '{confirmacao: $c, conexao: $conexao}')
-  printf '  %sRemovendo…%s' "$CINZA" "$NORMAL"
-  api DELETE "$(caminho_do_agente "$AGENTE")" "$corpo"
-  printf '\r\033[K'
   if [ "$API_STATUS" != 200 ]; then
     falha "$(detalhe_erro "$API_RESPOSTA")"
     return 0
@@ -248,18 +243,43 @@ menu_operador() {
   local op
   while true; do
     secao "Menu"
-    ESC_ESCOLHE=6 escolha op "O que fazer?" "Criar agente" "Listar agentes" "Editar agente" "Remover agente" \
-      "Ver consumo e falhas" "Sair"
+    ESC_ESCOLHE=7 escolha op "O que fazer?" "Criar agente" "Listar agentes" "Editar agente" "Remover agente" \
+      "Ver consumo e falhas" "Token do Chatwoot" "Sair"
     case "$op" in
       1) com_voltar acao_novo_agente ;;
       2) com_voltar com_pausa lista_agentes ;;
       3) com_voltar fluxo_editar_agente ;;
       4) com_voltar com_pausa fluxo_remover_agente ;;
       5) com_voltar com_pausa mostra_consumo ;;
+      6) com_voltar com_pausa fluxo_token_chatwoot ;;
       *) return 0 ;;
     esac
     [ "$FALHOU" = 0 ] || pausa
   done
+}
+
+# O token de administrador fica guardado depois da primeira vez; aqui o operador pode esquecê-lo.
+fluxo_token_chatwoot() {
+  local op endereco linha
+  local -a enderecos=()
+  secao "Token do Chatwoot"
+  api GET /admin/canais/chatwoot/acessos
+  exige_api
+  while IFS= read -r linha; do enderecos+=("$linha"); done < <(jq -r '.[].endereco' <<<"$API_RESPOSTA")
+  if [ "${#enderecos[@]}" -eq 0 ]; then
+    dica "Nenhum token guardado. Ele é pedido na próxima ação que precisar."
+    return 0
+  fi
+  dica "Guardado criptografado. Criar, renomear e remover agente e trocar o handoff usam este token."
+  echo
+  escolha op "Esquecer o token de" "${enderecos[@]}"
+  endereco=${enderecos[$((op - 1))]}
+  api DELETE "/admin/canais/chatwoot/acessos?endereco=$(jq -rn --arg e "$endereco" '$e | @uri')"
+  if [ "$API_STATUS" = 204 ]; then
+    ok "Token esquecido. Será pedido de novo na próxima vez."
+  else
+    falha "$(detalhe_erro "$API_RESPOSTA")"
+  fi
 }
 
 com_pausa() {

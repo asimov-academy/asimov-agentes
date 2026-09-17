@@ -10,6 +10,10 @@ class CredencialInvalida(ValueError):
     """Mensagem em português, pronta para o setup mostrar ao operador."""
 
 
+class AcessoRecusado(CredencialInvalida):
+    """O canal recusou o acesso do operador (token errado, revogado ou sem ser administrador)."""
+
+
 class Acao(StrEnum):
     IGNORAR = "ignorar"
     REGISTRAR = "registrar"
@@ -76,6 +80,14 @@ class Canal(Protocol):
     retoma_por_tempo: bool
     """True quando o agente volta sozinho depois de `retomada_automatica_horas` (canais diretos)."""
 
+    def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Só a parte secreta do acesso do operador (no Chatwoot, o token de administrador), ou {}."""
+        ...
+
+    def endereco(self, dados: dict[str, Any]) -> str:
+        """Onde o acesso do operador vale, a partir da conexão ou das credenciais do agente."""
+        ...
+
     async def descobrir(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Com o acesso do operador, lista o que dá para conectar (contas, caixas, números)."""
         ...
@@ -85,7 +97,7 @@ class Canal(Protocol):
     ) -> dict[str, Any]:
         """Configura o canal para chamar o webhook e devolve as credenciais de operação.
 
-        O acesso do operador usado aqui nunca é guardado; só o que for devolvido.
+        O acesso do operador não vai para as credenciais do agente; quem guarda é `acessos/`.
         """
         ...
 

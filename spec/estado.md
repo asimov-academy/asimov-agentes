@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.5.5` em `asimov-academy/asimov-agentes` (público). Escolhas com setas e telas limpas desde a v0.5.1; Esc volta à tela anterior desde a v0.5.2. `main` tem também o README.
+- `v0.6.0` em `asimov-academy/asimov-agentes` (público). Escolhas com setas e telas limpas desde a v0.5.1; Esc volta à tela anterior desde a v0.5.2. `main` tem também o README.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `ASIMOV_ATUALIZAR=1` antes do mesmo comando, ou `asimov atualizar`.
 
@@ -24,7 +24,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 - Modo de uso perguntado antes de instalar: `MODO_INSTALACAO=empresa|revenda`.
 - Modelo por função com provedor próprio: `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO` (openai, anthropic, gemini, groq). Fallback com `FallbackModel`. Visão e transcrição usadas desde a v0.3.0.
-- Setup cria o Agent Bot no Chatwoot com token de administrador (não guardado) e opera com o token do bot.
+- Setup cria o Agent Bot no Chatwoot com o token de administrador (pedido uma vez e guardado cifrado desde a v0.6.0) e opera com o token do bot.
 - Setup rodado de novo numa instalação concluída pede o que faltar de versões novas e reconstrói.
 
 ## Como a fase 2 ficou
@@ -60,7 +60,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 2. Segundo cliente: no Chatwoot, uma segunda caixa (o setup cria o bot). Menu > Criar agente > nova empresa. Mandar mensagem nas duas caixas e conferir que cada agente responde só na sua.
 3. Menu > Editar > Tempo de buffer (ex.: 20 s) e conferir a espera na próxima mensagem.
 4. Menu > Editar > Modelos > Resumo do handoff com um modelo barato; forçar um handoff e ver o Turno `resumo_handoff` no consumo.
-5. Menu > Remover, com o token de administrador: o bot some da caixa e o agente não responde mais.
+5. Menu > Remover: o bot some da caixa e o agente não responde mais, sem pedir o token de novo.
 6. Menu > Ver consumo e falhas: totais de 7 e 30 dias por empresa.
 
 ## Fluxo de publicação combinado com o operador

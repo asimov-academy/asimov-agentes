@@ -2,7 +2,8 @@
 
 Conexão: o operador informa a URL do Chatwoot e o token de um ADMINISTRADOR. Com ele o canal
 cria o Agent Bot já apontando para o webhook do agente e liga o bot nas caixas de entrada.
-O token do administrador não é guardado: em operação só se usa o token do próprio bot.
+O token do administrador fica em `acessos/` (cifrado) para criar, renomear e apagar bots; na
+conversa só se usa o token do próprio bot.
 
 Comportamentos do Chatwoot que este arquivo respeita (conferidos no código do Chatwoot):
 - autenticação pelo header `api_access_token`;
@@ -26,6 +27,7 @@ from pydantic import BaseModel, Field, HttpUrl, ValidationError, model_validator
 
 from app.canais.base import (
     Acao,
+    AcessoRecusado,
     Anexo,
     ArquivoBaixado,
     ArquivoGrandeDemais,
@@ -175,6 +177,16 @@ class Chatwoot:
 
     # ── Conexão (setup e menu) ─────────────────────────────────────────────
 
+    def acesso_do_operador(self, dados: dict[str, Any]) -> dict[str, Any]:
+        token = dados.get("token_admin")
+        return {"token_admin": token} if isinstance(token, str) and token.strip() else {}
+
+    def endereco(self, dados: dict[str, Any]) -> str:
+        url = dados.get("url")
+        if not isinstance(url, str) or not url.startswith(("https://", "http://")):
+            raise CredencialInvalida("dados do Chatwoot incompletos: url")
+        return _raiz(url)
+
     async def descobrir(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Contas e caixas de entrada que o token do administrador enxerga."""
         acesso: AcessoChatwoot = _valida(AcessoChatwoot, dados)
@@ -183,7 +195,7 @@ class Chatwoot:
             async with self._http() as http:
                 perfil = await http.get(f"{_raiz(acesso.url)}/api/v1/profile", headers=cabecalho)
                 if perfil.status_code == 401:
-                    raise CredencialInvalida("token recusado pelo Chatwoot")
+                    raise AcessoRecusado("token recusado pelo Chatwoot")
                 perfil.raise_for_status()
                 contas = []
                 for conta in perfil.json().get("accounts", []):
@@ -236,14 +248,14 @@ class Chatwoot:
                     headers=cabecalho,
                 )
                 if resp.status_code in (401, 403):
-                    raise CredencialInvalida(
+                    raise AcessoRecusado(
                         "o token precisa ser de um administrador da conta do Chatwoot"
                     )
                 resp.raise_for_status()
                 bot = resp.json()
                 if not bot.get("access_token") or not bot.get("secret"):
                     await http.delete(f"{base}/agent_bots/{bot['id']}", headers=cabecalho)
-                    raise CredencialInvalida(
+                    raise AcessoRecusado(
                         "o Chatwoot não devolveu o token do bot; confira se o usuário é administrador"
                     )
                 for inbox_id in conexao.inbox_ids:
@@ -285,7 +297,7 @@ class Chatwoot:
                 f"não consegui falar com o Chatwoot em {credenciais['url']}"
             ) from erro
         if resp.status_code in (401, 403):
-            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+            raise AcessoRecusado("o token precisa ser de um administrador da conta do Chatwoot")
         if resp.status_code >= 400 and resp.status_code != 404:
             raise CredencialInvalida(f"o Chatwoot recusou apagar o bot: HTTP {resp.status_code}")
 
@@ -304,7 +316,7 @@ class Chatwoot:
                 f"não consegui falar com o Chatwoot em {credenciais['url']}"
             ) from erro
         if resp.status_code in (401, 403):
-            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+            raise AcessoRecusado("o token precisa ser de um administrador da conta do Chatwoot")
         if resp.status_code >= 400:
             raise CredencialInvalida(f"o Chatwoot recusou renomear o bot: HTTP {resp.status_code}")
 
