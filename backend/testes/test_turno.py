@@ -8,10 +8,11 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import select
 
-from app.consumo.modelos import Turno
+from app.consumo.modelos import Falha, Turno
 from app.conversas import buffer, turno
 from app.conversas.divisao import limita_mensagens
 from app.conversas.modelos import Conversa, Mensagem
+from app.handoff.servico import MENSAGEM_DE_EXPECTATIVA
 from app.plataforma.config import config
 from testes.conftest import cria_cliente_e_agente, envia_webhook, payload_chatwoot
 
@@ -112,7 +113,7 @@ async def test_humano_conduzindo_o_agente_nao_responde(http, canal, fila, sessao
     assert canal.enviadas == []
 
 
-async def test_modelo_fora_do_ar_registra_turno_com_erro_e_nao_responde(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+async def test_modelo_fora_do_ar_registra_turno_com_erro_avisa_e_transfere(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     def quebra(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         raise RuntimeError("provedor fora do ar")
 
@@ -126,10 +127,15 @@ async def test_modelo_fora_do_ar_registra_turno_com_erro_e_nao_responde(http, ca
     resultado = await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), token)
 
     assert resultado == "falhou"
-    assert canal.enviadas == []
+    assert [t for _, t in canal.enviadas] == [MENSAGEM_DE_EXPECTATIVA]
+    assert len(canal.transferencias) == 1
+    nota = canal.transferencias[0][2]
+    assert "não conseguiu responder" in nota and "Resumo automático indisponível" in nota and "oi" in nota
     async with sessao() as s:
         registro = await s.scalar(select(Turno))
+        falhas = set(await s.scalars(select(Falha.tipo)))
     assert registro is not None and "provedor fora do ar" in (registro.erro or "")
+    assert falhas == {"turno_modelo_falhou", "resumo_handoff_falhou"}
 
 
 async def test_turno_de_outro_cliente_nao_acha_conversa(http, canal, fila, sessao, redis) -> None:  # type: ignore[no-untyped-def]

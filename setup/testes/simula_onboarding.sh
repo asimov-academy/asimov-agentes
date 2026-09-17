@@ -24,10 +24,11 @@ ip_da_cloudflare() { return 1; }
 INTERVALO_DNS=0.3
 api() {
   case "$1 $2" in
-    "POST /admin/canais/chatwoot/descobrir") API_STATUS=200; API_RESPOSTA='{"contas":[{"id":4,"nome":"Loja Exemplo","caixas":[{"id":1,"nome":"BecomApp"},{"id":3,"nome":"WhatsApp"}]},{"id":3,"nome":"Contour","caixas":[{"id":9,"nome":"Site"}]}]}' ;;
+    "POST /admin/canais/chatwoot/descobrir") API_STATUS=200; API_RESPOSTA='{"contas":[{"id":4,"nome":"Loja Exemplo","caixas":[{"id":1,"nome":"BecomApp"},{"id":3,"nome":"WhatsApp"}],"atendentes":[{"id":7,"nome":"Joana"}],"times":[{"id":2,"nome":"Vendas"}]},{"id":3,"nome":"Contour","caixas":[{"id":9,"nome":"Site"}]}]}' ;;
     "GET /admin/clientes") API_STATUS=200; API_RESPOSTA='[{"id":"c1","nome":"Loja Exemplo"},{"id":"c2","nome":"Padaria Pão Quente"}]' ;;
     "POST /admin/clientes") API_STATUS=201; API_RESPOSTA='{"id":"c9"}' ;;
-    "GET /admin/agentes") API_STATUS=200; API_RESPOSTA='[{"cliente_id":"c1","nome":"Luiz","canal":"chatwoot","modelo_conversa":"openai:gpt-5.5"},{"cliente_id":"c2","nome":"Bia","canal":"chatwoot","modelo_conversa":"groq:llama-3.3-70b-versatile"}]' ;;
+    "PATCH /admin/clientes/c1/agentes/a1") API_STATUS=200; API_RESPOSTA='{"id":"a1"}' ;;
+    "GET /admin/agentes") API_STATUS=200; API_RESPOSTA='[{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","modelo_conversa":"openai:gpt-5.5","handoff_destino":null,"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}},{"id":"a2","cliente_id":"c2","nome":"Bia","canal":"chatwoot","modelo_conversa":"groq:llama-3.3-70b-versatile","handoff_destino":{"tipo":"time","id":2,"nome":"Vendas"},"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":3}}]' ;;
     *) API_STATUS=201; API_RESPOSTA='{"id":"a1","url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/x"}' ;;
   esac
 }
@@ -36,3 +37,6 @@ tela_primeiro_agente
 estado_set instalacao_concluida x
 mostra_resumo
 lista_agentes
+# Atualização de uma instalação anterior ao handoff: agente sem destino.
+estado_remove handoff_perguntado
+tela_handoff_pendente

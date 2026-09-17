@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agentes import repo, servico
 from app.agentes.modelos import Agente
-from app.canais.base import CredencialInvalida
+from app.canais.base import CredencialInvalida, DestinoInvalido
 from app.canais.registro import CANAIS, credenciais_visiveis, obter_canal
 from app.ia.provedores import ModeloInvalido
 from app.plataforma.admin import exige_admin
@@ -36,6 +36,10 @@ class NovoAgente(BaseModel):
     buffer_segundos: int = Field(default=8, ge=1, le=60)
     max_mensagens_por_resposta: int = Field(default=3, ge=1, le=10)
     retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
+
+
+class EdicaoAgente(BaseModel):
+    handoff_destino: dict[str, Any] | None = None
 
 
 class AgenteSaida(BaseModel):
@@ -107,7 +111,7 @@ async def criar(
         raise HTTPException(status_code=404, detail=str(erro)) from erro
     except servico.Conflito as erro:
         raise HTTPException(status_code=409, detail=str(erro)) from erro
-    except (CredencialInvalida, ModeloInvalido) as erro:
+    except (CredencialInvalida, ModeloInvalido, DestinoInvalido) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
 
@@ -131,4 +135,19 @@ async def ver(
     agente = await repo.obter(s, cliente_id, agente_id)
     if agente is None:
         raise HTTPException(status_code=404, detail="agente não encontrado")
+    return _saida(agente)
+
+
+@router.patch("/clientes/{cliente_id}/agentes/{agente_id}", response_model=AgenteSaida)
+async def editar(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, dados: EdicaoAgente, s: AsyncSession = Depends(sessao)
+) -> AgenteSaida:
+    try:
+        agente = await servico.editar_agente(
+            s, cliente_id, agente_id, dados.model_dump(exclude_unset=True)
+        )
+    except servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except DestinoInvalido as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)

@@ -67,12 +67,17 @@ escolhe_empresa() {
   done
 }
 
-# Preenche CHATWOOT_URL, CHATWOOT_TOKEN e CHATWOOT_CONTAS (JSON devolvido pela API).
+# acessa_chatwoot [URL]: preenche CHATWOOT_URL, CHATWOOT_TOKEN e CHATWOOT_CONTAS (JSON da API).
+# Com URL, não pergunta o endereço (agente que já existe).
 acessa_chatwoot() {
-  local corpo
+  local corpo url_fixa=${1:-}
   dica "Token: no Chatwoot, avatar > Configurações do perfil > Token de acesso (administrador)."
   while true; do
-    pergunta CHATWOOT_URL "URL do Chatwoot" "$(estado_get chatwoot_url)"
+    if [ -n "$url_fixa" ]; then
+      CHATWOOT_URL=$url_fixa
+    else
+      pergunta CHATWOOT_URL "URL do Chatwoot" "$(estado_get chatwoot_url)"
+    fi
     CHATWOOT_URL=${CHATWOOT_URL%%/app*}
     CHATWOOT_URL=${CHATWOOT_URL%/}
     pergunta_secreta CHATWOOT_TOKEN "Token de acesso"
@@ -104,7 +109,32 @@ escolha_da_lista() {
   printf -v "$__var" '%s' "$((numero - 1))"
 }
 
-# Chatwoot → conta → caixa → nome → empresa → cria. Define AGENTE_* para quem chamou.
+# escolhe_destino_handoff JSON_DA_CONTA: define HANDOFF_DESTINO (JSON) para quem chamou.
+# Times primeiro, depois atendentes, e a caixa sem atribuição por último.
+escolhe_destino_handoff() {
+  local conta=$1 opcoes linha op
+  local -a rotulos=()
+  opcoes=$(jq -c '[(.times // [])[] | {tipo: "time", id, nome}]
+    + [(.atendentes // [])[] | {tipo: "usuario", id, nome}]
+    + [{tipo: "caixa", id: null, nome: null}]' <<<"$conta")
+  while IFS= read -r linha; do rotulos+=("$linha"); done < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[]
+    | if .tipo == "time" then "\(.nome)  \($cinza)time\($normal)"
+      elif .tipo == "usuario" then "\(.nome)"
+      else "Quem estiver na caixa  \($cinza)sem atribuir\($normal)" end' <<<"$opcoes")
+  echo
+  dica "Quando o agente passar a conversa para uma pessoa, ela vai para quem você escolher."
+  escolha op "Quem recebe o handoff" "${rotulos[@]}"
+  HANDOFF_DESTINO=$(jq -c ".[$((op - 1))]" <<<"$opcoes")
+}
+
+nome_do_destino() {
+  jq -r 'if . == null then "sem destino"
+    elif .tipo == "caixa" then "quem estiver na caixa"
+    elif .tipo == "time" then "time \(.nome // .id)"
+    else (.nome // "usuário \(.id)") end' <<<"$1"
+}
+
+# Chatwoot → conta → caixa → handoff → nome → empresa → cria. Define AGENTE_* para quem chamou.
 fluxo_novo_agente() {
   local conta_i caixa_i conta_id conta_nome caixa_id caixas nome corpo
   acessa_chatwoot
@@ -119,6 +149,7 @@ fluxo_novo_agente() {
   escolha_da_lista caixa_i "Caixa de entrada" "$(jq -c '[.[].nome]' <<<"$caixas")"
   caixa_id=$(jq -r ".[$caixa_i].id" <<<"$caixas")
   AGENTE_CAIXA=$(jq -r ".[$caixa_i].nome" <<<"$caixas")
+  escolhe_destino_handoff "$(jq -c ".contas[$conta_i]" <<<"$CHATWOOT_CONTAS")"
 
   echo
   pergunta nome "Nome do agente"
@@ -126,8 +157,8 @@ fluxo_novo_agente() {
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" \
-      --argjson conta "$conta_id" --argjson caixa "$caixa_id" \
-      '{nome: $nome, canal: "chatwoot",
+      --argjson conta "$conta_id" --argjson caixa "$caixa_id" --argjson destino "$HANDOFF_DESTINO" \
+      '{nome: $nome, canal: "chatwoot", handoff_destino: $destino,
         conexao: {url: $url, token_admin: $token, account_id: $conta, inbox_ids: [$caixa]}}')
     printf '  %sCriando o bot no Chatwoot…%s' "$CINZA" "$NORMAL"
     api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
@@ -136,6 +167,7 @@ fluxo_novo_agente() {
       AGENTE_NOME=$nome
       AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
       ok "$(destaque "$nome") no ar na caixa $(destaque "$AGENTE_CAIXA") ${CINZA}· $EMPRESA_NOME${NORMAL}"
+      ok "Handoff para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
       unset CHATWOOT_TOKEN
       return 0
     fi
@@ -176,12 +208,80 @@ lista_agentes() {
   jq -r --argjson clientes "$clientes" '
     ($clientes | map({(.id): .nome}) | add) as $nomes
     | group_by(.cliente_id)[]
-    | "\($nomes[.[0].cliente_id] // "?")\t" + (map("\(.nome)|\(.canal)|\(.modelo_conversa)") | join("\t"))
+    | "\($nomes[.[0].cliente_id] // "?")\t" + (map("\(.nome)|\(.canal)|\(.modelo_conversa)|\(.handoff_destino | tojson)") | join("\t"))
   ' <<<"$API_RESPOSTA" | while IFS=$'\t' read -r empresa resto; do
     printf '  %s%s%s\n' "$NEGRITO" "$empresa" "$NORMAL"
-    tr '\t' '\n' <<<"$resto" | while IFS='|' read -r nome canal modelo; do
-      printf '    %s✓%s %-16s %s%s · %s%s\n' "$VERDE" "$NORMAL" "$nome" "$CINZA" "$canal" "$modelo" "$NORMAL"
+    tr '\t' '\n' <<<"$resto" | while IFS='|' read -r nome canal modelo destino; do
+      printf '    %s✓%s %-16s %s%s · %s · handoff: %s%s\n' "$VERDE" "$NORMAL" "$nome" "$CINZA" "$canal" "$modelo" "$(nome_do_destino "$destino")" "$NORMAL"
     done
   done
   echo
+}
+
+# configura_handoff JSON_DO_AGENTE: pede o token de administrador, lista quem pode receber e grava.
+configura_handoff() {
+  local agente=$1 nome url conta_id conta corpo
+  nome=$(jq -r .nome <<<"$agente")
+  url=$(jq -r .credenciais.url <<<"$agente")
+  conta_id=$(jq -r .credenciais.account_id <<<"$agente")
+  echo
+  printf '  %s%s%s %s· hoje: %s%s\n' "$NEGRITO" "$nome" "$NORMAL" "$CINZA" "$(nome_do_destino "$(jq -c .handoff_destino <<<"$agente")")" "$NORMAL"
+  acessa_chatwoot "$url"
+  unset CHATWOOT_TOKEN
+  conta=$(jq -c --argjson id "$conta_id" '.contas[] | select(.id == $id)' <<<"$CHATWOOT_CONTAS")
+  if [ -z "$conta" ]; then
+    falha "Esse token não enxerga a conta $conta_id do Chatwoot. Use o token de um administrador dela."
+    return 0
+  fi
+  escolhe_destino_handoff "$conta"
+  corpo=$(jq -n --argjson destino "$HANDOFF_DESTINO" '{handoff_destino: $destino}')
+  api PATCH "/admin/clientes/$(jq -r .cliente_id <<<"$agente")/agentes/$(jq -r .id <<<"$agente")" "$corpo"
+  if [ "$API_STATUS" = 200 ]; then
+    ok "Handoff de $(destaque "$nome") para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
+  else
+    falha "$(detalhe_erro "$API_RESPOSTA")"
+  fi
+}
+
+# asimov handoff: escolhe o agente e troca quem recebe o handoff.
+fluxo_handoff() {
+  local agentes op
+  local -a rotulos=()
+  api GET /admin/agentes
+  [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
+  agentes=$API_RESPOSTA
+  if [ "$(jq 'length' <<<"$agentes")" -eq 0 ]; then
+    dica "Nenhum agente ainda. Crie com: asimov novo-agente"
+    return 0
+  fi
+  secao "Handoff"
+  while IFS= read -r linha; do rotulos+=("$linha"); done < <(jq -r '.[].nome' <<<"$agentes")
+  if [ "${#rotulos[@]}" -eq 1 ]; then
+    op=1
+  else
+    escolha op "Agente" "${rotulos[@]}"
+  fi
+  configura_handoff "$(jq -c ".[$((op - 1))]" <<<"$agentes")"
+  echo
+}
+
+# Atualização para a v0.4: agentes criados antes do handoff não têm destino. Pergunta uma vez.
+tela_handoff_pendente() {
+  local sem_destino agente
+  estado_tem handoff_perguntado && return 0
+  api GET /admin/agentes
+  [ "$API_STATUS" = 200 ] || return 0
+  sem_destino=$(jq -c '[.[] | select(.handoff_destino == null)]' <<<"$API_RESPOSTA")
+  if [ "$(jq 'length' <<<"$sem_destino")" -gt 0 ]; then
+    secao "Handoff"
+    info "O agente agora passa a conversa para uma pessoa quando o contato pede."
+    aviso "Sem destino, a conversa transferida fica na caixa sem atribuição."
+    if confirma "Escolher quem recebe agora?"; then
+      while IFS= read -r agente; do
+        configura_handoff "$agente"
+      done < <(jq -c '.[]' <<<"$sem_destino")
+    fi
+    dica "Para mudar depois: asimov handoff"
+  fi
+  estado_set handoff_perguntado "$(date -Is)"
 }

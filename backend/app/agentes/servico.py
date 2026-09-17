@@ -74,6 +74,7 @@ async def criar_agente(
     valida_modelos(modelos_finais)
 
     canal_obj = obter_canal(canal)
+    opcoes["handoff_destino"] = canal_obj.valida_destino_handoff(opcoes.get("handoff_destino"))
     token = cripto.novo_token()
     credenciais_ok = await canal_obj.conectar(conexao, config().url_webhook(canal, token), nome)
 
@@ -102,6 +103,21 @@ async def criar_agente(
             log.error("desconectar_falhou", canal=canal, erro=repr(erro))
         raise
     return agente, token
+
+
+async def editar_agente(
+    sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID, campos: dict[str, Any]
+) -> Agente:
+    """Por enquanto só o destino do handoff; o resto da edição entra com o menu (fase 4)."""
+    agente = await repo.obter(sessao, cliente_id, agente_id)
+    if agente is None:
+        raise NaoEncontrado("agente não encontrado")
+    if "handoff_destino" in campos:
+        agente.handoff_destino = obter_canal(agente.canal).valida_destino_handoff(
+            campos["handoff_destino"]
+        )
+    await sessao.commit()
+    return agente
 
 
 def url_webhook(agente: Agente) -> str:

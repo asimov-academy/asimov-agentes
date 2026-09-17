@@ -133,6 +133,17 @@ async def marca_respondido(
     )
 
 
+async def muda_status(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID, status: str
+) -> None:
+    """`agente` ou `humano`."""
+    await sessao.execute(
+        update(Conversa)
+        .where(Conversa.cliente_id == cliente_id, Conversa.id == conversa_id)
+        .values(status=status, atualizado_em=agora())
+    )
+
+
 async def ultimas_mensagens(
     sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID, limite: int = 40
 ) -> list[Mensagem]:

@@ -56,7 +56,7 @@ A empresa atendida pelo operador.
 | modelo_transcricao | texto | sim |
 | buffer_segundos | inteiro | sim, padrão 8 |
 | max_mensagens_por_resposta | inteiro | sim, padrão 3 (derivado) |
-| handoff_destino | estruturado por canal: número WhatsApp, chat id do grupo Telegram, ou usuário ou time do Chatwoot | sim |
+| handoff_destino | estruturado por canal: número WhatsApp, chat id do grupo Telegram, ou no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
 | handoff_template | nome do template aprovado na Meta para o aviso de handoff | sim no canal WhatsApp; vazio nos outros |
 | retomada_automatica_horas | inteiro | não; vazio no Chatwoot (retomada é devolver a conversa para pendente) |
 | ativo | booleano | sim |
@@ -133,7 +133,8 @@ Arquivo recebido de contato, com o cache do processamento.
 |---|---|---|
 | id | identificador | sim |
 | cliente_id | referência a Cliente | sim |
-| conversa_id | referência a Conversa | sim |
+| agente_id | referência a Agente | sim |
+| conversa_id | referência a Conversa | sim; no máximo um handoff aberto (sem `retomado_em`) por conversa |
 | motivo | texto | sim |
 | resumo | texto | sim |
 | codigo | texto curto único por agente, usado em `/retomar <código>` | sim |
@@ -180,7 +181,7 @@ Um ciclo de processamento após o buffer.
 | cliente_id | referência a Cliente | sim |
 | conversa_id | referência a Conversa | sim |
 | modelo | texto | sim |
-| funcao | `resposta`, `transcricao` ou `visao` | sim |
+| funcao | `resposta`, `transcricao`, `visao` ou `resumo_handoff` | sim |
 | tokens_entrada, tokens_saida | inteiro | sim |
 | custo_estimado | decimal | sim |
 | latencia_ms | inteiro | sim |
@@ -230,7 +231,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 | modelo_transcricao | `openai:whisper-1` |
 | buffer_segundos | 8 |
 | max_mensagens_por_resposta | 3 |
-| handoff_destino | usuário do Chatwoot (id `xxx`) |
+| handoff_destino | `{tipo: usuario, id: 7, nome: Joana}` |
 | handoff_template | vazio (canal Chatwoot) |
 | retomada_automatica_horas | vazio (retomada devolvendo a conversa para pendente no Chatwoot) |
 | ativo | sim |
@@ -239,7 +240,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 
 - Cliente: nome `Loja Exemplo`, slug `loja-exemplo`, ativo sim.
 - Contato: agente Ana, id_externo `4812`, nome `Maria`, telefone `5511999990000`.
-- Conversa: id_externo `1532`, status `agente`.
+- Conversa: id_externo `1532`, status `agente` (vira `humano` enquanto há handoff aberto).
 - Mensagem: direcao `entrada`, autor `contato`, tipo `audio`, texto_extraido `quero trocar um produto`.
 - Mídia: tipo_mime `audio/ogg`, tamanho_bytes `48213`, resultado com a transcrição.
 - Handoff: motivo `contato pediu para falar com uma pessoa`, resumo `Maria quer trocar um produto com defeito e já enviou o número do pedido`, retomado_por `chatwoot`.

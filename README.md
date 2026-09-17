@@ -9,6 +9,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 - **Agente respondendo no Chatwoot**: o setup cria o bot e liga na caixa de entrada sozinho.
 - **Atendimento com cara de gente**: espera o contato terminar de mandar as mensagens (buffer), mostra "digitando" e responde em mensagens curtas.
 - **Entende áudio, imagem e PDF**: transcreve áudio, lê foto de documento e PDF, e não processa de novo o mesmo arquivo reenviado.
+- **Passa para uma pessoa**: quando o contato pede, o agente transfere a conversa no Chatwoot para o atendente ou time escolhido, com um resumo em nota privada. Devolver a conversa para Pendente faz o agente voltar.
 - **Modelo por função**: resposta, fallback, visão e transcrição, cada um com seu provedor (OpenAI, Anthropic, Gemini ou Groq). Se o modelo principal cair, o fallback responde.
 - **Uma empresa ou várias**: use só para a sua empresa ou revenda agentes para empresas clientes, com os dados de cada uma isolados.
 - **Pronto para vibecoding**: projeto com testes, `AGENTS.md` e `CLAUDE.md` para o agente de código entender e evoluir.
@@ -35,7 +36,7 @@ O setup pergunta, nesta ordem:
 3. Claude Code ou Codex
 4. Provedor e modelo para resposta, fallback, visão e transcrição, com as chaves de API
 5. O registro DNS `bot.<seu-domínio>` (ele mostra o IP e espera propagar)
-6. URL e token de administrador do Chatwoot, conta, caixa de entrada e nome do agente
+6. URL e token de administrador do Chatwoot, conta, caixa de entrada, quem recebe o handoff e nome do agente
 
 Se algo falhar, ele mostra o motivo. Rode o mesmo comando de novo e ele continua de onde parou.
 
@@ -47,9 +48,12 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde.
 |---|---|
 | `asimov novo-agente` | Cria outro agente, para empresa nova ou existente |
 | `asimov agentes` | Lista agentes e empresas |
+| `asimov handoff` | Troca quem recebe a conversa passada pelo agente |
 | `asimov atualizar` | Baixa a versão nova e republica |
 
-**Personalidade do agente:** edite `~/asimov-agentes/prompts/<empresa>/<agente>/persona.md`. A mudança vale na próxima mensagem.
+**Personalidade do agente:** edite `~/asimov-agentes/prompts/<empresa>/<agente>/persona.md`. O resumo que vai para o atendente no handoff segue `resumo_handoff.md`, na mesma pasta. A mudança vale na próxima mensagem.
+
+**Handoff no Chatwoot:** enquanto a conversa está Aberta, o agente fica calado. Para devolver, marque a conversa como Pendente.
 
 **Evoluir com vibecoding:**
 

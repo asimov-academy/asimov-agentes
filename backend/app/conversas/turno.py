@@ -5,6 +5,9 @@ leitura das mídias pendentes, modelo, envio mensagem a mensagem com digitando, 
 
 Mensagem nova do contato antes do envio descarta a resposta: o turno dela responde tudo junto.
 Depois que o envio começou, o que chegar é respondido no turno seguinte.
+
+Handoff acontece no fim, depois do envio: pedido pelo modelo, por arquivo grande demais ou por
+falha do modelo depois das tentativas (aí com mensagem fixa de expectativa).
 """
 
 import asyncio
@@ -23,7 +26,8 @@ from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import buffer, repo
 from app.conversas.divisao import delay_ms, limita_mensagens
-from app.conversas.modelos import Mensagem
+from app.conversas.modelos import Conversa, Mensagem
+from app.handoff import servico as handoff
 from app.ia.agente import ResultadoTurno, roda_turno
 from app.midia import servico as midia
 from app.plataforma.banco import fabrica_sessao
@@ -103,6 +107,11 @@ async def _turno(
         credenciais = agentes_servico.credenciais(agente)
         if not await canal.agente_pode_falar(credenciais, conversa.id_externo):
             return "humano_conduz"
+        # O canal diz que o agente conduz: handoff ainda aberto é devolução que não chegou.
+        if conversa.status == "humano" and await handoff.retomar(
+            s, cliente_id, conversa_id, agente.canal
+        ):
+            await s.commit()
 
         mensagens = await repo.ultimas_mensagens(s, cliente_id, conversa_id)
         anteriores, pendentes = separa_pendentes(mensagens, conversa.respondido_ate)
@@ -133,6 +142,10 @@ async def _turno(
             )
             await s.commit()
             await registra_falha("turno_modelo_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id)
+            await _envia(s, canal, credenciais, agente, conversa, [handoff.MENSAGEM_DE_EXPECTATIVA])
+            await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
+            await handoff.transferir(s, agente, canal, credenciais, conversa, handoff.MOTIVO_FALHA_NO_TURNO)
+            await s.commit()
             return "falhou"
 
         latencia = int((time.monotonic() - inicio) * 1000)
@@ -154,28 +167,14 @@ async def _turno(
             await _digitando(canal, credenciais, conversa.id_externo, False)
             log.info("resposta_descartada")
             return "substituido"
-        enviadas = 0
-        for texto in limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta):
-            await _digitando(canal, credenciais, conversa.id_externo, True)
-            await asyncio.sleep(delay_ms(texto) / 1000)
-            try:
-                id_externo = await canal.enviar_texto(credenciais, conversa.id_externo, texto)
-            except Exception as erro:
-                await registra_falha("envio_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id)
-                break
-            await repo.grava_mensagem(
-                s,
-                Mensagem(
-                    cliente_id=cliente_id,
-                    conversa_id=conversa_id,
-                    direcao="saida",
-                    autor="agente",
-                    texto=texto,
-                    id_externo=id_externo,
-                ),
-            )
-            enviadas += 1
-        await _digitando(canal, credenciais, conversa.id_externo, False)
+        enviadas = await _envia(
+            s,
+            canal,
+            credenciais,
+            agente,
+            conversa,
+            limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta),
+        )
         await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
 
         await grava_turno(
@@ -191,9 +190,49 @@ async def _turno(
                 tools_chamadas=resultado.tools_chamadas or None,
             ),
         )
+        motivo = resultado.motivo_handoff or _motivo_por_midia(pendentes)
+        transferencia = None
+        if motivo is not None:
+            transferencia = await handoff.transferir(s, agente, canal, credenciais, conversa, motivo)
         await s.commit()
-        log.info("turno_concluido", mensagens=enviadas, latencia_ms=latencia)
-        return "respondido"
+        log.info("turno_concluido", mensagens=enviadas, latencia_ms=latencia, handoff=transferencia)
+        return "transferido" if transferencia == "transferido" else "respondido"
+
+
+def _motivo_por_midia(pendentes: list[Mensagem]) -> str | None:
+    """Arquivo acima do limite vai para humano mesmo que o modelo não tenha pedido."""
+    if any((m.anexo or {}).get("situacao") == "acima_do_limite" for m in pendentes):
+        return handoff.MOTIVO_ARQUIVO_GRANDE
+    return None
+
+
+async def _envia(
+    s: Any, canal: Any, credenciais: dict[str, Any], agente: Any, conversa: Conversa, textos: list[str]
+) -> int:
+    """Envia na ordem com digitando antes de cada uma; para na primeira que falhar."""
+    enviadas = 0
+    for texto in textos:
+        await _digitando(canal, credenciais, conversa.id_externo, True)
+        await asyncio.sleep(delay_ms(texto) / 1000)
+        try:
+            id_externo = await canal.enviar_texto(credenciais, conversa.id_externo, texto)
+        except Exception as erro:
+            await registra_falha("envio_falhou", {"erro": repr(erro)[:500]}, agente.cliente_id, agente.id)
+            break
+        await repo.grava_mensagem(
+            s,
+            Mensagem(
+                cliente_id=agente.cliente_id,
+                conversa_id=conversa.id,
+                direcao="saida",
+                autor="agente",
+                texto=texto,
+                id_externo=id_externo,
+            ),
+        )
+        enviadas += 1
+    await _digitando(canal, credenciais, conversa.id_externo, False)
+    return enviadas
 
 
 async def _digitando(canal: Any, credenciais: dict[str, Any], conversa: str, ligado: bool) -> None:

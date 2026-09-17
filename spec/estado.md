@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.3.2` em `asimov-academy/asimov-agentes` (público). `main` tem também o README.
+- `v0.4.0` em `asimov-academy/asimov-agentes` (público). `main` tem também o README.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `ASIMOV_ATUALIZAR=1` antes do mesmo comando, ou `asimov atualizar`.
 
@@ -14,7 +14,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 |---|---|
 | 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real (texto respondido pelo Chatwoot com WhatsApp) |
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2): áudio, imagem e PDF respondidos; 4 áudios seguidos numa resposta só; reenvio dos mesmos áudios sem nova transcrição |
-| 3. Handoff no Chatwoot | **Próxima** |
+| 3. Handoff no Chatwoot | **Construída na v0.4.0**, falta validar em VPS real |
 | 4. Menu do operador | Parcial: `asimov novo-agente` e `asimov agentes` prontos; faltam editar, remover e consumo |
 | 5. WhatsApp oficial e Telegram diretos | Não iniciada |
 | 6. Base de conhecimento | Não iniciada |
@@ -36,10 +36,20 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Validada na VPS em 2026-09-16. O teste achou a mensagem perdida durante o turno, corrigida na v0.3.2 (spec/decisoes.md).
 - O agente às vezes cita a mecânica ("recebi as transcrições"): ajustar `INSTRUCAO_DE_MIDIA` em `ia/agente.py` para responder como quem ouviu e viu.
 
-## Para a fase 3
+## Como a fase 3 ficou
 
-- Tools que alteram estado não existem ainda. Ao criar a primeira, turno com mídia pendente roda sem elas (exceto handoff): spec/arquitetura.md, seção de segurança.
-- Arquivo acima do limite hoje só pede para o contato escrever; a spec prevê handoff.
+- Tool `transferir_para_humano` só registra o pedido em `ContextoTurno` (`ia/contexto.py`); `handoff/servico.py` transfere no fim do turno, depois do envio. Chatwoot: nota privada, atribuição, status aberto.
+- Retomada: `conversation_status_changed`/`conversation_updated` com mudança de status para pendente, e o turno fecha handoff esquecido quando o Chatwoot já está pendente.
+- Falha do modelo depois das tentativas e arquivo acima do limite também transferem.
+- Destino por agente: usuário, time ou caixa. `asimov handoff` troca; a atualização pergunta uma vez para agentes antigos. `PATCH` do agente aceita só `handoff_destino` por enquanto.
+- Ainda sem tool que altera estado além do handoff: a regra de turno com mídia continua sem efeito prático.
+
+## Para validar a fase 3 na VPS
+
+1. `asimov atualizar` e escolher quem recebe o handoff do agente existente.
+2. Pedir para falar com uma pessoa: conversa atribuída, Aberta, com resumo em nota privada.
+3. Mandar mensagens com a conversa Aberta: agente calado.
+4. Marcar como Pendente, mandar mensagem: agente responde.
 
 ## Fluxo de publicação combinado com o operador
 
