@@ -403,20 +403,23 @@ mostra_consumo() {
 # mostra o motivo e volta também, em vez de fechar o menu.
 menu_operador() {
   local op
+  local -a rotulos acoes
   while true; do
     secao "Menu"
-    ESC_ESCOLHE=8 escolha op "O que fazer?" "Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" \
-      "Remover agente" "Ver consumo e falhas" "Token do Chatwoot" "Sair"
-    case "$op" in
-      1) com_voltar acao_novo_agente ;;
-      2) com_voltar fluxo_conversar ;;
-      3) com_voltar com_pausa lista_agentes ;;
-      4) com_voltar fluxo_editar_agente ;;
-      5) com_voltar com_pausa fluxo_remover_agente ;;
-      6) com_voltar com_pausa mostra_consumo ;;
-      7) com_voltar com_pausa fluxo_token_chatwoot ;;
-      *) return 0 ;;
-    esac
+    # A WAHA atualiza sozinha; o aviso aparece aqui quando ela precisou voltar para a versão anterior.
+    [ -n "$(estado_get waha_aviso)" ] && aviso "WhatsApp: $(estado_get waha_aviso)"
+    rotulos=("Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" "Remover agente" "Ver consumo e falhas")
+    acoes=(acao_novo_agente fluxo_conversar "com_pausa lista_agentes" fluxo_editar_agente "com_pausa fluxo_remover_agente" "com_pausa mostra_consumo")
+    if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
+      rotulos+=("WhatsApp (WAHA)")
+      acoes+=("com_pausa fluxo_waha")
+    fi
+    rotulos+=("Token do Chatwoot" "Sair")
+    acoes+=("com_pausa fluxo_token_chatwoot")
+    ESC_ESCOLHE=${#rotulos[@]} escolha op "O que fazer?" "${rotulos[@]}"
+    [ "$op" -lt "${#rotulos[@]}" ] || return 0
+    # shellcheck disable=SC2086  # a ação pode vir com `com_pausa` na frente
+    com_voltar ${acoes[$((op - 1))]}
     [ "$FALHOU" = 0 ] || pausa
   done
 }

@@ -7,13 +7,28 @@
 # sempre (WAHA_ATIVA=1 no .env, lido por deploy/compose.sh).
 
 WAHA_ESPERA_STATUS=3
+# Versão da WAHA que esta versão do setup instala. O timer semanal troca por uma mais nova.
+WAHA_VERSAO_BASE="2026.8.2"
+WAHA_TAGS_URL="https://hub.docker.com/v2/repositories/devlikeapro/waha/tags?page_size=100&ordering=last_updated"
+WAHA_ESPERA_VOLTAR=120
 
-# Tag da imagem conforme a arquitetura da VPS (a WAHA publica uma imagem própria para arm).
-versao_waha() {
+# Prefixo da tag conforme a arquitetura da VPS (a WAHA publica uma imagem própria para arm).
+prefixo_waha() {
   case "$(uname -m)" in
-    aarch64 | arm64) echo "gows-arm-2026.8.2" ;;
-    *) echo "gows-2026.8.2" ;;
+    aarch64 | arm64) echo "gows-arm-" ;;
+    *) echo "gows-" ;;
   esac
+}
+
+versao_waha() { echo "$(prefixo_waha)$WAHA_VERSAO_BASE"; }
+
+# tag_waha_mais_nova JSON PREFIXO: a maior versão publicada com aquele prefixo, ou vazio.
+# Só tags de versão (`gows-2026.8.2`): rótulos móveis como `gows` e `dev` mudam debaixo do pé.
+tag_waha_mais_nova() {
+  local json=$1 prefixo=$2 versao
+  versao=$(jq -r --arg p "$prefixo" '.results[]?.name | select(startswith($p)) | ltrimstr($p)' <<<"$json" 2>/dev/null |
+    grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+  [ -n "$versao" ] && printf '%s%s' "$prefixo" "$versao"
 }
 
 sobe_waha() { dc up -d --wait waha; }
@@ -40,9 +55,164 @@ garante_waha() {
   passo waha_container "WAHA no ar" "Veja: source deploy/compose.sh && dc logs waha" sobe_waha
   passo waha_api "API conversando com a WAHA" "Veja: source deploy/compose.sh && dc logs api" --sem-repetir sobe_api
   espera_url http://127.0.0.1:8000/health >/dev/null 2>&1 || true
+  # Versão da WAHA envelhece rápido: o WhatsApp muda o protocolo e a imagem antiga para de conectar.
+  instala_timer_waha
   # Os passos valem só para esta subida: o contêiner pode ser removido e precisar subir de novo.
   estado_remove passo_qrencode_waha passo_waha_container passo_waha_api
   echo
+}
+
+# instala_timer_waha: confere versão nova da WAHA toda semana, domingo de madrugada.
+# O timer roda no host (o contêiner não fala com o Docker), como o serviço que instalou o setup.
+instala_timer_waha() {
+  command -v systemctl >/dev/null 2>&1 || return 0
+  $SUDO tee /etc/systemd/system/asimov-waha.service >/dev/null <<UNIDADE
+[Unit]
+Description=Atualiza a WAHA (WhatsApp) do Asimov Agentes
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=HOME=$HOME
+ExecStart=$RAIZ_PROJETO/deploy/atualiza_waha.sh
+UNIDADE
+  $SUDO tee /etc/systemd/system/asimov-waha.timer >/dev/null <<UNIDADE
+[Unit]
+Description=Confere toda semana se saiu versão nova da WAHA
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 America/Sao_Paulo
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIDADE
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl enable --now asimov-waha.timer >/dev/null 2>&1
+}
+
+timer_waha_ligado() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  $SUDO systemctl is-enabled asimov-waha.timer >/dev/null 2>&1
+}
+
+# agentes_waha_pareados: ids dos agentes cujo número está conectado agora, um por linha.
+agentes_waha_pareados() {
+  local lista linha
+  api GET /admin/agentes
+  [ "$API_STATUS" = 200 ] || return 0
+  lista=$(jq -c '[.[] | select(.canal == "waha" and .ativo)]' <<<"$API_RESPOSTA")
+  while IFS= read -r linha; do
+    api GET "$(caminho_do_agente "$linha")/waha"
+    if [ "$API_STATUS" = 200 ] && [ "$(jq -r '.pareado' <<<"$API_RESPOSTA")" = true ]; then
+      jq -r '.id' <<<"$linha"
+    fi
+  done < <(jq -c '.[]' <<<"$lista")
+  return 0
+}
+
+# espera_numeros_voltarem IDS SEGUNDOS: 0 quando todos voltaram a ficar conectados.
+espera_numeros_voltarem() {
+  local ids=$1 limite=$2 passados=0 voltaram
+  [ -n "$ids" ] || return 0
+  while [ "$passados" -lt "$limite" ]; do
+    voltaram=$(agentes_waha_pareados)
+    if [ -z "$(comm -23 <(sort <<<"$ids") <(sort <<<"$voltaram"))" ]; then
+      return 0
+    fi
+    sleep 5
+    passados=$((passados + 5))
+  done
+  return 1
+}
+
+sobe_waha_de_novo() { dc up -d --wait waha; }
+
+# atualiza_waha [--silencioso]: troca a imagem da WAHA pela versão nova, se houver, e volta para a
+# anterior se algum número que estava conectado não voltar. O timer chama com --silencioso.
+# Deixa o resultado no estado: waha_checado, waha_versao e waha_aviso (lido pelo menu).
+atualiza_waha() {
+  local silencioso=${1:-} json atual nova pareados
+  atual=$(env_get VERSAO_WAHA)
+  [ -n "$atual" ] || atual=$(versao_waha)
+  json=$(curl -fsSL --max-time 30 "$WAHA_TAGS_URL" 2>/dev/null || true)
+  nova=$(tag_waha_mais_nova "$json" "$(prefixo_waha)")
+  estado_set waha_checado "$(date -Is)"
+
+  if [ -z "$nova" ]; then
+    [ -n "$silencioso" ] || aviso "Não consegui consultar as versões da WAHA agora. Tente mais tarde."
+    return 1
+  fi
+  if [ "$nova" = "$atual" ]; then
+    [ -n "$silencioso" ] || ok "A WAHA já está na versão mais nova ($(destaque "$atual"))."
+    return 0
+  fi
+
+  [ -n "$silencioso" ] || dica "Versão nova: $atual → $nova. A WAHA fica fora do ar por alguns segundos."
+  pareados=$(agentes_waha_pareados)
+  env_set VERSAO_WAHA "$nova"
+  if ! dc pull waha >>"$LOG" 2>&1 || ! sobe_waha_de_novo >>"$LOG" 2>&1; then
+    _volta_waha "$atual" "não consegui subir a WAHA $nova" "$silencioso"
+    return 1
+  fi
+  if ! espera_numeros_voltarem "$pareados" "$WAHA_ESPERA_VOLTAR"; then
+    _volta_waha "$atual" "os números não voltaram a conectar na WAHA $nova" "$silencioso"
+    return 1
+  fi
+
+  estado_set waha_versao "$nova"
+  estado_remove waha_aviso
+  [ -n "$silencioso" ] || ok "WAHA atualizada para $(destaque "$nova")."
+  printf '%s waha atualizada: %s -> %s\n' "$(date -Is)" "$atual" "$nova" >>"$LOG"
+  return 0
+}
+
+# _volta_waha VERSAO MOTIVO SILENCIOSO: desfaz a atualização e deixa o aviso para o menu mostrar.
+_volta_waha() {
+  local anterior=$1 motivo=$2 silencioso=$3
+  env_set VERSAO_WAHA "$anterior"
+  sobe_waha_de_novo >>"$LOG" 2>&1 || true
+  espera_numeros_voltarem "$(agentes_waha_pareados)" 30 || true
+  estado_set waha_aviso "$motivo; voltei para $anterior em $(date -Is)"
+  printf '%s waha: %s; voltei para %s\n' "$(date -Is)" "$motivo" "$anterior" >>"$LOG"
+  [ -n "$silencioso" ] || falha "$motivo. Voltei para $anterior."
+}
+
+# Tela do menu: versão, última conferida, atualização automática e atualizar agora.
+fluxo_waha() {
+  local op
+  secao "WhatsApp (WAHA)"
+  campo "Versão" "$(env_get VERSAO_WAHA)"
+  campo "Conferida" "$(estado_get waha_checado | cut -c1-16 | tr T ' ')"
+  campo "Automática" "$(timer_waha_ligado && echo 'sim, domingo de madrugada' || echo não)"
+  if [ -n "$(estado_get waha_aviso)" ]; then
+    echo
+    aviso "$(estado_get waha_aviso)"
+    dica "Detalhes: source deploy/compose.sh && dc logs waha"
+  fi
+  echo
+  ESC_ESCOLHE=3 escolha op "O que fazer?" \
+    "Procurar versão nova agora" \
+    "$(timer_waha_ligado && echo "Desligar a atualização automática" || echo "Ligar a atualização automática")" \
+    "Voltar"
+  case "$op" in
+    1)
+      echo
+      atualiza_waha || true
+      estado_remove waha_aviso
+      ;;
+    2)
+      if timer_waha_ligado; then
+        $SUDO systemctl disable --now asimov-waha.timer >/dev/null 2>&1 || true
+        ok "Atualização automática desligada. Confira de vez em quando por aqui."
+      else
+        instala_timer_waha
+        ok "Atualização automática ligada: domingo de madrugada."
+      fi
+      ;;
+  esac
 }
 
 # waha_situacao AGENTE_JSON: consulta a sessão. Define WAHA_STATUS, WAHA_QR e WAHA_NUMERO.

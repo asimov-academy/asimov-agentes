@@ -194,6 +194,8 @@ Worker arq, mesmo código do backend, container `worker`:
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
 | `limpar_midia` | cron diário | apaga arquivos de mídia com mais de 90 dias |
 
+Fora do worker, no host: `asimov-waha.timer` (systemd, domingo de madrugada) roda `deploy/atualiza_waha.sh`, que atualiza a imagem da WAHA e volta para a anterior se algum número não reconectar. Fica no host porque atualizar contêiner pede o Docker, e dar o socket do Docker a um contêiner é dar a VPS inteira.
+
 Digitando por canal: WhatsApp pelo indicador de digitação da Cloud API junto da confirmação de leitura; WAHA `startTyping`/`stopTyping` e `sendSeen`; nativo guarda o digitando no Redis para o terminal mostrar; Chatwoot `toggle_typing_status`.
 
 Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persistindo, mensagem curta de expectativa ao contato, registro em Falha e handoff. Nunca resposta inventada.

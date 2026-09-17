@@ -20,6 +20,9 @@ consulta_provedor() {
 ip_publico() { echo 203.0.113.10; }
 # WAHA: o contêiner e o desenho do QR code não existem aqui.
 garante_waha() { ok "WAHA no ar (simulado)"; }
+# Docker Hub e Compose não existem aqui: a tag nova vem de mentira e o `dc` só registra.
+curl() { case "$*" in *hub.docker.com*) echo '{"results":[{"name":"gows-2026.9.1"},{"name":"gows-arm-2026.9.1"},{"name":"gows-2026.8.2"},{"name":"gows-arm-2026.8.2"},{"name":"gows"},{"name":"dev"}]}' ;; *) return 1 ;; esac; }
+dc() { echo "dc $*" >>"$DIR/dc.log"; }
 qrencode() { printf '  [QR code de %s]\n' "${*: -1}"; }
 WAHA_ESPERA_STATUS=0
 ip_do_dominio() { local n; n=$(cat $DIR/n 2>/dev/null || echo 0); echo $((n+1)) > $DIR/n; [ "$n" -ge 2 ] && echo 203.0.113.10 || true; }
@@ -35,7 +38,7 @@ api() {
     "GET /admin/clientes") API_STATUS=200; API_RESPOSTA='[{"id":"c1","nome":"Loja Exemplo"},{"id":"c2","nome":"Padaria Pão Quente"}]' ;;
     "POST /admin/clientes") API_STATUS=201; API_RESPOSTA='{"id":"c9"}' ;;
     "PATCH /admin/clientes/c1/agentes/a1") API_STATUS=200; API_RESPOSTA=$(jq -c --argjson m "$3" '. + $m' <<<'{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}}') ;;
-    "GET /admin/agentes") API_STATUS=200; API_RESPOSTA='[{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}},{"id":"a2","cliente_id":"c2","nome":"Bia","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok2","modelo_conversa":"groq:llama-3.3-70b-versatile","handoff_destino":{"tipo":"time","id":2,"nome":"Vendas"},"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":3}}]' ;;
+    "GET /admin/agentes") API_STATUS=200; API_RESPOSTA='[{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","ativo":true},{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}},{"id":"a2","cliente_id":"c2","nome":"Bia","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok2","modelo_conversa":"groq:llama-3.3-70b-versatile","handoff_destino":{"tipo":"time","id":2,"nome":"Vendas"},"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":3}}]' ;;
     "GET /admin/agentes?cliente_id=c1") API_STATUS=200; API_RESPOSTA='[]' ;;
     "DELETE /admin/clientes/c1/agentes/a1") API_STATUS=200; API_RESPOSTA='{"removido":true,"canal_desconectado":true}' ;;
     "GET /admin/ferramentas") API_STATUS=200; API_RESPOSTA='[{"nome":"calculadora","rotulo":"Calculadora","descricao":"contas exatas","padrao":false},{"nome":"busca_web","rotulo":"Busca na web","descricao":"pesquisa na internet","padrao":false}]' ;;
@@ -90,3 +93,8 @@ jq -c . "$DIR/criado_waha"
 AGENTE='{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","handoff_destino":{"tipo":"grupo","chat_id":"120363111@g.us","nome":"Atendimento Loja Exemplo"},"retomada_automatica_horas":4}'
 com_voltar edita_waha
 jq -c . "$DIR/patch_waha"
+# Atualização da WAHA: tag nova no Docker Hub, troca a versão e registra.
+env_set WAHA_ATIVA 1
+env_set VERSAO_WAHA gows-2026.8.2
+com_voltar fluxo_waha
+printf 'VERSAO_WAHA=%s\n' "$(env_get VERSAO_WAHA)"
