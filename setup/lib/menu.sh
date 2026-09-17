@@ -21,7 +21,11 @@ mostra_agente() {
         else "; volta com 👍 ou /retomar" end' <<<"$AGENTE")"
       campo "Atende" "$(atende_do_agente "$AGENTE")"
       ;;
-    *) campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")" ;;
+    *)
+      campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")$(jq -r '
+        if .retomada_automatica_horas then "; volta em \(.retomada_automatica_horas) h se ninguém devolver"
+        else "; volta quando a conversa voltar para Pendente" end' <<<"$AGENTE")"
+      ;;
   esac
   campo "Digitação" "$(jq -r '"\(.digitacao_caracteres_por_segundo) caracteres/s, até \(.digitacao_maximo_segundos) s por mensagem"' <<<"$AGENTE")"
   campo "Ferramentas" "$(jq -r '(.ferramentas // []) | if length == 0 then "nenhuma" else map({calculadora: "calculadora", busca_web: "busca na web"}[.] // .) | join(", ") end' <<<"$AGENTE")"
@@ -187,10 +191,12 @@ conecta_canal() {
 conecta_chatwoot() {
   local nome=$1 corpo rapido=""
   escolhe_caixa_chatwoot
+  pergunta_retomada 4 chatwoot
   ritmo_do_whatsapp && rapido=1
 
   corpo=$(jq -n --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
-    '{canal: "chatwoot", conexao: $conexao, handoff_destino: $destino}')
+    --argjson horas "$RETOMADA_HORAS" \
+    '{canal: "chatwoot", conexao: $conexao, handoff_destino: $destino, retomada_automatica_horas: $horas}')
   api_com_token POST "$(caminho_do_agente "$AGENTE")/canal" "$corpo" "Criando o bot no Chatwoot…"
   if [ "$API_STATUS" != 200 ]; then
     RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")

@@ -196,6 +196,7 @@ async def conectar_canal(
     canal: str,
     conexao: dict[str, Any],
     handoff_destino: dict[str, Any] | None,
+    retomada_automatica_horas: int | None = None,
 ) -> Agente:
     """Liga num canal externo um agente criado sem canal (nativo).
 
@@ -214,6 +215,7 @@ async def conectar_canal(
     if not novo.externo:
         raise CampoInvalido(f"{canal} não é um canal para ligar o agente")
     destino = novo.valida_destino_handoff(handoff_destino)
+    _valida_retomada(novo, retomada_automatica_horas)
     token = cripto.decifra_texto(agente.token_webhook_cifrado)
     acesso: dict[str, Any] = {}
 
@@ -228,6 +230,7 @@ async def conectar_canal(
         agente.canal = canal
         agente.credenciais_cifradas = cripto.cifra(credenciais_ok)
         agente.handoff_destino = destino
+        agente.retomada_automatica_horas = retomada_automatica_horas
         await sessao.commit()
     except Exception:
         await sessao.rollback()

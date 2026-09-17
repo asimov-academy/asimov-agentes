@@ -294,10 +294,13 @@ fluxo_agente_chatwoot() {
   pergunta nome "Nome do agente"
   escolhe_empresa "$CHATWOOT_CONTA_NOME"
   escolhe_ferramentas ferramentas ""
+  pergunta_retomada 4 chatwoot
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
-      --argjson f "$ferramentas" '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao, ferramentas: $f}')
+      --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" \
+      '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao, ferramentas: $f,
+        retomada_automatica_horas: $horas}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando o bot no Chatwoot…"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
@@ -423,7 +426,9 @@ configura_handoff() {
     return 0
   fi
   escolhe_destino_handoff "$conta"
-  corpo=$(jq -n --argjson destino "$HANDOFF_DESTINO" '{handoff_destino: $destino}')
+  pergunta_retomada "$(jq -r '.retomada_automatica_horas // 0' <<<"$agente")" chatwoot
+  corpo=$(jq -n --argjson destino "$HANDOFF_DESTINO" --argjson horas "$RETOMADA_HORAS" \
+    '{handoff_destino: $destino, retomada_automatica_horas: $horas}')
   api PATCH "$(caminho_do_agente "$agente")" "$corpo"
   if [ "$API_STATUS" = 200 ]; then
     AGENTE=$API_RESPOSTA

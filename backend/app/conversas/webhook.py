@@ -149,6 +149,18 @@ async def receber(
         except Exception as erro:
             log.error("pausa_por_intervencao_falhou", erro=repr(erro))
             return Response(status_code=500)
+        # O canal fica sabendo pelo worker: aqui só se grava e agenda.
+        fila = getattr(request.app.state, "fila", None)
+        try:
+            if fila is not None:
+                await fila.enqueue_job(
+                    "assumir_conversa",
+                    str(agente.cliente_id),
+                    str(conversa.id),
+                    evento.autor_externo,
+                )
+        except Exception as erro:
+            log.error("assumir_no_canal_nao_agendado", erro=repr(erro))
 
     if evento.acao is Acao.PROCESSAR:
         fila = getattr(request.app.state, "fila", None)

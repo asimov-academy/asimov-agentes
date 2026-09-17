@@ -228,7 +228,11 @@ async def test_desconectar_apaga_o_bot_com_o_token_do_administrador() -> None:
 async def test_devolver_ao_agente_marca_pendente_com_token_do_bot() -> None:
     canal = ChatwootHttp(lambda req, corpo: httpx.Response(200, json={}))
     await canal.devolver_ao_agente(CREDENCIAIS, "12")
-    assert canal.chamadas == [("POST", "/api/v1/accounts/1/conversations/12/toggle_status", {"status": "pending"})]
+    # Pendente é o agente conduzindo; a atribuição sai junto, senão a conversa fica com dono na fila.
+    assert canal.chamadas == [
+        ("POST", "/api/v1/accounts/1/conversations/12/toggle_status", {"status": "pending"}),
+        ("POST", "/api/v1/accounts/1/conversations/12/assignments", {"assignee_id": 0}),
+    ]
 
 
 async def test_renomear_troca_o_nome_do_bot_com_token_do_administrador() -> None:

@@ -167,7 +167,8 @@ async def manda(
 
 
 async def roda_turno(fila: Any, redis: Any) -> str:
-    _, cliente_id, conversa_id, token = fila.jobs[-1]
+    """O último turno agendado; a fila também leva jobs de outro tipo (assumir_conversa)."""
+    _, cliente_id, conversa_id, token = [j for j in fila.jobs if j[0] == "processar_turno"][-1]
     await redis.set(f"buffer:{conversa_id}", token)
     return await turno.processar_turno({"redis": redis}, cliente_id, conversa_id, token)
 
@@ -219,12 +220,13 @@ async def test_remover_agente_desconecta_o_numero(http, waha) -> None:  # type: 
     assert waha.desconectadas == [waha.sessao]
 
 
-async def test_retomada_por_tempo_nao_vale_no_chatwoot(http, canal) -> None:  # type: ignore[no-untyped-def]
+async def test_retomada_por_tempo_nao_vale_no_terminal(http) -> None:  # type: ignore[no-untyped-def]
+    """No terminal quem conduz é o operador: não há atendente que esqueça de devolver."""
     conta = (await http.post("/admin/clientes", json={"nome": "Loja Exemplo"}, headers=ADMIN)).json()
 
     resp = await http.post(
         f"/admin/clientes/{conta['id']}/agentes",
-        json={"nome": "Ana", "canal": "chatwoot", "conexao": CONEXAO_EXEMPLO, "retomada_automatica_horas": 3},
+        json={"nome": "Ana", "canal": "nativo", "retomada_automatica_horas": 3},
         headers=ADMIN,
     )
 

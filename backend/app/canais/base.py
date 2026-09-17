@@ -70,6 +70,8 @@ class Evento:
     """Código do handoff em RETOMAR_POR_CODIGO: a conversa a retomar é achada por ele."""
     por: str | None = None
     """Quem devolveu a conversa ao agente, para o histórico do handoff. Vazio vale o canal."""
+    autor_externo: str | None = None
+    """Quem escreveu, no canal, quando não é o contato: o atendente que assumiu a conversa."""
     contato_externo: str | None = None
     contato_nome: str | None = None
     contato_telefone: str | None = None
@@ -86,7 +88,7 @@ class Canal(Protocol):
     responde_200_em_assinatura_invalida: bool
     """True quando o canal pune resposta de erro (Chatwoot silencia o bot na conversa)."""
     retoma_por_tempo: bool
-    """True quando o agente volta sozinho depois de `retomada_automatica_horas` (canais diretos)."""
+    """True quando o agente pode voltar sozinho depois de `retomada_automatica_horas`."""
     pede_acesso_do_operador: bool
     """False quando criar, renomear e remover não precisam de token do operador (nativo)."""
     externo: bool
@@ -189,7 +191,18 @@ class Canal(Protocol):
         ...
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
-        """Operador retomou pelo menu: o canal volta a deixar o agente falar na conversa."""
+        """O canal volta a deixar o agente falar na conversa: retomada pelo menu, por comando ou
+        por tempo. No Chatwoot, conversa pendente e sem atendente atribuído."""
+        ...
+
+    async def assumir_no_canal(
+        self, credenciais: dict[str, Any], conversa_externa: str, autor_externo: str | None
+    ) -> None:
+        """Uma pessoa da equipe assumiu a conversa: deixa isso à vista no canal.
+
+        No Chatwoot, conversa aberta e atribuída a quem respondeu. Canal em que a conversa não tem
+        dono (WhatsApp) não faz nada. Roda no worker, nunca dentro do webhook.
+        """
         ...
 
     async def baixar_midia(

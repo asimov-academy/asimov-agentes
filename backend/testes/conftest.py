@@ -90,7 +90,9 @@ class ChatwootFalso(Chatwoot):
         self.transferencias: list[tuple[str, dict[str, Any] | None, str]] = []
         self.transferir_quebra = False
         self.desconectar_recusa = False
+        self.devolver_recusa = False
         self.devolvidas: list[str] = []
+        self.assumidas: list[tuple[str, str | None]] = []
         self.renomeados: list[str] = []
         self.tokens_usados: list[str | None] = []
 
@@ -123,8 +125,14 @@ class ChatwootFalso(Chatwoot):
         self.renomeados.append(nome)
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
+        if self.devolver_recusa:
+            raise ConnectionError("chatwoot fora do ar")
         self.devolvidas.append(conversa_externa)
         self.status = "pending"
+
+    async def assumir_no_canal(self, credenciais: dict[str, Any], conversa_externa: str, autor_externo: str | None) -> None:
+        self.assumidas.append((conversa_externa, autor_externo))
+        self.status = "open"
 
     async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str, status: str) -> bool:
         return self.status == "pending"

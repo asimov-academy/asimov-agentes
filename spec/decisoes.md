@@ -2,6 +2,16 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Atendente assume a conversa no Chatwoot, com prazo de volta (v0.11.0)
+
+- **Pedido do operador**: no Chatwoot, mensagem de atendente (outgoing que não é do bot) tem de abrir a conversa, tirar o bot e atribuir a quem respondeu; passado o prazo do onboarding, a conversa volta para Pendente com o bot conduzindo.
+- **Mesma mecânica da WAHA**: o evento virou `Acao.PAUSAR`, que grava a fala como de humano e abre o handoff sem IA e sem aviso, com `retomar_em` pelo `retomada_automatica_horas` do agente. O que muda por canal é o efeito visível, que fica no canal: `assumir_no_canal` (Chatwoot: status aberto e atribuição a quem escreveu; WhatsApp: nada, porque a conversa não tem dono).
+- **O canal é avisado pelo worker**, não pelo webhook: a regra de só validar, gravar e agendar continua valendo, e o Chatwoot silencia o bot se o webhook demorar. Job novo `assumir_conversa`.
+- **`retomada_automatica_horas` passou a valer no Chatwoot** (`retoma_por_tempo` agora é False só no nativo, onde não existe atendente). É a rede de segurança para a conversa que o atendente esqueceu de devolver.
+- **A retomada por tempo devolve no canal antes de fechar o handoff**: `devolver_ao_agente` (Chatwoot: pendente e sem atribuição) e só então o handoff fecha. Se o canal recusar, o handoff fica aberto e a tentativa vai para dez minutos depois, com falha registrada: fechar sem o canal deixar criaria um agente achando que fala onde está calado.
+- **Desatribuir junto da devolução**: conversa pendente com dono confunde a fila de quem olha o Chatwoot, e quem conduz dali em diante é o bot.
+- A pergunta das horas entrou na criação do agente Chatwoot, em Editar agente > Handoff e ao ligar um agente nativo no Chatwoot, com o texto do canal (lá a devolução normal é voltar para Pendente).
+
 ## 2026-09-17: Pessoa da equipe assume a conversa, joinha devolve (v0.10.0)
 
 - **Pedido do operador**: quando alguém da empresa responde pelo próprio aparelho, o agente tem de calar na hora, respeitando o tempo de retomada do onboarding, e voltar quando essa pessoa reagir com 👍 numa mensagem.
