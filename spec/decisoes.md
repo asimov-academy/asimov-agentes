@@ -6,7 +6,7 @@ Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arqu
 
 - **Agente renomeado não podia ser removido**: a confirmação comparava com o slug, que guarda o nome de quando o agente foi criado. Agora vale o nome atual ou o original. O menu mostra o nome a digitar e, se não conferir, o que foi digitado.
 - **Renomear pelo menu pode trocar o nome do bot no Chatwoot**, com o token de administrador (opcional). `PATCH` do agente aceita `conexao`; o canal ganhou `renomear`. Se o Chatwoot recusar, nada é salvo. Substitui "o bot mantém o nome antigo" da v0.5.0. spec/arquitetura.md.
-- **`asimov teclas`**: mostra os bytes de cada tecla e o intervalo entre eles. O operador ainda vê o menu voltar ao usar Shift no terminal do navegador da Hostinger, sem reprodução local: a correção seguinte depende dessa leitura.
+- **O Shift não era a causa.** Lido no terminal do navegador da Hostinger: Shift sozinho não manda nada, Shift+T manda `T` e setas chegam inteiras. A volta ao menu era a confirmação recusada seguida da pausa. O diagnóstico de teclas usado para descobrir isso saiu na v0.5.5.
 
 ## 2026-09-16: Shift não volta mais ao menu (v0.5.3)
 

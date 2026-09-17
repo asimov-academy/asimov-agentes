@@ -63,7 +63,7 @@ Fale com o operador em português, curto e direto.
 - `exec 3<arquivo 2>/dev/null` silencia o stderr do script inteiro; use `{ exec 3<arquivo; } 2>/dev/null`.
 - Helpers de tela (`pergunta`, `escolha`, `le_tecla`) usam locais com prefixo `__`; nome igual ao da variável de quem chama quebra o `printf -v`.
 - Setas só com terminal (`tem_terminal`); com `ASIMOV_TTY` apontando para arquivo a leitura é por linha. Teste de teclas: pty com `pyte`, esperando o script carregar antes da primeira tecla.
-- Terminal no navegador (Hostinger) entrega sequência de escape atrasada: Esc sozinho só depois de `ESPERA_SEQUENCIA`; teste teclas com bash 5, não o 3.2 do macOS.
+- Teste teclas com bash 5 (o da VPS), não o 3.2 do macOS: o tempo de espera do Esc é outro.
 - Ação do menu roda em `com_voltar` (subshell, para o Esc voltar): variável alterada lá dentro some, a não ser que saia por `devolve`.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.

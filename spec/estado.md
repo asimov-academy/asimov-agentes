@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.5.4` em `asimov-academy/asimov-agentes` (público). Escolhas com setas e telas limpas desde a v0.5.1; Esc volta à tela anterior desde a v0.5.2. `main` tem também o README.
+- `v0.5.5` em `asimov-academy/asimov-agentes` (público). Escolhas com setas e telas limpas desde a v0.5.1; Esc volta à tela anterior desde a v0.5.2. `main` tem também o README.
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `ASIMOV_ATUALIZAR=1` antes do mesmo comando, ou `asimov atualizar`.
 

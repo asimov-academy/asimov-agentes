@@ -167,7 +167,7 @@ pergunta_secreta() {
 tem_terminal() { [ -t 3 ] && [ -t 1 ]; }
 
 # Esc sozinho é um byte só; setas e teclas com Shift chegam como Esc seguido de uma sequência.
-# Terminal no navegador (painel da Hostinger) pode entregar a sequência atrasada: a espera cobre isso.
+# A espera cobre sequência que chega atrasada em conexão lenta.
 ESPERA_SEQUENCIA=1
 [ "${BASH_VERSINFO[0]}" -ge 4 ] && ESPERA_SEQUENCIA=0.4
 SAIDA_VOLTAR=20
@@ -384,29 +384,6 @@ confirma() {
   printf ': %s\n' "$([ "$__sim" -eq 1 ] && echo Sim || echo Não)"
   printf '\033[?25h'
   [ "$__sim" -eq 1 ]
-}
-
-# diagnostico_teclas: mostra os bytes que o terminal manda em cada tecla e o intervalo entre eles.
-# Serve para entender terminais que se comportam diferente (painel da Hostinger no navegador).
-diagnostico_teclas() {
-  local __byte __grupo __inicio __agora __tempos
-  info "Aperte, uma de cada vez: Shift sozinho, Shift+T, Esc, seta para baixo, Backspace."
-  dica "Cada linha é o que chegou de uma vez. Digite q para sair."
-  echo
-  while true; do
-    IFS= read -rsn1 -d '' __byte <&3 || break
-    __grupo=$__byte
-    __inicio=${EPOCHREALTIME:-0}
-    # Junta o que chegar em até 1 s seguido, com o tempo de cada byte.
-    __tempos=""
-    while IFS= read -rsn1 -d '' -t 1 __byte <&3; do
-      __agora=${EPOCHREALTIME:-0}
-      __grupo+=$__byte
-      __tempos+=" +$(( (${__agora/[.,]/} - ${__inicio/[.,]/}) / 1000 ))ms"
-    done
-    [ "$__grupo" = q ] && break
-    printf '  %q%s\n' "$__grupo" "${__tempos:+  ${CINZA}bytes seguintes:$__tempos${NORMAL}}"
-  done
 }
 
 # pausa: segura a tela até uma tecla, antes de o menu limpar o que foi mostrado.
