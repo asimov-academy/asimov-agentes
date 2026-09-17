@@ -173,21 +173,24 @@ fluxo_novo_agente() {
   esac
 }
 
-# Nome → empresa → cria. Nada para conectar: serve para testar prompt e ferramentas no terminal.
+# Nome → empresa → ajustes → cria. Nada para conectar: serve para testar prompt e ferramentas no terminal.
 fluxo_agente_nativo() {
   local nome corpo
   AGENTE_CANAL=nativo
   dica "Mesmo buffer, digitando, ferramentas, consumo e handoff dos outros canais; não atende ninguém de fora."
   pergunta nome "Nome do agente"
   escolhe_empresa ""
+  configura_nativo_novo
   while true; do
-    corpo=$(jq -n --arg nome "$nome" '{nome: $nome, canal: "nativo"}')
+    corpo=$(jq -n --arg nome "$nome" --argjson ajustes "$AJUSTES_AGENTE" '{nome: $nome, canal: "nativo"} + $ajustes')
     api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
       AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
       AGENTE=$API_RESPOSTA
+      echo
       ok "Agente $(destaque "$nome") criado ${CINZA}· nativo · $EMPRESA_NOME${NORMAL}"
+      dica "Prompt: prompts/$(jq -r .arquivo_prompt <<<"$API_RESPOSTA") (vale na próxima mensagem)"
       return 0
     fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
@@ -197,6 +200,67 @@ fluxo_agente_nativo() {
       erro_fatal "Não consegui criar o agente" "Rode o comando de novo."
     fi
   done
+}
+
+# configura_nativo_novo: ritmo, mensagens, ferramentas e modelo de resposta. Define AJUSTES_AGENTE (JSON).
+# O padrão dos canais (buffer de 8 s e digitação de uma pessoa) deixa o teste no terminal lento.
+configura_nativo_novo() {
+  local op buffer velocidade maximo mensagens ferramentas modelo="" provedor
+  local -a provedores=()
+  echo
+  dica "Ajustes do agente. Tudo muda depois em Editar agente."
+  dica "Rápido: responde 2 s depois da última mensagem, 1 s de digitando por mensagem."
+  dica "Como no WhatsApp: espera 8 s e digita no ritmo de uma pessoa (até 20 s por mensagem)."
+  echo
+  escolha op "Ritmo das respostas" "Rápido, para testar" "Como no WhatsApp" "Escolher os tempos"
+  case "$op" in
+    1) buffer=2 velocidade=30 maximo=1 ;;
+    2) buffer=8 velocidade=6 maximo=20 ;;
+    *)
+      pergunta_numero buffer "Segundos de buffer (1 a 60)" 1 60 2
+      pergunta_numero velocidade "Caracteres digitados por segundo (1 a 30)" 1 30 6
+      pergunta_numero maximo "Máximo de segundos digitando por mensagem (1 a 30)" 1 30 20
+      ;;
+  esac
+  pergunta_numero mensagens "Máximo de mensagens por resposta (1 a 10)" 1 10 3
+  escolhe_ferramentas ferramentas ""
+  if ! confirma "Modelo de resposta padrão ($(env_get MODELO_CONVERSA))?"; then
+    while IFS= read -r provedor; do provedores+=("$provedor"); done < <(provedores_com_chave)
+    escolhe_modelo_em modelo "Resposta ao contato" conversa "" "${provedores[@]}"
+  fi
+  AJUSTES_AGENTE=$(jq -n --argjson b "$buffer" --argjson v "$velocidade" --argjson m "$maximo" \
+    --argjson n "$mensagens" --argjson f "$ferramentas" --arg modelo "$modelo" \
+    '{buffer_segundos: $b, digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m,
+      max_mensagens_por_resposta: $n, ferramentas: $f}
+     + (if $modelo == "" then {} else {modelos: {modelo_conversa: $modelo}} end)')
+}
+
+# provedores_com_chave: um por linha. A plataforma não enxerga chave nova sem reconstruir.
+provedores_com_chave() {
+  local provedor
+  for provedor in openai anthropic gemini groq; do
+    [ -z "$(env_get "$(variavel_da_chave "$provedor")")" ] || echo "$provedor"
+  done
+}
+
+# escolhe_ferramentas VAR JSON_DO_AGENTE: lista de marcar com o catálogo da API; devolve o JSON dos nomes.
+# Sem agente, começam marcadas as padrão.
+escolhe_ferramentas() {
+  local __var=$1 __agente=${2:-} __catalogo __ligadas __ferramentas_marcadas __escolhidas="[]" __numero __linha
+  local -a __rotulos=()
+  api GET /admin/ferramentas
+  exige_api
+  __catalogo=$API_RESPOSTA
+  while IFS= read -r __linha; do __rotulos+=("$__linha"); done \
+    < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[] | "\(.rotulo)  \($cinza)\(.descricao)\($normal)"' <<<"$__catalogo")
+  __ligadas=$(jq -r --arg agente "$__agente" '[.[] | if ($agente == "") then (if .padrao then 1 else 0 end)
+    else (if (.nome as $n | $agente | fromjson | .ferramentas | index($n)) then 1 else 0 end) end] | join(" ")' <<<"$__catalogo")
+  echo
+  marca __ferramentas_marcadas "Ferramentas do agente" "$__ligadas" "${__rotulos[@]}"
+  for __numero in $__ferramentas_marcadas; do
+    __escolhidas=$(jq -c --argjson catalogo "$__catalogo" --argjson i "$((__numero - 1))" '. + [$catalogo[$i].nome]' <<<"$__escolhidas")
+  done
+  printf -v "$__var" '%s' "$__escolhidas"
 }
 
 # Chatwoot → conta → caixa → handoff → nome → empresa → cria.

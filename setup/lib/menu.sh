@@ -40,9 +40,7 @@ salva_agente() {
 escolhe_modelo_do_agente() {
   local op campo funcao rotulo opcional="" provedor
   local -a provedores=()
-  for provedor in openai anthropic gemini groq; do
-    [ -n "$(env_get "$(variavel_da_chave "$provedor")")" ] && provedores+=("$provedor")
-  done
+  while IFS= read -r provedor; do provedores+=("$provedor"); done < <(provedores_com_chave)
   echo
   escolha op "Qual modelo" \
     "Resposta ao contato  ${CINZA}$(jq -r '.modelo_conversa' <<<"$AGENTE")${NORMAL}" \
@@ -141,20 +139,8 @@ edita_digitacao() {
 }
 
 edita_ferramentas() {
-  local catalogo ligadas marcadas escolhidas numero linha
-  local -a rotulos=()
-  api GET /admin/ferramentas
-  exige_api
-  catalogo=$API_RESPOSTA
-  while IFS= read -r linha; do rotulos+=("$linha"); done \
-    < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[] | "\(.rotulo)  \($cinza)\(.descricao)\($normal)"' <<<"$catalogo")
-  ligadas=$(jq -r --argjson agente "$AGENTE" '[.[] | if (.nome as $n | $agente.ferramentas | index($n)) then 1 else 0 end] | join(" ")' <<<"$catalogo")
-  echo
-  marca marcadas "Ferramentas do agente" "$ligadas" "${rotulos[@]}"
-  escolhidas="[]"
-  for numero in $marcadas; do
-    escolhidas=$(jq -c --argjson catalogo "$catalogo" --argjson i "$((numero - 1))" '. + [$catalogo[$i].nome]' <<<"$escolhidas")
-  done
+  local escolhidas
+  escolhe_ferramentas escolhidas "$AGENTE"
   salva_agente "$(jq -n --argjson f "$escolhidas" '{ferramentas: $f}')"
 }
 
