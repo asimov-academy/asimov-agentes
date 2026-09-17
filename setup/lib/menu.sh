@@ -13,7 +13,11 @@ mostra_agente() {
   campo "Resumo" "$(jq -r '.modelo_auxiliar' <<<"$AGENTE")"
   campo "Visão" "$(jq -r '.modelo_visao' <<<"$AGENTE")"
   campo "Áudio" "$(jq -r '.modelo_transcricao' <<<"$AGENTE")"
-  campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
+  if [ "$(jq -r '.canal' <<<"$AGENTE")" = nativo ]; then
+    campo "Handoff" "aparece na conversa do terminal"
+  else
+    campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
+  fi
   campo "Digitação" "$(jq -r '"\(.digitacao_caracteres_por_segundo) caracteres/s, até \(.digitacao_maximo_segundos) s por mensagem"' <<<"$AGENTE")"
   campo "Ferramentas" "$(jq -r '(.ferramentas // []) | if length == 0 then "nenhuma" else map({calculadora: "calculadora", busca_web: "busca na web"}[.] // .) | join(", ") end' <<<"$AGENTE")"
 }
@@ -64,6 +68,7 @@ escolhe_modelo_do_agente() {
 # Cada mudança roda em `com_voltar`: Esc no meio volta para a ficha sem salvar.
 fluxo_editar_agente() {
   local op
+  local -a rotulos acoes
   secao "Editar agente"
   if ! escolhe_agente; then
     pausa
@@ -79,25 +84,28 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    ESC_ESCOLHE=8 escolha op "O que mudar?" "Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" \
-      "Ferramentas" "Modelos" "Handoff" "Voltar"
-    case "$op" in
-      1) com_voltar edita_nome ;;
-      2) com_voltar edita_buffer ;;
-      3) com_voltar edita_mensagens ;;
-      4) com_voltar edita_digitacao ;;
-      5) com_voltar edita_ferramentas ;;
-      6) com_voltar edita_modelo ;;
-      7) com_voltar edita_handoff ;;
-      *) return 0 ;;
-    esac
+    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Modelos")
+    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_modelo)
+    # No nativo o handoff aparece no próprio terminal: não há destino para escolher.
+    if [ "$(jq -r '.canal' <<<"$AGENTE")" != nativo ]; then
+      rotulos+=("Handoff")
+      acoes+=(edita_handoff)
+    fi
+    rotulos+=("Voltar")
+    ESC_ESCOLHE=${#rotulos[@]} escolha op "O que mudar?" "${rotulos[@]}"
+    [ "$op" -lt "${#rotulos[@]}" ] || return 0
+    com_voltar "${acoes[$((op - 1))]}"
     [ "$FALHOU" = 0 ] || pausa
   done
 }
 
 edita_nome() {
   local valor
-  dica "Muda também o nome do bot, que aparece nas mensagens no Chatwoot. A pasta do prompt continua a mesma."
+  if [ "$(jq -r '.canal' <<<"$AGENTE")" = chatwoot ]; then
+    dica "Muda também o nome do bot, que aparece nas mensagens no Chatwoot. A pasta do prompt continua a mesma."
+  else
+    dica "A pasta do prompt continua a mesma."
+  fi
   pergunta valor "Nome" "$(jq -r '.nome' <<<"$AGENTE")"
   salva_agente "$(jq -n --arg v "$valor" '{nome: $v}')"
   if [ "$API_STATUS" = 422 ]; then
@@ -161,14 +169,21 @@ edita_handoff() {
 }
 
 fluxo_remover_agente() {
-  local nome confirmacao corpo cliente_id
+  local nome confirmacao corpo cliente_id canal aguarde="Removendo…"
   secao "Remover agente"
   escolhe_agente || return 0
   nome=$(jq -r '.nome' <<<"$AGENTE")
   cliente_id=$(jq -r '.cliente_id' <<<"$AGENTE")
+  canal=$(jq -r '.canal' <<<"$AGENTE")
   echo
-  aviso "$(destaque "$nome") para de responder na hora e o webhook deixa de valer."
-  dica "O bot sai do Chatwoot. Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
+  if [ "$canal" = chatwoot ]; then
+    aviso "$(destaque "$nome") para de responder na hora e o webhook deixa de valer."
+    dica "O bot sai do Chatwoot. Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
+    aguarde="Removendo e apagando o bot no Chatwoot…"
+  else
+    aviso "$(destaque "$nome") deixa de conversar no terminal."
+    dica "Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
+  fi
   dica "volta se você criar um agente com o mesmo nome nessa empresa."
   echo
   pergunta confirmacao "Para confirmar, digite $(destaque "$nome")"
@@ -178,7 +193,7 @@ fluxo_remover_agente() {
   fi
 
   corpo=$(jq -n --arg c "$confirmacao" '{confirmacao: $c}')
-  api_com_token DELETE "$(caminho_do_agente "$AGENTE")" "$corpo" "Removendo e apagando o bot no Chatwoot…"
+  api_com_token DELETE "$(caminho_do_agente "$AGENTE")" "$corpo" "$aguarde"
   if [ "$API_STATUS" = 422 ]; then
     falha "$(detalhe_erro "$API_RESPOSTA")"
     confirma "Remover mesmo assim, deixando o bot no Chatwoot?" || return 0
@@ -291,15 +306,16 @@ menu_operador() {
   local op
   while true; do
     secao "Menu"
-    ESC_ESCOLHE=7 escolha op "O que fazer?" "Criar agente" "Listar agentes" "Editar agente" "Remover agente" \
-      "Ver consumo e falhas" "Token do Chatwoot" "Sair"
+    ESC_ESCOLHE=8 escolha op "O que fazer?" "Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" \
+      "Remover agente" "Ver consumo e falhas" "Token do Chatwoot" "Sair"
     case "$op" in
       1) com_voltar acao_novo_agente ;;
-      2) com_voltar com_pausa lista_agentes ;;
-      3) com_voltar fluxo_editar_agente ;;
-      4) com_voltar com_pausa fluxo_remover_agente ;;
-      5) com_voltar com_pausa mostra_consumo ;;
-      6) com_voltar com_pausa fluxo_token_chatwoot ;;
+      2) com_voltar fluxo_conversar ;;
+      3) com_voltar com_pausa lista_agentes ;;
+      4) com_voltar fluxo_editar_agente ;;
+      5) com_voltar com_pausa fluxo_remover_agente ;;
+      6) com_voltar com_pausa mostra_consumo ;;
+      7) com_voltar com_pausa fluxo_token_chatwoot ;;
       *) return 0 ;;
     esac
     [ "$FALHOU" = 0 ] || pausa
@@ -338,10 +354,22 @@ com_pausa() {
 novo_agente() {
   secao "Novo agente"
   fluxo_novo_agente
-  dica "Mande uma mensagem na caixa de entrada para testar."
+  if [ "$AGENTE_CANAL" = chatwoot ]; then
+    dica "Mande uma mensagem na caixa de entrada para testar."
+    return 0
+  fi
+  echo
+  if confirma "Conversar com $AGENTE_NOME agora?"; then
+    conversa_no_terminal
+    AGENTE_CONVERSOU=1
+  else
+    dica "Para conversar depois: asimov conversar"
+  fi
 }
 
 acao_novo_agente() {
+  AGENTE_CONVERSOU=""
   novo_agente
-  pausa
+  # Quem saiu da conversa já leu tudo: volta direto ao menu.
+  [ -n "$AGENTE_CONVERSOU" ] || pausa
 }

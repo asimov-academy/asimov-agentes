@@ -9,7 +9,8 @@ source "$RAIZ_PROJETO/setup/lib/base.sh"
 ajuda() {
   printf '\n  %sasimov%s %sv%s%s\n\n' "$NEGRITO" "$NORMAL" "$CINZA" "$VERSAO" "$NORMAL"
   printf '    %sasimov%s        abre o menu\n' "$CIANO" "$NORMAL"
-  printf '    %snovo-agente%s   cria um agente no Chatwoot\n' "$CIANO" "$NORMAL"
+  printf '    %snovo-agente%s   cria um agente no Chatwoot ou nativo\n' "$CIANO" "$NORMAL"
+  printf '    %sconversar%s     conversa com um agente nativo aqui no terminal\n' "$CIANO" "$NORMAL"
   printf '    %sagentes%s       lista os agentes, empresas e webhooks\n' "$CIANO" "$NORMAL"
   printf '    %seditar%s        muda nome, buffer, mensagens, modelos ou handoff de um agente\n' "$CIANO" "$NORMAL"
   printf '    %sremover%s       remove um agente\n' "$CIANO" "$NORMAL"
@@ -37,6 +38,7 @@ case "${1:-menu}" in
     menu_operador
     ;;
   novo-agente) roda novo_agente ;;
+  conversar) roda fluxo_conversar ;;
   agentes) roda lista_agentes ;;
   editar) roda fluxo_editar_agente ;;
   remover) roda fluxo_remover_agente ;;

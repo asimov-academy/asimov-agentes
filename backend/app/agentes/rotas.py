@@ -32,7 +32,8 @@ class NovoAgente(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     canal: str
     conexao: dict[str, Any] = Field(
-        description="Acesso do operador ao canal (Chatwoot: url, conta, caixas e, se não houver guardado, token_admin). O token que funcionar fica guardado cifrado."
+        default_factory=dict,
+        description="Acesso do operador ao canal (Chatwoot: url, conta, caixas e, se não houver guardado, token_admin; nativo: nada). O token que funcionar fica guardado cifrado.",
     )
     modelos: Modelos = Modelos()
     handoff_destino: dict[str, Any] | None = None
