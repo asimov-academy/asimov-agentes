@@ -63,11 +63,12 @@ ARTE
   printf '%s  %sv%s%s\n\n' "$NORMAL" "$CINZA" "$VERSAO" "$NORMAL"
 }
 
-# secao "Título": cabeçalho de uma linha.
+# secao "Título": tela nova. Limpa tudo, redesenha o banner e mostra o cabeçalho de uma linha.
 secao() {
   local traco
+  banner_asimov
   traco=$(printf '%*s' $((56 - ${#1})) '' | tr ' ' '-')
-  printf '\n%s%s▍ %s %s%s%s\n\n' "$CIANO" "$NEGRITO" "$1" "$NORMAL$CINZA" "$traco" "$NORMAL"
+  printf '%s%s▍ %s %s%s%s\n\n' "$CIANO" "$NEGRITO" "$1" "$NORMAL$CINZA" "$traco" "$NORMAL"
 }
 titulo() { secao "$@"; }
 
@@ -145,8 +146,76 @@ pergunta_secreta() {
   done
 }
 
+# Com terminal, escolhas andam com as setas e confirmam com Enter. Sem terminal (ASIMOV_TTY com
+# arquivo de respostas, usado na simulação), a resposta é uma linha com o número ou S/N.
+tem_terminal() { [ -t 3 ] && [ -t 1 ]; }
+
+if tem_terminal; then
+  trap 'printf "\033[?25h"' EXIT
+fi
+
+# le_tecla VAR: cima, baixo, esquerda, direita, enter, ou o próprio caractere.
+le_tecla() {
+  local __lida="" __sequencia=""
+  if ! IFS= read -rsn1 __lida <&3; then
+    printf '\033[?25h\n'
+    exit 1
+  fi
+  case "$__lida" in
+    "") __lida=enter ;;
+    $'\033')
+      IFS= read -rsn2 -t 1 __sequencia <&3 || true
+      case "$__sequencia" in
+        "[A" | "OA") __lida=cima ;;
+        "[B" | "OB") __lida=baixo ;;
+        "[C" | "OC") __lida=direita ;;
+        "[D" | "OD") __lida=esquerda ;;
+        *) __lida=outra ;;
+      esac
+      ;;
+  esac
+  printf -v "$1" '%s' "$__lida"
+}
+
 # escolha VAR "texto" opção1 opção2 ...: devolve o número escolhido.
 escolha() {
+  local __var=$1 __texto=$2 __atual=1 __tecla __i __item
+  shift 2
+  if ! tem_terminal; then
+    escolha_digitada "$__var" "$__texto" "$@"
+    return 0
+  fi
+  _prompt "$__texto"
+  printf '  %s↑ ↓ e Enter%s\n' "$CINZA" "$NORMAL"
+  printf '\033[?25l'
+  while true; do
+    __i=1
+    for __item in "$@"; do
+      if [ "$__i" -eq "$__atual" ]; then
+        printf '\r\033[K  %s❯%s %s%s%s\n' "$CIANO" "$NORMAL" "$NEGRITO" "$__item" "$NORMAL"
+      else
+        printf '\r\033[K    %s\n' "$__item"
+      fi
+      __i=$((__i + 1))
+    done
+    le_tecla __tecla
+    case "$__tecla" in
+      cima | k) __atual=$((__atual == 1 ? $# : __atual - 1)) ;;
+      baixo | j) __atual=$((__atual == $# ? 1 : __atual + 1)) ;;
+      [1-9]) [ "$__tecla" -le "$#" ] && __atual=$__tecla ;;
+      enter) break ;;
+    esac
+    printf '\033[%sA' "$#"
+  done
+  # A lista vira uma linha só com o que foi escolhido.
+  printf '\033[%sA\r\033[J' "$(($# + 1))"
+  _prompt "$__texto"
+  printf ': %s\n' "${!__atual}"
+  printf '\033[?25h'
+  printf -v "$__var" '%s' "$__atual"
+}
+
+escolha_digitada() {
   local __var=$1 __texto=$2 __resposta __i __item
   shift 2
   _prompt "$__texto"
@@ -168,13 +237,47 @@ escolha() {
   done
 }
 
-# confirma "texto" -> 0 para sim
+# confirma "texto" -> 0 para sim. Setas trocam, Enter confirma, S e N respondem direto.
 confirma() {
-  local __resposta=""
+  local __resposta="" __sim=1 __tecla
+  if ! tem_terminal; then
+    _prompt "$1"
+    printf ' %s(S/n)%s: ' "$CINZA" "$NORMAL"
+    ler __resposta
+    [[ -z "$__resposta" || "$__resposta" =~ ^[SsYy]$ ]]
+    return
+  fi
+  printf '\033[?25l'
+  while true; do
+    printf '\r\033[K'
+    _prompt "$1"
+    if [ "$__sim" -eq 1 ]; then
+      printf '   %s❯ Sim%s     %sNão%s' "$CIANO$NEGRITO" "$NORMAL" "$CINZA" "$NORMAL"
+    else
+      printf '     %sSim%s   %s❯ Não%s' "$CINZA" "$NORMAL" "$CIANO$NEGRITO" "$NORMAL"
+    fi
+    le_tecla __tecla
+    case "$__tecla" in
+      cima | baixo | esquerda | direita | $'\t') __sim=$((1 - __sim)) ;;
+      [SsYy]) __sim=1 && break ;;
+      [Nn]) __sim=0 && break ;;
+      enter) break ;;
+    esac
+  done
+  printf '\r\033[K'
   _prompt "$1"
-  printf ' %s(S/n)%s: ' "$CINZA" "$NORMAL"
-  ler __resposta
-  [[ -z "$__resposta" || "$__resposta" =~ ^[SsYy]$ ]]
+  printf ': %s\n' "$([ "$__sim" -eq 1 ] && echo Sim || echo Não)"
+  printf '\033[?25h'
+  [ "$__sim" -eq 1 ]
+}
+
+# pausa: segura a tela até uma tecla, antes de o menu limpar o que foi mostrado.
+pausa() {
+  local __tecla
+  tem_terminal || return 0
+  printf '\n  %sEnter para voltar%s' "$CINZA" "$NORMAL"
+  le_tecla __tecla
+  echo
 }
 
 linha_ok() { printf '\r\033[K  %s%2s/%s%s  %s✓%s  %s\n' "$CINZA" "$1" "$2" "$NORMAL" "$VERDE" "$NORMAL" "$3"; }

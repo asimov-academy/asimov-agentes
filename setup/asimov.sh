@@ -27,7 +27,6 @@ exige_instalacao() {
 case "${1:-menu}" in
   menu)
     exige_instalacao
-    banner_asimov
     menu_operador
     ;;
   novo-agente)
@@ -44,7 +43,7 @@ case "${1:-menu}" in
     ;;
   editar)
     exige_instalacao
-    fluxo_editar_agente
+    fluxo_editar_agente || true
     ;;
   remover)
     exige_instalacao

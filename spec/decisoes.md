@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Setas e telas limpas (v0.5.1)
+
+- **Escolhas com setas e Enter**, pedido do operador, em todo o setup: listas (`escolha`) e Sim/Não (`confirma`), inclusive o aceite da tela 1. Números de 1 a 9 e S/N continuam como atalho. A lista escolhida vira uma linha com a resposta.
+- **Cada tela nova limpa o terminal e redesenha o banner** (`secao`). Listagem, consumo e resultado de criar ou remover esperam Enter antes de o menu limpar; a edição de agente redesenha a ficha com o resultado da última mudança.
+- **Sem terminal, a leitura continua por linha** (número ou S/N): é o que `simula_onboarding.sh` usa com o arquivo de respostas. spec/telas.md.
+
 ## 2026-09-16: Menu do operador (fase 4, v0.5.0)
 
 - **O menu abre ao rodar o setup de novo e com `asimov` sem argumento.** Cada ação também é subcomando (`editar`, `remover`, `consumo`), para quem prefere ir direto. `asimov atualizar` para no resumo, sem menu. spec/telas.md, tela 8.

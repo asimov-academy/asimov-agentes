@@ -278,7 +278,8 @@ configura_handoff() {
   unset CHATWOOT_TOKEN
   conta=$(jq -c --argjson id "$conta_id" '.contas[] | select(.id == $id)' <<<"$CHATWOOT_CONTAS")
   if [ -z "$conta" ]; then
-    falha "Esse token não enxerga a conta $conta_id do Chatwoot. Use o token de um administrador dela."
+    RESULTADO=$(falha "Esse token não enxerga a conta $conta_id do Chatwoot. Use o token de um administrador dela.")
+    printf '%s\n' "$RESULTADO"
     return 0
   fi
   escolhe_destino_handoff "$conta"
@@ -286,10 +287,11 @@ configura_handoff() {
   api PATCH "$(caminho_do_agente "$agente")" "$corpo"
   if [ "$API_STATUS" = 200 ]; then
     AGENTE=$API_RESPOSTA
-    ok "Handoff de $(destaque "$nome") para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
+    RESULTADO=$(ok "Handoff de $(destaque "$nome") para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")")
   else
-    falha "$(detalhe_erro "$API_RESPOSTA")"
+    RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
   fi
+  printf '%s\n' "$RESULTADO"
 }
 
 # asimov handoff: escolhe o agente e troca quem recebe o handoff.

@@ -16,14 +16,15 @@ mostra_agente() {
   campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
 }
 
-# salva_agente JSON: PATCH só com os campos do JSON; atualiza AGENTE.
+# salva_agente JSON: PATCH só com os campos do JSON; atualiza AGENTE e deixa o RESULTADO para a
+# tela redesenhada mostrar.
 salva_agente() {
   api PATCH "$(caminho_do_agente "$AGENTE")" "$1"
   if [ "$API_STATUS" = 200 ]; then
     AGENTE=$API_RESPOSTA
-    ok "Salvo. Vale a partir da próxima mensagem."
+    RESULTADO=$(ok "Salvo. Vale a partir da próxima mensagem.")
   else
-    falha "$(detalhe_erro "$API_RESPOSTA")"
+    RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
   fi
 }
 
@@ -60,11 +61,17 @@ escolhe_modelo_do_agente() {
 fluxo_editar_agente() {
   local op valor
   secao "Editar agente"
-  escolhe_agente || return 0
+  # Sem agentes devolve 1: o menu segura a tela com a dica.
+  escolhe_agente || return 1
+  RESULTADO=""
   while true; do
-    echo
-    printf '  %s%s%s\n' "$NEGRITO" "$(jq -r '.nome' <<<"$AGENTE")" "$NORMAL"
+    secao "Editar $(jq -r '.nome' <<<"$AGENTE")"
     mostra_agente
+    if [ -n "$RESULTADO" ]; then
+      echo
+      printf '%s\n' "$RESULTADO"
+      RESULTADO=""
+    fi
     echo
     escolha op "O que mudar?" "Nome" "Tempo de buffer" "Mensagens por resposta" "Modelos" "Handoff" "Voltar"
     case "$op" in
@@ -218,11 +225,21 @@ menu_operador() {
         secao "Novo agente"
         fluxo_novo_agente
         dica "Mande uma mensagem na caixa de entrada para testar."
+        pausa
         ;;
-      2) lista_agentes ;;
-      3) fluxo_editar_agente ;;
-      4) fluxo_remover_agente ;;
-      5) mostra_consumo ;;
+      2)
+        lista_agentes
+        pausa
+        ;;
+      3) fluxo_editar_agente || pausa ;;
+      4)
+        fluxo_remover_agente
+        pausa
+        ;;
+      5)
+        mostra_consumo
+        pausa
+        ;;
       *) return 0 ;;
     esac
   done
