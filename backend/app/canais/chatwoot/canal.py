@@ -23,6 +23,7 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import httpx
+import structlog
 from pydantic import BaseModel, Field, HttpUrl, ValidationError, model_validator
 
 from app.canais.base import (
@@ -37,6 +38,8 @@ from app.canais.base import (
     Evento,
 )
 from app.canais.chatwoot.assinatura import assinatura_confere, timestamp_recente
+
+log = structlog.get_logger()
 
 TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 TIMEOUT_DOWNLOAD = httpx.Timeout(60.0, connect=5.0)
@@ -155,11 +158,12 @@ class Chatwoot:
     nome = "chatwoot"
     campos_secretos = frozenset({"api_access_token", "bot_secret"})
     responde_200_em_assinatura_invalida = True
-    retoma_por_tempo = False
+    retoma_por_tempo = True
     pede_acesso_do_operador = True
     externo = True
     webhook_interno = False
-    """A conversa volta ao agente quando o atendente a devolve para pendente."""
+    """A conversa volta ao agente quando o atendente a devolve para pendente, ou sozinha depois de
+    `retomada_automatica_horas` se ninguém devolver."""
 
     def _http(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(timeout=TIMEOUT)
@@ -395,8 +399,15 @@ class Chatwoot:
         if tipo_mensagem in ("outgoing", 1):
             if remetente.get("type") == "agent_bot":
                 return Evento(Acao.IGNORAR, "mensagem enviada por bot", conversa)
+            # Atendente respondeu: a conversa passa a ser dele, e o agente só volta quando ela for
+            # devolvida para pendente ou o prazo do agente vencer.
             return Evento(
-                Acao.REGISTRAR, "mensagem de atendente", **base, autor="humano", direcao="saida"
+                Acao.PAUSAR,
+                "mensagem de atendente",
+                **base,
+                autor="humano",
+                direcao="saida",
+                autor_externo=str(remetente["id"]) if remetente.get("id") is not None else None,
             )
 
         return Evento(Acao.IGNORAR, f"message_type {tipo_mensagem!r}", conversa)
@@ -484,14 +495,39 @@ class Chatwoot:
         return None
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
-        """Pendente é o agente conduzindo. O Chatwoot avisa a mudança pelo webhook, que é idempotente."""
+        """Pendente é o agente conduzindo. O Chatwoot avisa a mudança pelo webhook, que é idempotente.
+
+        Tira também a atribuição do atendente: conversa pendente com dono confunde quem olha a fila,
+        e quem está conduzindo dali em diante é o bot. Recusa na atribuição não impede a devolução.
+        """
+        base = f"{self._base_operacao(credenciais)}/conversations/{conversa_externa}"
+        cabecalho = self._cabecalho_bot(credenciais)
         async with self._http() as http:
-            resp = await http.post(
-                f"{self._base_operacao(credenciais)}/conversations/{conversa_externa}/toggle_status",
-                json={"status": "pending"},
-                headers=self._cabecalho_bot(credenciais),
-            )
-        resp.raise_for_status()
+            resp = await http.post(f"{base}/toggle_status", json={"status": "pending"}, headers=cabecalho)
+            resp.raise_for_status()
+            try:
+                await http.post(f"{base}/assignments", json={"assignee_id": 0}, headers=cabecalho)
+            except httpx.HTTPError as erro:
+                log.warning("desatribuir_falhou", erro=repr(erro))
+
+    async def assumir_no_canal(
+        self, credenciais: dict[str, Any], conversa_externa: str, autor_externo: str | None
+    ) -> None:
+        """Atendente respondeu: conversa aberta e atribuída a ele, para sair da fila do bot.
+
+        O Chatwoot pode já ter feito os dois, conforme a configuração da caixa; repetir não muda nada.
+        """
+        base = f"{self._base_operacao(credenciais)}/conversations/{conversa_externa}"
+        cabecalho = self._cabecalho_bot(credenciais)
+        async with self._http() as http:
+            resp = await http.post(f"{base}/toggle_status", json={"status": "open"}, headers=cabecalho)
+            resp.raise_for_status()
+            if autor_externo and autor_externo.isdigit():
+                atribuiu = await http.post(
+                    f"{base}/assignments", json={"assignee_id": int(autor_externo)}, headers=cabecalho
+                )
+                if atribuiu.status_code >= 400:
+                    log.warning("atribuir_ao_atendente_recusado", status=atribuiu.status_code)
 
     async def digitando(
         self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool

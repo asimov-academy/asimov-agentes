@@ -213,10 +213,41 @@ async def retomar_por_codigo(sessao: AsyncSession, agente: "Agente", codigo: str
     return True
 
 
+ESPERA_APOS_FALHA_MINUTOS = 10
+
+
+async def assumir_no_canal(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID, autor_externo: str | None
+) -> bool:
+    """Deixa à vista no canal que uma pessoa assumiu a conversa (no Chatwoot, aberta e atribuída).
+
+    Roda no worker: o webhook só grava e agenda. Devolve se o canal foi avisado.
+    """
+    from app.agentes import repo as agentes_repo
+
+    conversa = await conversas_repo.obter_conversa(sessao, cliente_id, conversa_id)
+    if conversa is None:
+        return False
+    agente = await agentes_repo.obter(sessao, cliente_id, conversa.agente_id)
+    if agente is None or not agente.ativo:
+        return False
+    canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
+    try:
+        await canal.assumir_no_canal(credenciais, conversa.id_externo, autor_externo)
+    except Exception as erro:
+        await registra_falha(
+            "assumir_no_canal_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id
+        )
+        return False
+    return True
+
+
 async def retomada_automatica(sessao: AsyncSession) -> int:
     """Devolve ao agente as conversas cujo prazo de handoff venceu. Roda de minuto em minuto.
 
-    Falha ao avisar o destino não impede a retomada: o agente voltar a atender é o que importa.
+    O canal é avisado primeiro (no Chatwoot, conversa de volta para pendente e sem atendente): se ele
+    recusar, o handoff continua aberto e a tentativa fica para daqui a alguns minutos, senão o agente
+    acharia que pode falar onde o canal não deixa. Falha só no aviso ao destino não impede a retomada.
     """
     from app.agentes import repo as agentes_repo
 
@@ -228,10 +259,14 @@ async def retomada_automatica(sessao: AsyncSession) -> int:
             await sessao.commit()
             continue
         conversa = await conversas_repo.obter_conversa(sessao, aberto.cliente_id, aberto.conversa_id)
+        canal, credenciais = _canal_do_agente(agente)
+        if conversa is not None and not await _devolve_no_canal(
+            sessao, agente, canal, credenciais, conversa, aberto
+        ):
+            continue
         await retomar(sessao, aberto.cliente_id, aberto.conversa_id, "tempo")
         await sessao.commit()
         retomadas += 1
-        canal, credenciais = _canal_do_agente(agente)
         await _avisa(
             canal,
             credenciais,
@@ -243,6 +278,27 @@ async def retomada_automatica(sessao: AsyncSession) -> int:
     if retomadas:
         log.info("retomada_automatica", conversas=retomadas)
     return retomadas
+
+
+async def _devolve_no_canal(
+    sessao: AsyncSession,
+    agente: "Agente",
+    canal: "Canal",
+    credenciais: dict[str, Any],
+    conversa: "Conversa",
+    aberto: Handoff,
+) -> bool:
+    """False quando o canal recusou: o handoff fica aberto e tenta de novo em alguns minutos."""
+    try:
+        await canal.devolver_ao_agente(credenciais, conversa.id_externo)
+    except Exception as erro:
+        await registra_falha(
+            "retomada_no_canal_falhou", {"erro": repr(erro)[:500]}, agente.cliente_id, agente.id
+        )
+        aberto.retomar_em = agora() + timedelta(minutes=ESPERA_APOS_FALHA_MINUTOS)
+        await sessao.commit()
+        return False
+    return True
 
 
 def _canal_do_agente(agente: "Agente") -> tuple["Canal", dict[str, Any]]:

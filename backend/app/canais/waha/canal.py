@@ -340,6 +340,12 @@ class Waha:
         """A conversa volta pelo status aqui; no WhatsApp não há nada para desfazer."""
         return None
 
+    async def assumir_no_canal(
+        self, credenciais: dict[str, Any], conversa_externa: str, autor_externo: str | None
+    ) -> None:
+        """No WhatsApp a conversa não tem dono: quem assumiu já está respondendo por ela."""
+        return None
+
     async def baixar_midia(
         self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int
     ) -> ArquivoBaixado:

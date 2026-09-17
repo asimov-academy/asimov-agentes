@@ -83,6 +83,7 @@ class NovaConexao(BaseModel):
         description="Acesso do operador ao canal, como na criação (Chatwoot: url, conta, caixas e token_admin se não houver guardado).",
     )
     handoff_destino: dict[str, Any] | None = None
+    retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
 
 
 class Remocao(BaseModel):
@@ -245,7 +246,13 @@ async def conectar(
         raise HTTPException(status_code=422, detail=f"canal não suportado: {dados.canal}")
     try:
         agente = await servico.conectar_canal(
-            s, cliente_id, agente_id, dados.canal, dados.conexao, dados.handoff_destino
+            s,
+            cliente_id,
+            agente_id,
+            dados.canal,
+            dados.conexao,
+            dados.handoff_destino,
+            dados.retomada_automatica_horas,
         )
     except servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro

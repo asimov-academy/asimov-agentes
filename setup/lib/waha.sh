@@ -412,13 +412,20 @@ filtra_grupos() {
     | [to_entries[] | select($nomes[.key] // "" | contains($alvo)) | .value]' <<<"$grupos"
 }
 
-# pergunta_retomada: horas até o agente voltar sozinho depois do handoff. Define RETOMADA_HORAS (JSON).
+# pergunta_retomada [PADRAO] [CANAL]: horas até o agente voltar sozinho depois que uma pessoa
+# assume a conversa. Define RETOMADA_HORAS (JSON, `null` quando é para ficar parado).
 pergunta_retomada() {
-  local horas padrao=${1:-4}
+  local horas padrao=${1:-4} canal=${2:-waha}
   echo
-  dica "Quando alguém da equipe responde pelo aparelho, o agente cala na hora e deixa a pessoa atender."
-  dica "Para devolver ao agente: reagir com 👍 em qualquer mensagem da conversa ou mandar /retomar."
-  dica "Sem nada disso, ele volta sozinho depois do tempo abaixo. 0 deixa parado até alguém devolver."
+  if [ "$canal" = chatwoot ]; then
+    dica "Quando um atendente responde no Chatwoot, a conversa passa a ser dele e o agente cala."
+    dica "Ele volta quando a conversa voltar para Pendente, ou sozinho depois do tempo abaixo,"
+    dica "que é a rede de segurança para quando alguém esquece de devolver. 0 deixa parado."
+  else
+    dica "Quando alguém da equipe responde pelo aparelho, o agente cala na hora e deixa a pessoa atender."
+    dica "Para devolver ao agente: reagir com 👍 em qualquer mensagem da conversa ou mandar /retomar."
+    dica "Sem nada disso, ele volta sozinho depois do tempo abaixo. 0 deixa parado até alguém devolver."
+  fi
   pergunta_numero horas "Horas até o agente voltar sozinho (0 a 720)" 0 720 "$padrao"
   if [ "$horas" -eq 0 ]; then
     RETOMADA_HORAS=null

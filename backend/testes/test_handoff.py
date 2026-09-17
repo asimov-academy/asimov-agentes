@@ -308,3 +308,82 @@ async def test_modelo_em_loop_para_no_teto_do_turno_sem_tentar_de_novo(http, can
     async with sessao() as s:
         registro = await s.scalar(select(Turno).where(Turno.funcao == "resposta"))
     assert registro is not None and "UsageLimitExceeded" in (registro.erro or "")
+
+
+# ── Atendente assume a conversa no Chatwoot ────────────────────────────────
+
+
+async def test_atendente_respondendo_pausa_o_agente_e_marca_a_conversa(http, canal, fila, sessao) -> None:  # type: ignore[no-untyped-def]
+    """Quem responde passa a dona da conversa; o agente só volta na devolução ou no prazo."""
+    from app.worker import assumir_conversa
+
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", retomada_automatica_horas=2)
+    await envia_webhook(http, agente["token"], payload_chatwoot(1, "quero trocar o produto"))
+    canal.status = "open"
+
+    resp = await envia_webhook(
+        http,
+        agente["token"],
+        payload_chatwoot(2, "pode trazer amanhã", tipo="outgoing", remetente={"id": 7, "name": "Joana", "type": "user"}),
+    )
+
+    assert resp.status_code == 200
+    async with sessao() as s:
+        aberto = (await s.scalars(select(Handoff))).one()
+        conversa = (await s.scalars(select(Conversa))).one()
+    assert aberto.motivo == handoff.MOTIVO_PESSOA_RESPONDEU and aberto.retomar_em is not None
+    assert conversa.status == "humano"
+
+    agendados = [j for j in fila.jobs if j[0] == "assumir_conversa"]
+    assert agendados == [("assumir_conversa", str(conversa.cliente_id), str(conversa.id), "7")]
+    await assumir_conversa({}, str(conversa.cliente_id), str(conversa.id), "7")
+    assert canal.assumidas == [(conversa.id_externo, "7")]
+
+
+async def test_prazo_vencido_devolve_a_conversa_no_chatwoot(http, canal, fila, sessao) -> None:  # type: ignore[no-untyped-def]
+    from app.handoff import repo as handoff_repo
+    from app.plataforma.banco import agora, fabrica_sessao
+
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", retomada_automatica_horas=2)
+    await envia_webhook(http, agente["token"], payload_chatwoot(1, "oi"))
+    canal.status = "open"
+    await envia_webhook(
+        http,
+        agente["token"],
+        payload_chatwoot(2, "eu respondo", tipo="outgoing", remetente={"id": 7, "name": "Joana", "type": "user"}),
+    )
+
+    async with fabrica_sessao()() as s:
+        aberto = (await s.scalars(select(Handoff))).one()
+        aberto.retomar_em = agora()
+        await s.commit()
+        assert await handoff.retomada_automatica(s) == 1
+        assert await handoff_repo.aberto(s, aberto.cliente_id, aberto.conversa_id) is None
+        conversa = (await s.scalars(select(Conversa))).one()
+    assert canal.devolvidas == [conversa.id_externo], "o Chatwoot precisa voltar para pendente"
+    assert conversa.status == "agente"
+
+
+async def test_chatwoot_fora_do_ar_mantem_o_handoff_aberto(http, canal, fila, sessao) -> None:  # type: ignore[no-untyped-def]
+    """Fechar o handoff sem o canal deixar o agente falar só criaria um agente mudo achando que fala."""
+    from app.handoff import repo as handoff_repo
+    from app.plataforma.banco import agora, fabrica_sessao
+
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", retomada_automatica_horas=2)
+    await envia_webhook(http, agente["token"], payload_chatwoot(1, "oi"))
+    canal.status = "open"
+    await envia_webhook(
+        http,
+        agente["token"],
+        payload_chatwoot(2, "eu respondo", tipo="outgoing", remetente={"id": 7, "name": "Joana", "type": "user"}),
+    )
+    canal.devolver_recusa = True
+
+    async with fabrica_sessao()() as s:
+        aberto = (await s.scalars(select(Handoff))).one()
+        aberto.retomar_em = agora()
+        await s.commit()
+
+        assert await handoff.retomada_automatica(s) == 0
+        ainda_aberto = await handoff_repo.aberto(s, aberto.cliente_id, aberto.conversa_id)
+        assert ainda_aberto is not None and ainda_aberto.retomar_em > agora()

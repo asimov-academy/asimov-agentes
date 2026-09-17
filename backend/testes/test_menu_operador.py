@@ -68,7 +68,6 @@ async def test_editar_recusa_valor_invalido(http, canal, fila) -> None:  # type:
         ({"modelo_conversa": None}, "vazios"),
         ({"nome": "   "}, "vazio"),
         ({"buffer_segundos": 0}, None),
-        ({"retomada_automatica_horas": 4}, "devolve a conversa"),
         ({"canal": "telegram"}, None),
         ({"credenciais_cifradas": "x"}, None),
     ):

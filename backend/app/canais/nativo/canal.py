@@ -93,5 +93,11 @@ class Nativo:
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
         await memoria.muda_humano(conversa_externa, False)
 
+    async def assumir_no_canal(
+        self, credenciais: dict[str, Any], conversa_externa: str, autor_externo: str | None
+    ) -> None:
+        """No terminal quem conduz é o operador, que está vendo a conversa."""
+        return None
+
     async def baixar_midia(self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int) -> ArquivoBaixado:
         raise NotImplementedError("o terminal só manda texto")

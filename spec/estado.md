@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.10.0` em `asimov-academy/asimov-agentes` (público): no WhatsApp, responder pelo aparelho cala o agente na hora (handoff sem IA e sem aviso, com o prazo do agente) e reagir com 👍 na conversa o traz de volta. O que a equipe respondeu entra na memória do agente marcado como fala de atendente, em todo canal que tem atendente.
+- `v0.11.0` em `asimov-academy/asimov-agentes` (público): no Chatwoot, atendente que responde fica com a conversa (aberta e atribuída a ele) e o agente volta sozinho no prazo do onboarding, com a conversa de volta para Pendente e sem atribuição.
+- `v0.10.0`: no WhatsApp, responder pelo aparelho cala o agente na hora (handoff sem IA e sem aviso, com o prazo do agente) e reagir com 👍 na conversa o traz de volta. O que a equipe respondeu entra na memória do agente marcado como fala de atendente, em todo canal que tem atendente.
 - `v0.9.3`: destino do handoff da WAHA em dois passos (número ou grupo), com busca pelo nome do grupo.
 - `v0.9.2`: o agente pode atender só os números listados (`contatos_permitidos`), escolhido na criação e em Editar agente; grupos continuam sempre ignorados.
 - `v0.9.1`: aviso de API não oficial com confirmação antes de parear, correção do fluxo que voltava ao menu quando o systemd recusava o timer, e nomes dos passos da instalação do WhatsApp.
@@ -52,7 +53,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Canal Chatwoot (`canais/chatwoot/`): cria o Agent Bot e confere na caixa que ele ficou ligado; aceita evento de qualquer caixa em que o bot esteja ligado (a assinatura prova o bot).
 - Turno (`conversas/turno.py`): buffer por conversa, lock de 240 s, mídia antes do modelo, resposta descartada se chegar mensagem nova antes do envio, digitando com o tempo de uma pessoa digitar (6 caracteres/s, variação de 15%, teto de 20 s por mensagem, soma até 90 s; editável por agente).
 - Mídia: transcrição, visão e PDF com texto, cache por cliente e hash, limites de 20 MB e 5 minutos.
-- Handoff no Chatwoot: nota privada curta, atribuição, status aberto; retomada pelo status pendente; falha do modelo e arquivo grande também transferem. Retomada pelo operador existe na API (`POST .../conversas/{id}/retomar`), sem opção no menu.
+- Handoff no Chatwoot: nota privada curta, atribuição, status aberto; retomada pelo status pendente ou pelo prazo do agente (que devolve para pendente e desatribui); atendente que responde por lá pausa o agente e fica com a conversa; falha do modelo e arquivo grande também transferem. Retomada pelo operador existe na API (`POST .../conversas/{id}/retomar`), sem opção no menu.
 - Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), escolhidas na criação (nenhuma por padrão desde a v0.8.11). OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
