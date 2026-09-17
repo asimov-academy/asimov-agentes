@@ -243,6 +243,20 @@ aviso_nao_oficial() {
   confirma "Entendi o risco. Continuar?"
 }
 
+# reconfigura_sessoes_waha: põe nas sessões que já existem a lista de eventos da versão atual.
+# Roda em `asimov atualizar`: sessão criada por uma versão anterior não receberia, por exemplo, o
+# joinha que devolve a conversa ao agente.
+reconfigura_sessoes_waha() {
+  local linha
+  [ "$(env_get WAHA_ATIVA)" = 1 ] || return 0
+  api GET /admin/agentes
+  [ "$API_STATUS" = 200 ] || return 0
+  while IFS= read -r linha; do
+    api POST "$(caminho_do_agente "$linha")/waha/webhook" '{}'
+  done < <(jq -c '.[] | select(.canal == "waha" and .ativo)' <<<"$API_RESPOSTA")
+  return 0
+}
+
 # waha_situacao AGENTE_JSON: consulta a sessão. Define WAHA_STATUS, WAHA_QR e WAHA_NUMERO.
 waha_situacao() {
   api GET "$(caminho_do_agente "$1")/waha"
@@ -316,7 +330,7 @@ escolhe_destino_waha() {
   local agente=$1 op telefone
   echo
   dica "Quando o agente passar a conversa para uma pessoa, o aviso com o resumo vai para cá."
-  dica "Quem receber devolve a conversa mandando /retomar com o código do aviso."
+  dica "Para devolver: 👍 em qualquer mensagem da conversa, ou /retomar com o código do aviso."
   echo
   escolha op "Quem recebe o handoff" \
     "Um número de WhatsApp" \
@@ -402,8 +416,9 @@ filtra_grupos() {
 pergunta_retomada() {
   local horas padrao=${1:-4}
   echo
-  dica "No WhatsApp não existe devolver a conversa como no Chatwoot: se ninguém mandar /retomar,"
-  dica "o agente volta a atender sozinho depois do tempo que você escolher. 0 deixa parado até o comando."
+  dica "Quando alguém da equipe responde pelo aparelho, o agente cala na hora e deixa a pessoa atender."
+  dica "Para devolver ao agente: reagir com 👍 em qualquer mensagem da conversa ou mandar /retomar."
+  dica "Sem nada disso, ele volta sozinho depois do tempo abaixo. 0 deixa parado até alguém devolver."
   pergunta_numero horas "Horas até o agente voltar sozinho (0 a 720)" 0 720 "$padrao"
   if [ "$horas" -eq 0 ]; then
     RETOMADA_HORAS=null
@@ -508,7 +523,7 @@ edita_waha() {
     *) campo "Número" "não pareado ($WAHA_STATUS)" ;;
   esac
   campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
-  campo "Retomada" "$(jq -r 'if .retomada_automatica_horas then "sozinho em \(.retomada_automatica_horas) h" else "só com /retomar" end' <<<"$AGENTE")"
+  campo "Retomada" "👍 na conversa$(jq -r 'if .retomada_automatica_horas then ", ou sozinho em \(.retomada_automatica_horas) h" else " ou /retomar" end' <<<"$AGENTE")"
   campo "Atende" "$(atende_do_agente "$AGENTE")"
   echo
   ESC_ESCOLHE=5 escolha op "O que fazer?" \

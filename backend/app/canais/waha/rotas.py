@@ -94,6 +94,24 @@ async def reiniciar(
     return await situacao(cliente_id, agente_id, s)
 
 
+@router.post("/clientes/{cliente_id}/agentes/{agente_id}/waha/webhook", status_code=204)
+async def reconfigurar_webhook(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)
+) -> None:
+    """Põe na sessão a lista de eventos de hoje, para sessão criada por uma versão anterior.
+
+    Chamado pelo setup em `asimov atualizar`. A URL e a chave são as que o agente já tem.
+    """
+    agente = await _agente_waha(s, cliente_id, agente_id)
+    credenciais = agentes_servico.credenciais(agente)
+    try:
+        await api.atualiza_webhook(
+            _sessao(agente), agentes_servico.url_webhook(agente), credenciais.get("hmac_key", "")
+        )
+    except CredencialInvalida as erro:
+        raise _erro_da_waha(erro) from erro
+
+
 @router.get("/clientes/{cliente_id}/agentes/{agente_id}/waha/grupos", response_model=list[GrupoSaida])
 async def grupos(
     cliente_id: uuid.UUID, agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)

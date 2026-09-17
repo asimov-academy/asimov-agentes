@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.9.3` em `asimov-academy/asimov-agentes` (público): destino do handoff da WAHA em dois passos (número ou grupo), com busca pelo nome do grupo.
+- `v0.10.0` em `asimov-academy/asimov-agentes` (público): no WhatsApp, responder pelo aparelho cala o agente na hora (handoff sem IA e sem aviso, com o prazo do agente) e reagir com 👍 na conversa o traz de volta.
+- `v0.9.3`: destino do handoff da WAHA em dois passos (número ou grupo), com busca pelo nome do grupo.
 - `v0.9.2`: o agente pode atender só os números listados (`contatos_permitidos`), escolhido na criação e em Editar agente; grupos continuam sempre ignorados.
 - `v0.9.1`: aviso de API não oficial com confirmação antes de parear, correção do fluxo que voltava ao menu quando o systemd recusava o timer, e nomes dos passos da instalação do WhatsApp.
 - `v0.9.0`: **WhatsApp direto pela WAHA**, segunda parte da fase 5. A WAHA sobe sob demanda (perfil do Compose, no primeiro agente WhatsApp), o número é pareado por QR code no terminal, o handoff avisa um número ou grupo com resumo e código, e a conversa volta com `/retomar <código>` ou sozinha pelo prazo do agente.
@@ -45,7 +46,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ### Plataforma
 
-- Canal WAHA (`canais/waha/`, v0.9.0): uma sessão por agente com webhook interno assinado (HMAC SHA-512), QR code lido pelo setup (`GET .../waha`, `POST .../waha/reiniciar`, `GET .../waha/grupos`), envio, digitando e marcar como lida, download de mídia com a chave da instalação, remoção com logout. Ignora `fromMe`, grupos (menos o do handoff) e sessão de outro agente. Handoff: pausa pelo status da conversa, aviso ao número ou grupo com resumo e código, `/retomar <código>` só do destino, job `retomada_automatica` no worker (cron de um minuto) e aviso de que o agente voltou.
+- Canal WAHA (`canais/waha/`, v0.9.0): uma sessão por agente com webhook interno assinado (HMAC SHA-512), QR code lido pelo setup (`GET .../waha`, `POST .../waha/reiniciar`, `GET .../waha/grupos`), envio, digitando e marcar como lida, download de mídia com a chave da instalação, remoção com logout. Ignora grupos (menos o do handoff) e sessão de outro agente; o que sai do número é lido pelo `source` (`api` é o agente, `app` é gente no aparelho, que pausa o agente). Handoff: pausa pelo status da conversa, aviso ao número ou grupo com resumo e código, `/retomar <código>` só do destino, job `retomada_automatica` no worker (cron de um minuto) e aviso de que o agente voltou.
 - Conversa de teste no terminal para agente de qualquer canal (`Conversa.canal` nativo; `canal_da_conversa`). Agente nativo pode ser conectado depois a um canal externo (`POST .../canal`: Chatwoot ou WAHA).
 - Canal nativo (`canais/nativo/`): sem conexão nem webhook; rotas `POST` e `GET .../terminal` em `canais/nativo/rotas.py`; envio, digitando e humano conduzindo no Redis (`memoria.py`); a leitura diz se o turno ainda está em andamento. Handoff mostra motivo, resumo e código no terminal e `/retomar` usa a retomada do operador.
 - Canal Chatwoot (`canais/chatwoot/`): cria o Agent Bot e confere na caixa que ele ficou ligado; aceita evento de qualquer caixa em que o bot esteja ligado (a assinatura prova o bot).

@@ -38,6 +38,14 @@ from app.plataforma.textos import slug
 COMANDO_RETOMAR = re.compile(r"^\s*/retomar\s+([A-Za-z0-9]{4,12})\s*$", re.IGNORECASE)
 SUFIXOS_DE_PESSOA = ("@c.us", "@lid", "@s.whatsapp.net")
 SUFIXO_DE_GRUPO = "@g.us"
+JOINHA = "\U0001f44d"
+"""Reagir com joinha numa mensagem devolve a conversa ao agente: é o que a pessoa tem à mão no
+celular, sem precisar do código. Tons de pele e o seletor de variação entram na comparação."""
+ENFEITES_DO_EMOJI = str.maketrans("", "", "\ufe0f\ufe0e" + "".join(chr(c) for c in range(0x1F3FB, 0x1F400)))
+
+
+def e_joinha(texto: str | None) -> bool:
+    return bool(texto) and str(texto).translate(ENFEITES_DO_EMOJI).strip() == JOINHA
 
 
 class CredenciaisWaha(BaseModel):
@@ -109,6 +117,13 @@ def _anexos(mensagem: dict[str, Any]) -> tuple[Anexo, ...]:
     )
 
 
+def _chat_da_mensagem(mensagem: dict[str, Any]) -> str | None:
+    """A conversa é sempre a do outro lado: no que sai do número, `from` é o próprio agente."""
+    lado = mensagem.get("to") if mensagem.get("fromMe") else mensagem.get("from")
+    lado = lado or mensagem.get("from")
+    return lado if isinstance(lado, str) and lado else None
+
+
 def _nome_do_contato(mensagem: dict[str, Any]) -> str | None:
     dados = mensagem.get("_data") if isinstance(mensagem.get("_data"), dict) else {}
     for campo in ("notifyName", "pushName", "senderName"):
@@ -173,7 +188,7 @@ class Waha:
         self, payload: dict[str, Any], credenciais: dict[str, Any], destino: dict[str, Any] | None = None
     ) -> Evento:
         evento = payload.get("event")
-        if evento != "message":
+        if evento not in ("message.any", "message", "message.reaction"):
             return Evento(Acao.IGNORAR, f"evento fora da lista: {evento!r}")
         sessao = payload.get("session")
         if sessao and credenciais.get("sessao") and sessao != credenciais["sessao"]:
@@ -182,12 +197,16 @@ class Waha:
         mensagem = payload.get("payload")
         if not isinstance(mensagem, dict):
             return Evento(Acao.IGNORAR, "webhook sem mensagem")
-        if mensagem.get("fromMe"):
-            return Evento(Acao.IGNORAR, "mensagem enviada pelo próprio número")
 
-        chat = mensagem.get("from")
-        if not isinstance(chat, str) or not chat:
-            return Evento(Acao.IGNORAR, "mensagem sem remetente")
+        chat = _chat_da_mensagem(mensagem)
+        if chat is None:
+            return Evento(Acao.IGNORAR, "mensagem sem conversa")
+
+        if evento == "message.reaction":
+            return self._reacao(mensagem, chat)
+
+        if mensagem.get("fromMe"):
+            return self._saiu_do_numero(mensagem, chat)
 
         texto = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
         chat_do_destino = _texto_do_destino(destino)
@@ -218,6 +237,40 @@ class Waha:
         if not (texto or "").strip() and not base["anexos"]:
             return Evento(Acao.REGISTRAR, "mensagem sem conteúdo", **base)
         return Evento(Acao.PROCESSAR, "mensagem do contato", **base)
+
+    def _reacao(self, mensagem: dict[str, Any], chat: str) -> Evento:
+        """Joinha do número do agente devolve a conversa; reação do contato não mexe em nada."""
+        reacao = mensagem.get("reaction")
+        emoji = reacao.get("text") if isinstance(reacao, dict) else None
+        if not mensagem.get("fromMe"):
+            return Evento(Acao.IGNORAR, "reação do contato", chat)
+        if not e_joinha(emoji):
+            return Evento(Acao.IGNORAR, f"reação que não é joinha: {emoji!r}", chat)
+        if chat.endswith(SUFIXO_DE_GRUPO):
+            return Evento(Acao.IGNORAR, "reação em grupo", chat)
+        return Evento(Acao.RETOMAR, "joinha devolveu a conversa ao agente", chat, por="joinha")
+
+    def _saiu_do_numero(self, mensagem: dict[str, Any], chat: str) -> Evento:
+        """Mensagem do próprio número: ou foi o agente pela API, ou é gente digitando no aparelho.
+
+        `source` da WAHA separa os dois: `api` é o agente falando, `app` é uma pessoa da empresa
+        que abriu o WhatsApp e respondeu. Nesse caso o agente cala até o joinha ou o prazo.
+        """
+        if mensagem.get("source") == "api":
+            return Evento(Acao.IGNORAR, "mensagem enviada pelo próprio agente", chat)
+        if chat.endswith(SUFIXO_DE_GRUPO):
+            return Evento(Acao.IGNORAR, "mensagem de grupo", chat)
+        texto = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
+        return Evento(
+            Acao.PAUSAR,
+            "uma pessoa respondeu pelo aparelho",
+            conversa_externa=chat,
+            mensagem_externa=str(mensagem.get("id")) if mensagem.get("id") is not None else None,
+            texto=texto,
+            anexos=_anexos(mensagem),
+            autor="humano",
+            direcao="saida",
+        )
 
     # ── Operação ───────────────────────────────────────────────────────────
 
@@ -264,7 +317,8 @@ class Waha:
         aviso = (
             f"Assumi a conversa com {numero_legivel(conversa_externa)} e o agente parou de responder.\n\n"
             f"{nota}\n\n"
-            f"Quando terminar, mande /retomar {codigo} para o agente voltar a atender."
+            f"Quando terminar, devolva ao agente: reaja com {JOINHA} em qualquer mensagem da conversa "
+            f"ou mande /retomar {codigo} aqui."
         )
         try:
             await api.envia_texto(credenciais["sessao"], chat, aviso)
