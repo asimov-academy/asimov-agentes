@@ -13,11 +13,15 @@ mostra_agente() {
   campo "Resumo" "$(jq -r '.modelo_auxiliar' <<<"$AGENTE")"
   campo "Visão" "$(jq -r '.modelo_visao' <<<"$AGENTE")"
   campo "Áudio" "$(jq -r '.modelo_transcricao' <<<"$AGENTE")"
-  if [ "$(jq -r '.canal' <<<"$AGENTE")" = nativo ]; then
-    campo "Handoff" "aparece na conversa do terminal"
-  else
-    campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")"
-  fi
+  case "$(jq -r '.canal' <<<"$AGENTE")" in
+    nativo) campo "Handoff" "aparece na conversa do terminal" ;;
+    waha)
+      campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")$(jq -r '
+        if .retomada_automatica_horas then "; volta sozinho em \(.retomada_automatica_horas) h"
+        else "; volta só com /retomar" end' <<<"$AGENTE")"
+      ;;
+    *) campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")" ;;
+  esac
   campo "Digitação" "$(jq -r '"\(.digitacao_caracteres_por_segundo) caracteres/s, até \(.digitacao_maximo_segundos) s por mensagem"' <<<"$AGENTE")"
   campo "Ferramentas" "$(jq -r '(.ferramentas // []) | if length == 0 then "nenhuma" else map({calculadora: "calculadora", busca_web: "busca na web"}[.] // .) | join(", ") end' <<<"$AGENTE")"
 }
@@ -86,13 +90,20 @@ fluxo_editar_agente() {
     acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_modelo)
     # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
     # ligar o agente num canal.
-    if [ "$(jq -r '.canal' <<<"$AGENTE")" = nativo ]; then
-      rotulos+=("Conectar a um canal")
-      acoes+=(conecta_canal)
-    else
-      rotulos+=("Handoff")
-      acoes+=(edita_handoff)
-    fi
+    case "$(jq -r '.canal' <<<"$AGENTE")" in
+      nativo)
+        rotulos+=("Conectar a um canal")
+        acoes+=(conecta_canal)
+        ;;
+      waha)
+        rotulos+=("WhatsApp")
+        acoes+=(edita_waha)
+        ;;
+      *)
+        rotulos+=("Handoff")
+        acoes+=(edita_handoff)
+        ;;
+    esac
     rotulos+=("Voltar")
     ESC_ESCOLHE=${#rotulos[@]} escolha op "O que mudar?" "${rotulos[@]}"
     [ "$op" -lt "${#rotulos[@]}" ] || return 0
@@ -153,41 +164,89 @@ edita_modelo() {
   salva_agente "$CORPO_MODELO"
 }
 
-# conecta_canal: liga o AGENTE nativo num canal. Prompt, modelos, ferramentas e conversas ficam.
+# conecta_canal: liga o AGENTE nativo num canal externo. Prompt, modelos, ferramentas e conversas ficam.
 conecta_canal() {
-  local nome corpo rapido=""
+  local nome op
   nome=$(jq -r '.nome' <<<"$AGENTE")
   echo
   dica "$nome passa a atender pelo canal com o mesmo prompt, modelos e ferramentas."
   dica "A conversa de teste aqui no terminal continua funcionando."
-  dica "Por enquanto o canal disponível é o Chatwoot; WhatsApp oficial e WAHA entram aqui nas próximas versões."
-  ok "Canal: $(destaque Chatwoot)"
-  escolhe_caixa_chatwoot
-  if [ "$(jq -r '.buffer_segundos < 8 or .digitacao_maximo_segundos < 20' <<<"$AGENTE")" = true ]; then
-    echo
-    dica "O ritmo de teste (buffer e digitando curtos) parece robô para quem escreve no WhatsApp."
-    confirma "Usar o ritmo do WhatsApp (espera 8 s e digita como uma pessoa)?" && rapido=1
+  echo
+  escolha op "Canal" \
+    "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
+    "WhatsApp  ${CINZA}um número seu, pareado por QR code aqui na VPS${NORMAL}"
+  if [ "$op" = 1 ]; then
+    conecta_chatwoot "$nome"
+  else
+    conecta_waha "$nome"
   fi
+  devolve AGENTE RESULTADO
+}
+
+conecta_chatwoot() {
+  local nome=$1 corpo rapido=""
+  escolhe_caixa_chatwoot
+  ritmo_do_whatsapp && rapido=1
 
   corpo=$(jq -n --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
     '{canal: "chatwoot", conexao: $conexao, handoff_destino: $destino}')
   api_com_token POST "$(caminho_do_agente "$AGENTE")/canal" "$corpo" "Criando o bot no Chatwoot…"
   if [ "$API_STATUS" != 200 ]; then
     RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
-    devolve AGENTE RESULTADO
     return 0
   fi
   AGENTE=$API_RESPOSTA
   RESULTADO=$(ok "$(destaque "$nome") no ar na caixa $(destaque "$AGENTE_CAIXA") ${CINZA}· handoff para $(nome_do_destino "$HANDOFF_DESTINO")${NORMAL}")
-  if [ -n "$rapido" ]; then
-    api PATCH "$(caminho_do_agente "$AGENTE")" '{"buffer_segundos": 8, "digitacao_caracteres_por_segundo": 6, "digitacao_maximo_segundos": 20}'
+  [ -n "$rapido" ] && aplica_ritmo_do_whatsapp
+  return 0
+}
+
+conecta_waha() {
+  local nome=$1 rapido=""
+  garante_waha
+  pergunta_retomada
+  ritmo_do_whatsapp && rapido=1
+
+  api POST "$(caminho_do_agente "$AGENTE")/canal" '{"canal": "waha", "conexao": {}}'
+  if [ "$API_STATUS" != 200 ]; then
+    RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
+    return 0
+  fi
+  AGENTE=$API_RESPOSTA
+  api PATCH "$(caminho_do_agente "$AGENTE")" "$(jq -n --argjson h "$RETOMADA_HORAS" '{retomada_automatica_horas: $h}')"
+  [ "$API_STATUS" = 200 ] && AGENTE=$API_RESPOSTA
+  [ -n "$rapido" ] && aplica_ritmo_do_whatsapp
+
+  if espera_waha "$AGENTE"; then
+    escolhe_destino_waha "$AGENTE"
+    api PATCH "$(caminho_do_agente "$AGENTE")" "$(jq -n --argjson d "$HANDOFF_DESTINO" '{handoff_destino: $d}')"
     if [ "$API_STATUS" = 200 ]; then
       AGENTE=$API_RESPOSTA
-    else
-      RESULTADO+=$'\n'$(falha "Ritmo não mudou: $(detalhe_erro "$API_RESPOSTA")")
+      RESULTADO=$(ok "$(destaque "$nome") atende no WhatsApp $(destaque "+$WAHA_NUMERO") ${CINZA}· handoff para $(nome_do_destino "$HANDOFF_DESTINO")${NORMAL}")
+      return 0
     fi
+    RESULTADO=$(falha "$(detalhe_erro "$API_RESPOSTA")")
+    return 0
   fi
-  devolve AGENTE RESULTADO
+  RESULTADO=$(aviso "$(destaque "$nome") está no WhatsApp, mas o número ainda não foi pareado. Volte em WhatsApp para ler o QR code.")
+  return 0
+}
+
+# O ritmo de teste (buffer e digitando curtos) parece robô para quem escreve no WhatsApp.
+ritmo_do_whatsapp() {
+  [ "$(jq -r '.buffer_segundos < 8 or .digitacao_maximo_segundos < 20' <<<"$AGENTE")" = true ] || return 1
+  echo
+  dica "O ritmo de teste (buffer e digitando curtos) parece robô para quem escreve no WhatsApp."
+  confirma "Usar o ritmo do WhatsApp (espera 8 s e digita como uma pessoa)?"
+}
+
+aplica_ritmo_do_whatsapp() {
+  api PATCH "$(caminho_do_agente "$AGENTE")" '{"buffer_segundos": 8, "digitacao_caracteres_por_segundo": 6, "digitacao_maximo_segundos": 20}'
+  if [ "$API_STATUS" = 200 ]; then
+    AGENTE=$API_RESPOSTA
+  else
+    RESULTADO+=$'\n'$(falha "Ritmo não mudou: $(detalhe_erro "$API_RESPOSTA")")
+  fi
 }
 
 edita_handoff() {
@@ -203,14 +262,23 @@ fluxo_remover_agente() {
   cliente_id=$(jq -r '.cliente_id' <<<"$AGENTE")
   canal=$(jq -r '.canal' <<<"$AGENTE")
   echo
-  if [ "$canal" = chatwoot ]; then
-    aviso "$(destaque "$nome") para de responder na hora e o webhook deixa de valer."
-    dica "O bot sai do Chatwoot. Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
-    aguarde="Removendo e apagando o bot no Chatwoot…"
-  else
-    aviso "$(destaque "$nome") deixa de conversar no terminal."
-    dica "Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
-  fi
+  case "$canal" in
+    chatwoot)
+      aviso "$(destaque "$nome") para de responder na hora e o webhook deixa de valer."
+      dica "O bot sai do Chatwoot. Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
+      aguarde="Removendo e apagando o bot no Chatwoot…"
+      ;;
+    waha)
+      aviso "$(destaque "$nome") para de responder na hora e o número é desconectado."
+      dica "O aparelho sai da lista de aparelhos conectados do WhatsApp. Conversas e consumo ficam"
+      dica "guardados; o prompt fica em prompts/ e"
+      aguarde="Removendo e desconectando o número…"
+      ;;
+    *)
+      aviso "$(destaque "$nome") deixa de conversar no terminal."
+      dica "Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
+      ;;
+  esac
   dica "volta se você criar um agente com o mesmo nome nessa empresa."
   echo
   pergunta confirmacao "Para confirmar, digite $(destaque "$nome")"
@@ -223,7 +291,7 @@ fluxo_remover_agente() {
   api_com_token DELETE "$(caminho_do_agente "$AGENTE")" "$corpo" "$aguarde"
   if [ "$API_STATUS" = 422 ]; then
     falha "$(detalhe_erro "$API_RESPOSTA")"
-    confirma "Remover mesmo assim, deixando o bot no Chatwoot?" || return 0
+    confirma "Remover mesmo assim, deixando a conexão no canal?" || return 0
     api DELETE "$(caminho_do_agente "$AGENTE")" "$(jq -c '. + {desconectar_canal: false}' <<<"$corpo")"
   fi
   if [ "$API_STATUS" != 200 ]; then
@@ -232,7 +300,11 @@ fluxo_remover_agente() {
   fi
   ok "$(destaque "$nome") removido"
   if [ "$(jq -r '.canal_desconectado' <<<"$API_RESPOSTA")" != true ]; then
-    aviso "O bot continua no Chatwoot: tire ele da caixa de entrada nas configurações de bot da caixa."
+    if [ "$canal" = waha ]; then
+      aviso "O número continua conectado: tire o aparelho no WhatsApp, em Aparelhos conectados."
+    else
+      aviso "O bot continua no Chatwoot: tire ele da caixa de entrada nas configurações de bot da caixa."
+    fi
   fi
 
   [ "$(env_get MODO_INSTALACAO)" = revenda ] || return 0
@@ -331,20 +403,23 @@ mostra_consumo() {
 # mostra o motivo e volta também, em vez de fechar o menu.
 menu_operador() {
   local op
+  local -a rotulos acoes
   while true; do
     secao "Menu"
-    ESC_ESCOLHE=8 escolha op "O que fazer?" "Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" \
-      "Remover agente" "Ver consumo e falhas" "Token do Chatwoot" "Sair"
-    case "$op" in
-      1) com_voltar acao_novo_agente ;;
-      2) com_voltar fluxo_conversar ;;
-      3) com_voltar com_pausa lista_agentes ;;
-      4) com_voltar fluxo_editar_agente ;;
-      5) com_voltar com_pausa fluxo_remover_agente ;;
-      6) com_voltar com_pausa mostra_consumo ;;
-      7) com_voltar com_pausa fluxo_token_chatwoot ;;
-      *) return 0 ;;
-    esac
+    # A WAHA atualiza sozinha; o aviso aparece aqui quando ela precisou voltar para a versão anterior.
+    [ -n "$(estado_get waha_aviso)" ] && aviso "WhatsApp: $(estado_get waha_aviso)"
+    rotulos=("Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" "Remover agente" "Ver consumo e falhas")
+    acoes=(acao_novo_agente fluxo_conversar "com_pausa lista_agentes" fluxo_editar_agente "com_pausa fluxo_remover_agente" "com_pausa mostra_consumo")
+    if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
+      rotulos+=("WhatsApp (WAHA)")
+      acoes+=("com_pausa fluxo_waha")
+    fi
+    rotulos+=("Token do Chatwoot" "Sair")
+    acoes+=("com_pausa fluxo_token_chatwoot")
+    ESC_ESCOLHE=${#rotulos[@]} escolha op "O que fazer?" "${rotulos[@]}"
+    [ "$op" -lt "${#rotulos[@]}" ] || return 0
+    # shellcheck disable=SC2086  # a ação pode vir com `com_pausa` na frente
+    com_voltar ${acoes[$((op - 1))]}
     [ "$FALHOU" = 0 ] || pausa
   done
 }

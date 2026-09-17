@@ -18,6 +18,13 @@ consulta_provedor() {
   esac
 }
 ip_publico() { echo 203.0.113.10; }
+# WAHA: o contêiner e o desenho do QR code não existem aqui.
+garante_waha() { ok "WAHA no ar (simulado)"; }
+# Docker Hub e Compose não existem aqui: a tag nova vem de mentira e o `dc` só registra.
+curl() { case "$*" in *hub.docker.com*) echo '{"results":[{"name":"gows-2026.9.1"},{"name":"gows-arm-2026.9.1"},{"name":"gows-2026.8.2"},{"name":"gows-arm-2026.8.2"},{"name":"gows"},{"name":"dev"}]}' ;; *) return 1 ;; esac; }
+dc() { echo "dc $*" >>"$DIR/dc.log"; }
+qrencode() { printf '  [QR code de %s]\n' "${*: -1}"; }
+WAHA_ESPERA_STATUS=0
 ip_do_dominio() { local n; n=$(cat $DIR/n 2>/dev/null || echo 0); echo $((n+1)) > $DIR/n; [ "$n" -ge 2 ] && echo 203.0.113.10 || true; }
 ipv6_do_dominio() { :; }
 ip_da_cloudflare() { return 1; }
@@ -31,7 +38,7 @@ api() {
     "GET /admin/clientes") API_STATUS=200; API_RESPOSTA='[{"id":"c1","nome":"Loja Exemplo"},{"id":"c2","nome":"Padaria Pão Quente"}]' ;;
     "POST /admin/clientes") API_STATUS=201; API_RESPOSTA='{"id":"c9"}' ;;
     "PATCH /admin/clientes/c1/agentes/a1") API_STATUS=200; API_RESPOSTA=$(jq -c --argjson m "$3" '. + $m' <<<'{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}}') ;;
-    "GET /admin/agentes") API_STATUS=200; API_RESPOSTA='[{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}},{"id":"a2","cliente_id":"c2","nome":"Bia","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok2","modelo_conversa":"groq:llama-3.3-70b-versatile","handoff_destino":{"tipo":"time","id":2,"nome":"Vendas"},"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":3}}]' ;;
+    "GET /admin/agentes") API_STATUS=200; API_RESPOSTA='[{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","ativo":true},{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}},{"id":"a2","cliente_id":"c2","nome":"Bia","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok2","modelo_conversa":"groq:llama-3.3-70b-versatile","handoff_destino":{"tipo":"time","id":2,"nome":"Vendas"},"credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":3}}]' ;;
     "GET /admin/agentes?cliente_id=c1") API_STATUS=200; API_RESPOSTA='[]' ;;
     "DELETE /admin/clientes/c1/agentes/a1") API_STATUS=200; API_RESPOSTA='{"removido":true,"canal_desconectado":true}' ;;
     "GET /admin/ferramentas") API_STATUS=200; API_RESPOSTA='[{"nome":"calculadora","rotulo":"Calculadora","descricao":"contas exatas","padrao":false},{"nome":"busca_web","rotulo":"Busca na web","descricao":"pesquisa na internet","padrao":false}]' ;;
@@ -40,7 +47,21 @@ api() {
     "DELETE /admin/clientes/c1") API_STATUS=204; API_RESPOSTA='' ;;
     "GET /admin/consumo?dias=7") API_STATUS=200; API_RESPOSTA='{"agentes":[{"cliente_id":"c1","cliente":"Loja Exemplo","agente_id":"a1","agente":"Luiz","turnos":12,"chamadas":15,"tokens_entrada":81200,"tokens_saida":1900,"custo_estimado":"0.412300","sem_custo":0}],"falhas":[]}' ;;
     "GET /admin/consumo?dias=30") API_STATUS=200; API_RESPOSTA='{"agentes":[{"cliente_id":"c1","cliente":"Loja Exemplo","agente_id":"a1","agente":"Luiz","turnos":480,"chamadas":530,"tokens_entrada":3100000,"tokens_saida":52000,"custo_estimado":"12.805","sem_custo":3},{"cliente_id":"c2","cliente":"Padaria Pão Quente","agente_id":"a2","agente":"Bia","turnos":40,"chamadas":40,"tokens_entrada":300,"tokens_saida":90,"custo_estimado":"0.05","sem_custo":0}],"falhas":[{"criado_em":"2026-09-16T21:05:08.123456Z","tipo":"envio_falhou","detalhe":{"erro":"HTTPStatusError(500)"},"cliente":"Loja Exemplo","agente":"Luiz"},{"criado_em":"2026-09-15T08:00:00Z","tipo":"webhook_token_desconhecido","detalhe":{"canal":"chatwoot"},"cliente":null,"agente":null}]}' ;;
-    "POST /admin/clientes/c1/agentes") API_STATUS=201; API_RESPOSTA='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"nativo","ativo":true,"buffer_segundos":2,"arquivo_prompt":"loja-exemplo/ana/persona.md","credenciais":{}}'; echo "$3" >"$DIR/criado_nativo" ;;
+    "POST /admin/clientes/c1/agentes")
+      if grep -q '"canal": *"waha"' <<<"$3"; then
+        API_STATUS=201; API_RESPOSTA='{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","ativo":true,"buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"retomada_automatica_horas":4,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":[],"arquivo_prompt":"loja-exemplo/carlos/persona.md","credenciais":{"sessao":"carlos-a1b2c3","hmac_key":"***"}}'; echo "$3" >"$DIR/criado_waha"
+      else
+        API_STATUS=201; API_RESPOSTA='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"nativo","ativo":true,"buffer_segundos":2,"arquivo_prompt":"loja-exemplo/ana/persona.md","credenciais":{}}'; echo "$3" >"$DIR/criado_nativo"
+      fi ;;
+    "GET /admin/clientes/c1/agentes/a4/waha")
+      # Primeira consulta: esperando a leitura. Segunda: número pareado.
+      if [ -f "$DIR/qr_visto" ]; then
+        API_STATUS=200; API_RESPOSTA='{"status":"WORKING","pareado":true,"numero":"5511988887777","nome":"Carlos","qr":null}'
+      else
+        touch "$DIR/qr_visto"; API_STATUS=200; API_RESPOSTA='{"status":"SCAN_QR_CODE","pareado":false,"numero":null,"nome":null,"qr":"2@abc123"}'
+      fi ;;
+    "GET /admin/clientes/c1/agentes/a4/waha/grupos") API_STATUS=200; API_RESPOSTA='[{"chat_id":"120363111@g.us","nome":"Atendimento Loja Exemplo"}]' ;;
+    "PATCH /admin/clientes/c1/agentes/a4") API_STATUS=200; API_RESPOSTA=$(jq -c --argjson m "$3" '. + $m' <<<'{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","ativo":true,"buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"retomada_automatica_horas":4,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":[],"credenciais":{"sessao":"carlos-a1b2c3"}}'); echo "$3" >"$DIR/patch_waha" ;;
     "POST /admin/clientes/c1/agentes/a3/terminal") API_STATUS=200; API_RESPOSTA='{"conversa":"k1","conversa_id":"u1","agendada":true}' ;;
     "GET /admin/clientes/c1/agentes/a3/terminal/k1?depois=0") API_STATUS=200; API_RESPOSTA='{"mensagens":[{"id":"m1","texto":"Oi! Sou a Ana.\nComo posso ajudar?"}],"proxima":1,"digitando":false,"respondendo":false,"turno":{"id":"t1","modelo":"openai:gpt-5.5","latencia_ms":3140,"tokens_entrada":1180,"tokens_saida":64,"custo_estimado":"0.002100","ferramentas":["web_search","calcular"],"erro":null},"handoff":{"motivo":"contato pediu uma pessoa","resumo":"Quer falar com alguém.","codigo":"K7M2QX"}}' ;;
     "POST /admin/clientes/c1/agentes/a3/canal") API_STATUS=200; API_RESPOSTA='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"chatwoot","buffer_segundos":2,"digitacao_maximo_segundos":1}'; echo "$3" >"$DIR/conectado" ;;
@@ -65,3 +86,15 @@ com_voltar conecta_canal
 printf '%s\n' "$RESULTADO"
 jq -c . "$DIR/conectado"
 jq -c . <<<"$AGENTE"
+# Agente no WhatsApp: cria, pareia pelo QR code, escolhe o grupo do handoff e troca o destino depois.
+EMPRESA_ID=c1 EMPRESA_NOME="Loja Exemplo"
+com_voltar fluxo_agente_waha
+jq -c . "$DIR/criado_waha"
+AGENTE='{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","handoff_destino":{"tipo":"grupo","chat_id":"120363111@g.us","nome":"Atendimento Loja Exemplo"},"retomada_automatica_horas":4}'
+com_voltar edita_waha
+jq -c . "$DIR/patch_waha"
+# Atualização da WAHA: tag nova no Docker Hub, troca a versão e registra.
+env_set WAHA_ATIVA 1
+env_set VERSAO_WAHA gows-2026.8.2
+com_voltar fluxo_waha
+printf 'VERSAO_WAHA=%s\n' "$(env_get VERSAO_WAHA)"

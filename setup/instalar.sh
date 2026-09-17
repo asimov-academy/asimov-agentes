@@ -16,6 +16,10 @@ atualiza() {
   tela_instalacao
   ajusta_permissoes
   instala_comando
+  # Instalação que ligou o WhatsApp antes de o timer semanal da WAHA existir.
+  if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
+    instala_timer_waha
+  fi
   tela_handoff_pendente
   mostra_resumo
   [ -n "${ASIMOV_ATUALIZAR:-}" ] || menu_operador

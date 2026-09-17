@@ -78,6 +78,28 @@ services:
       - api
     restart: unless-stopped
 
+  # WhatsApp pela WAHA. Sobe só quando o primeiro agente WAHA é criado (setup/lib/waha.sh liga
+  # WAHA_ATIVA=1 no .env e o `dc` passa a mandar --profile waha). Sem porta publicada: quem fala
+  # com ela é a API, pela rede do Compose. O volume guarda o pareamento do número.
+  waha:
+    profiles: ["waha"]
+    # Imagem só com a engine GOWS (menor). setup/lib/waha.sh grava a tag arm quando a VPS é arm.
+    image: devlikeapro/waha:${VERSAO_WAHA:-gows-2026.8.2}
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: GOWS
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WAHA_DASHBOARD_ENABLED: "false"
+      WHATSAPP_SWAGGER_ENABLED: "false"
+      WAHA_EVENTS_DOWNLOAD_MEDIA: "true"
+      WAHA_API_DOWNLOAD_MEDIA: "true"
+      # O arquivo precisa durar do webhook até o fim do turno (buffer, fila e lock de 240 s).
+      WHATSAPP_FILES_LIFETIME: "3600"
+      TZ: America/Sao_Paulo
+    volumes:
+      - waha_sessoes:/app/.sessions
+      - waha_arquivos:/app/.media
+    restart: unless-stopped
+
   teste:
     profiles: ["teste"]
     build:
@@ -99,6 +121,8 @@ services:
 volumes:
   postgres:
   midia:
+  waha_sessoes:
+  waha_arquivos:
   redis:
   caddy_data:
   caddy_config:

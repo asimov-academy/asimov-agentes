@@ -87,11 +87,15 @@ async def receber(
         await registra_falha("webhook_json_invalido", {}, agente.cliente_id, agente.id)
         return _recusa(pune, 400)
 
-    evento = canal_obj.interpretar(payload, credenciais)
+    evento = canal_obj.interpretar(payload, credenciais, agente.handoff_destino)
     if evento.acao is Acao.IGNORAR:
         # Info de propósito: evento ignorado sem motivo visível é o que mais atrasa o debug de canal novo.
         log.info("webhook_ignorado", motivo=evento.motivo)
         return Response(status_code=200)
+
+    if evento.acao is Acao.RETOMAR_POR_CODIGO:
+        assert evento.codigo is not None
+        return await _retoma_por_codigo(s, agente, evento.codigo)
 
     assert evento.conversa_externa is not None
     if evento.acao is Acao.RETOMAR:
@@ -142,6 +146,21 @@ async def receber(
             return Response(status_code=500)
 
     log.info("webhook_aceito", acao=str(evento.acao), motivo=evento.motivo)
+    return Response(status_code=200)
+
+
+async def _retoma_por_codigo(s: AsyncSession, agente: Any, codigo: str) -> Response:
+    """Canais diretos: quem recebeu o handoff mandou `/retomar <código>` na conversa dele.
+
+    Código que não existe (ou de um handoff já fechado) responde 200 sem fazer nada: o destino
+    recebe o aviso de que não deu certo, e nada quebra.
+    """
+    try:
+        avisado = await handoff.retomar_por_codigo(s, agente, codigo)
+    except Exception as erro:
+        log.error("retomada_por_codigo_falhou", erro=repr(erro))
+        return Response(status_code=500)
+    log.info("webhook_aceito", acao="retomar_por_codigo", motivo="comando do destino", achou=avisado)
     return Response(status_code=200)
 
 

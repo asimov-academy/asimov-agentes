@@ -4,10 +4,11 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.8.11` em `asimov-academy/asimov-agentes` (público): agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
+- `v0.9.0` em `asimov-academy/asimov-agentes` (público): **WhatsApp direto pela WAHA**, segunda parte da fase 5. A WAHA sobe sob demanda (perfil do Compose, no primeiro agente WhatsApp), o número é pareado por QR code no terminal, o handoff avisa um número ou grupo com resumo e código, e a conversa volta com `/retomar <código>` ou sozinha pelo prazo do agente.
+- `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 177 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo no bash 3.2 e no 5, conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 194 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
 
 ## Fases
 
@@ -17,7 +18,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. **Parte 1 (agente nativo) concluída e validada em VPS real na v0.8.11**; o que falta conferir está em Pendências. **Próxima: WAHA**, depois o oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Parte 1 (agente nativo) concluída e validada em VPS real na v0.8.11. **Parte 2 (WAHA) construída na v0.9.0, aguardando o critério de aceite numa VPS real.** Próxima: WhatsApp oficial. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -33,14 +34,16 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 - Instalação guiada: modo de uso, domínio, e-mail do SSL, agente de código, modelo por função com provedor próprio (`MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`; openai, anthropic, gemini, groq), DNS, instalação com retomada, primeiro agente e resumo.
 - Setup rodado de novo numa instalação concluída pede o que faltar de versões novas, reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
-- Menu (`setup/lib/menu.sh`, `asimov` sem argumento): criar agente (começa pelo canal: Chatwoot ou nativo), conversar com agente nativo (`setup/lib/conversa.sh`), listar, editar e remover agente, ver consumo e falhas (escolhe a empresa), token do Chatwoot (esquecer) e sair. Subcomandos: `novo-agente`, `conversar`, `agentes`, `editar`, `remover`, `consumo`, `handoff`, `atualizar`, `ajuda`.
-- Editar agente: nome (renomeia o bot no Chatwoot também), buffer, mensagens por resposta, digitação, ferramentas (lista de marcar), modelos (inclui o do resumo do handoff) e destino do handoff.
+- Menu (`setup/lib/menu.sh`, `asimov` sem argumento): criar agente (começa pelo canal: Chatwoot, WhatsApp pela WAHA ou nativo), conversar com agente nativo (`setup/lib/conversa.sh`), listar, editar e remover agente, ver consumo e falhas (escolhe a empresa), token do Chatwoot (esquecer) e sair. Subcomandos: `novo-agente`, `conversar`, `agentes`, `editar`, `remover`, `consumo`, `handoff`, `atualizar`, `ajuda`.
+- Editar agente: nome (renomeia o bot no Chatwoot também), buffer, mensagens por resposta, digitação, ferramentas (lista de marcar), modelos (inclui o do resumo do handoff) e, conforme o canal, destino do handoff, "Conectar a um canal" (nativo) ou "WhatsApp" (WAHA: número pareado, destino e horas até voltar sozinho).
+- WhatsApp pela WAHA (`setup/lib/waha.sh`, v0.9.0): o contêiner sobe na primeira vez que o operador escolhe o canal (`garante_waha`), o QR code é desenhado com `qrencode` até o número parear e o destino do handoff é escolhido depois (número digitado ou grupo do próprio número). A imagem se atualiza sozinha: `asimov-waha.timer` (domingo de madrugada) roda `deploy/atualiza_waha.sh`, que volta para a versão anterior se algum número não reconectar em 2 minutos e deixa o aviso no menu. Item "WhatsApp (WAHA)" no menu: versão, última conferida, ligar ou desligar a automática e procurar versão nova agora.
 - Tela: escolhas com setas e Enter (números como atalho), Sim/Não com setas, lista de marcar com Espaço, cada seção limpa a tela e redesenha o banner, Esc volta à tela anterior (cada ação do menu roda em `com_voltar`), pausa com Enter antes de o menu limpar o que precisa ser lido.
 - Token de administrador do Chatwoot pedido uma vez por URL e guardado cifrado (`acessos/`); a API responde 428 quando falta ou foi recusado e o menu pergunta (`api_com_token` em `setup/lib/agente.sh`).
 
 ### Plataforma
 
-- Conversa de teste no terminal para agente de qualquer canal (`Conversa.canal` nativo; `canal_da_conversa`). Agente nativo pode ser conectado depois a um canal externo (`POST .../canal`, hoje só Chatwoot).
+- Canal WAHA (`canais/waha/`, v0.9.0): uma sessão por agente com webhook interno assinado (HMAC SHA-512), QR code lido pelo setup (`GET .../waha`, `POST .../waha/reiniciar`, `GET .../waha/grupos`), envio, digitando e marcar como lida, download de mídia com a chave da instalação, remoção com logout. Ignora `fromMe`, grupos (menos o do handoff) e sessão de outro agente. Handoff: pausa pelo status da conversa, aviso ao número ou grupo com resumo e código, `/retomar <código>` só do destino, job `retomada_automatica` no worker (cron de um minuto) e aviso de que o agente voltou.
+- Conversa de teste no terminal para agente de qualquer canal (`Conversa.canal` nativo; `canal_da_conversa`). Agente nativo pode ser conectado depois a um canal externo (`POST .../canal`: Chatwoot ou WAHA).
 - Canal nativo (`canais/nativo/`): sem conexão nem webhook; rotas `POST` e `GET .../terminal` em `canais/nativo/rotas.py`; envio, digitando e humano conduzindo no Redis (`memoria.py`); a leitura diz se o turno ainda está em andamento. Handoff mostra motivo, resumo e código no terminal e `/retomar` usa a retomada do operador.
 - Canal Chatwoot (`canais/chatwoot/`): cria o Agent Bot e confere na caixa que ele ficou ligado; aceita evento de qualquer caixa em que o bot esteja ligado (a assinatura prova o bot).
 - Turno (`conversas/turno.py`): buffer por conversa, lock de 240 s, mídia antes do modelo, resposta descartada se chegar mensagem nova antes do envio, digitando com o tempo de uma pessoa digitar (6 caracteres/s, variação de 15%, teto de 20 s por mensagem, soma até 90 s; editável por agente).
@@ -53,6 +56,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Pendências conhecidas
 
+- **Parte 2 (WAHA) ainda não rodou numa VPS**: falta parear um número de verdade, conferir texto, áudio e imagem, o aviso de handoff e o `/retomar`, a remoção tirando o aparelho da lista do WhatsApp e o timer de atualização (`systemctl list-timers asimov-waha.timer`). O que o operador precisa: um chip de teste que possa ser bloqueado e o número ou grupo que recebe o handoff.
 - Da parte 1, não conferido na VPS depois das correções: contas pela calculadora nova (v0.8.7: ponto de milhar, porcentagem, parcela, datas), citação da busca sem markdown (v0.8.10) e `/retomar` no terminal. Cobertos por teste automatizado.
 - Mídia (visão e PDF) na OpenAI Responses ainda não conferida na VPS.
 - Uma mensagem digitada no terminal da VPS chegou como "Ol�a" (byte inválido antes do "a"). Suspeita: apagar uma letra acentuada; não reproduzido local com bash 5.
@@ -63,7 +67,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Para a fase 5
 
-Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo (feito, v0.8.0 a v0.8.11), WAHA, WhatsApp oficial**, uma versão por parte, com validação na VPS entre elas.
+Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo (feito, v0.8.0 a v0.8.11), WAHA (construída, v0.9.0), WhatsApp oficial**, uma versão por parte, com validação na VPS entre elas.
 
 Validado na VPS na parte 1 (2026-09-17): conversa no terminal com ritmo rápido e etapas; nativo conectado ao Chatwoot com as conversas de teste separadas; handoff e devolução no Chatwoot; busca na web usada quando precisa (v0.8.5) e sem o erro de JSON (v0.8.9); data do dia respondida sem ferramenta (v0.8.10); agente novo cru, sem ferramentas e com prompt de uma linha, gastando uns 550 tokens por turno contra uns 5.600 com busca ligada (v0.8.11).
 
@@ -74,7 +78,7 @@ O que reaproveitar:
 - No menu: `com_voltar`, `api_com_token`, `escolha`, `marca`, `pergunta_numero`, `pausa`. A escolha do canal está em `fluxo_novo_agente` (`agente.sh`): WAHA e oficial entram como opções novas ali; `escolhe_agente [canal]` filtra por canal; editar monta as opções por canal (`fluxo_editar_agente`).
 - `le_tecla VAR segundos` devolve `nada` sem tecla no tempo: serve para desenhar o QR code e consultar o status da sessão enquanto espera.
 
-WAHA (conferido na documentação em 2026-09-17):
+WAHA (construída na v0.9.0; conferido na documentação em 2026-09-17):
 - Imagem `devlikeapro/waha` com `WHATSAPP_DEFAULT_ENGINE=GOWS` (conferir a tag para amd64 e arm e fixar a versão). Variáveis: `WAHA_API_KEY` (gerada pelo setup no `.env`), `WAHA_DISABLE_DASHBOARD`, `WAHA_DISABLE_SWAGGER`, `WHATSAPP_DOWNLOAD_MEDIA`, `WHATSAPP_FILES_LIFETIME`. Header `X-Api-Key`. Volume para as sessões.
 - Sessões: `POST /api/sessions` com `{"name", "config": {"webhooks": [{"url", "events", "hmac": {"key"}, "retries"}]}}`, `POST /api/sessions/{s}/start|stop|logout`, `DELETE /api/sessions/{s}`, `GET /api/sessions/{s}` (status `STARTING`, `SCAN_QR_CODE`, `WORKING`, `FAILED`, `STOPPED`), `GET /api/{s}/auth/qr?format=raw` (texto para o `qrencode` desenhar no terminal), `POST /api/{s}/auth/request-code` com `phoneNumber` (código de pareamento), `GET /api/sessions/{s}/me`.
 - Webhook: eventos `message` (só recebidas) e `session.status`; corpo com `event`, `session` e `payload` (`id`, `from`, `fromMe`, `to`, `body`, `hasMedia`, `media.url`, `media.mimetype`, `media.filename`, `participant`). Assinatura `X-Webhook-Hmac` = HMAC SHA-512 do corpo cru, `X-Webhook-Hmac-Algorithm: sha512`.

@@ -65,7 +65,7 @@ tela_iniciando() {
   passo upgrade "Atualização do sistema" "Rode apt-get upgrade para ver o erro." apt_upgrade
   passo base "sudo, apt-utils e dialog" "Veja o log." apt_instala sudo apt-utils dialog
   passo ferramentas "jq, curl e dnsutils" "Veja o log." \
-    apt_instala jq curl ca-certificates gnupg dnsutils openssl
+    apt_instala jq curl ca-certificates gnupg dnsutils openssl qrencode
   passo git "Git" "Veja o log." apt_instala git
   passo python "python3 e ufw" "Veja o log." apt_instala python3 ufw
   passo docker "Docker" \

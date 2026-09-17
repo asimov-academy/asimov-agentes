@@ -22,7 +22,7 @@ Fale com o operador em português, curto e direto.
 - Setup e comando `asimov`: Bash para Ubuntu 24.04 (`curl`, `jq`, `dig`).
 - Backend: Python 3.12, `uv`, FastAPI, PydanticAI (OpenAI pela Responses, Anthropic, Gemini, Groq, FallbackModel, `WebSearch` com DuckDuckGo local), arq.
 - Dados: PostgreSQL 16 com pgvector, SQLAlchemy 2.0, Alembic, Redis 7.
-- Execução: Docker Compose com Caddy.
+- Execução: Docker Compose com Caddy. WAHA (WhatsApp) em perfil, sobe sob demanda; `qrencode` desenha o QR no terminal.
 - Testes: pytest com Postgres e Redis reais em container; `shellcheck`.
 
 ## Comandos de desenvolvimento
@@ -38,7 +38,7 @@ Fale com o operador em português, curto e direto.
 - `setup/` é o único cliente da API. Depois que a API sobe, ele NUNCA acessa o banco.
 - `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
 - `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA chama banco direto.
-- Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`.
+- Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.
 - Não existe `frontend/` na primeira versão.
 
@@ -47,6 +47,7 @@ Fale com o operador em português, curto e direto.
 - Todo repositório recebe `cliente_id` obrigatório e toda consulta filtra por ele. Única exceção: `acessos/` (token do operador no canal, da instalação). NUNCA use `cliente_id` vindo do corpo da requisição: nos webhooks ele sai do `token_webhook`, nas rotas admin da URL conferida no banco.
 - Busca vetorial filtra `cliente_id` e `agente_id` no `WHERE`.
 - Webhook do Chatwoot com assinatura inválida responde 200 e registra Falha. NUNCA 401: o Chatwoot silencia o bot na conversa.
+- No WhatsApp direto a pausa do handoff é o `status` da conversa aqui, e a volta é `/retomar <código>` do destino ou o prazo do agente. NUNCA guarde essa pausa em dois lugares.
 - Webhook só valida, grava e agenda. NUNCA chame IA dentro da requisição.
 - Conteúdo extraído de mídia entra como dado do contato. NUNCA no prompt de sistema.
 - Credenciais de canal só criptografadas no banco. NUNCA em log, resposta da API ou `.env`.
@@ -67,6 +68,7 @@ Fale com o operador em português, curto e direto.
 - Teste teclas com bash 5 (o da VPS), não o 3.2 do macOS: o tempo de espera do Esc é outro.
 - Terminal no navegador da Hostinger manda Enter como `\r\n`: toda leitura com terminal começa por `descarta_pendentes`, senão o Enter sobra e responde a pergunta seguinte.
 - Ação do menu roda em `com_voltar` (subshell, para o Esc voltar): variável alterada lá dentro some, a não ser que saia por `devolve`.
+- WAHA: o contêiner tem perfil no Compose e só sobe no primeiro agente WhatsApp (`WAHA_ATIVA=1` no `.env`, lido pelo `dc`). A `WAHA_API_KEY` nasce na instalação: gerá-la depois obrigaria a reiniciar a API. A imagem é atualizada por timer do systemd no host (`deploy/atualiza_waha.sh`), nunca pelo worker: contêiner com socket do Docker é a VPS inteira.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.
 - Chatwoot: conversa Aberta é humano conduzindo, o agente fica calado; só Pendente gera turno.

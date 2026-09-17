@@ -15,7 +15,7 @@ gera_arquivos_de_contexto() {
   sed -e "s|{{AGENTE_CODIGO}}|$agente_codigo|g" \
     -e "s|{{MODELOS}}|$modelos|g" \
     -e "s|{{MODO}}|$(env_get MODO_INSTALACAO)|g" \
-    -e "s|{{CANAIS}}|Chatwoot|g" \
+    -e "s|{{CANAIS}}|Chatwoot, WhatsApp (WAHA) e nativo (terminal)|g" \
     -e "s|{{CAMINHO_LOG}}|$LOG|g" \
     "$RAIZ_PROJETO/modelos/AGENTS.md.tmpl" >"$RAIZ_PROJETO/AGENTS.md"
   printf '@AGENTS.md\n' >"$RAIZ_PROJETO/CLAUDE.md"
@@ -43,6 +43,13 @@ mostra_resumo() {
   secao "Pronto"
   if [ "$(estado_get agente_canal)" = nativo ]; then
     ok "Agente $(destaque "$(estado_get agente_nome)") criado para conversar no terminal ${CINZA}· $(estado_get agente_conta)${NORMAL}"
+    echo
+  elif [ "$(estado_get agente_canal)" = waha ]; then
+    if [ -n "$(estado_get agente_caixa)" ]; then
+      ok "$(destaque "$(estado_get agente_nome)") atende no WhatsApp $(destaque "$(estado_get agente_caixa)") ${CINZA}· $(estado_get agente_conta)${NORMAL}"
+    else
+      aviso "$(destaque "$(estado_get agente_nome)") criado, mas o número ainda não foi pareado: abra $(destaque asimov) > Editar agente > WhatsApp."
+    fi
     echo
   elif [ -n "$(estado_get agente_id)" ]; then
     ok "$(destaque "$(estado_get agente_nome)") no ar na caixa $(destaque "$(estado_get agente_caixa)") ${CINZA}· $(estado_get agente_conta)${NORMAL}"

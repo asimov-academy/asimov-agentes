@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -71,3 +72,29 @@ async def fecha(
         .returning(Handoff.id)
     )
     return fechado is not None
+
+
+async def aberto_por_codigo(
+    sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID, codigo: str
+) -> Handoff | None:
+    """O `/retomar <código>` dos canais diretos só alcança handoff aberto do próprio agente."""
+    return await sessao.scalar(
+        select(Handoff).where(
+            Handoff.cliente_id == cliente_id,
+            Handoff.agente_id == agente_id,
+            Handoff.codigo == codigo.upper(),
+            Handoff.retomado_em.is_(None),
+        )
+    )
+
+
+async def vencidos(sessao: AsyncSession, limite: datetime, maximo: int = 100) -> list[Handoff]:
+    """Handoffs abertos que passaram da hora de voltar sozinhos (canais com retomada por tempo)."""
+    return list(
+        await sessao.scalars(
+            select(Handoff)
+            .where(Handoff.retomado_em.is_(None), Handoff.retomar_em.is_not(None), Handoff.retomar_em <= limite)
+            .order_by(Handoff.retomar_em)
+            .limit(maximo)
+        )
+    )

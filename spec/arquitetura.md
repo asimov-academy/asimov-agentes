@@ -120,7 +120,7 @@ prompts/<cliente>/<agente>/resumo_handoff.md
 ```
 
 - Em cada assunto: `rotas.py` só recebe e valida, `servico.py` tem a regra, `repo.py` fala com o banco. Rota nunca chama banco direto.
-- Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo.
+- Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo. O que muda entre canais vira atributo ou método do contrato, nunca `if canal ==` fora de `canais/`: `webhook_interno` (WAHA chama a API pela rede do Compose), `agente_pode_falar(credenciais, conversa, status)` (o Chatwoot pergunta ao Chatwoot; o canal direto vale-se do status da conversa), `interpretar(payload, credenciais, destino)` (o destino do handoff é de onde vem o `/retomar`), `transferir(..., codigo)`, `avisa_destino` e `rotulo_da_conversa`.
 - Ferramenta nova que o operador liga por agente é um arquivo próprio em `ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar, se vem ligada), listada em `ia/ferramentas/registro.py`. Um teste falha se houver arquivo fora do registro. Tool que todo agente tem é registrada em `ia/agente.py`.
 - Por que assim: para mudar como a WAHA envia mensagem, mexe-se só em `canais/waha/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
 
@@ -147,7 +147,9 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Enviar documento | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/documentos` | caminho do arquivo na VPS ou upload multipart | documento com status `processando` | formato aceito (PDF, DOCX, TXT, MD); hash repetido no mesmo agente é recusado; enfileira ingestão |
 | Listar documentos | `GET .../agentes/{agente_id}/documentos` | ids | lista com status e trechos | agente pertence ao cliente |
 | Remover documento | `DELETE .../documentos/{documento_id}` | ids | ok | documento pertence ao agente e ao cliente; apaga trechos |
-| Sessão WAHA | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}/sessao` | ids | status (`SCAN_QR_CODE`, `WORKING`, `FAILED`) e QR code em texto quando aguardando | agente WAHA do cliente; o menu desenha o QR no terminal até `WORKING` |
+| Sessão WAHA | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}/waha` | ids | status (`STARTING`, `SCAN_QR_CODE`, `WORKING`, `FAILED`, `STOPPED`), pareado, número e QR code em texto quando aguardando | agente WAHA do cliente; o menu desenha o QR no terminal até `WORKING`; WAHA fora do ar devolve 502 |
+| Reiniciar sessão WAHA | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/waha/reiniciar` | ids | mesma saída da consulta | para e inicia a sessão para vir um QR code novo (depois de `FAILED` ou para trocar de número) |
+| Grupos da WAHA | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}/waha/grupos` | ids | grupos do número (chat_id e nome) | para escolher o destino do handoff; número ainda não pareado devolve lista vazia |
 | Conversar no terminal | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/terminal` | texto (1 a 4000) e conversa (vazia começa uma nova) | conversa, conversa_id (para retomar) e agendada (false com handoff aberto: grava e o agente não responde) | agente ativo do cliente, de qualquer canal: a conversa é criada no canal nativo e a resposta não passa pelo canal do agente; conversa informada precisa ser desse agente e do nativo (404: nunca escreve em conversa real do canal); grava a mensagem e agenda o buffer, como um webhook |
 | Ler conversa do terminal | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}/terminal/{conversa}?depois=` | ids e `depois` (quantas mensagens do agente o terminal já mostrou) | mensagens do agente depois dessa posição, próxima posição, digitando, respondendo (turno em andamento), último turno de resposta (modelo, latência, tokens, custo, ferramentas, erro) e handoff aberto (motivo, resumo, código) | conversa do terminal desse agente e cliente; o lock do turno é lido antes das mensagens: respondendo falso garante que resposta, turno e handoff já estão gravados |
 | Conectar agente a um canal | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/canal` | canal, conexao (como na criação) e handoff_destino | agente | agente ativo do cliente num canal que não é externo (nativo), senão 409; canal novo externo, senão 422; conecta com o mesmo token do webhook e grava credenciais e destino; sem token guardado nem informado, 428; se gravar falhar, desfaz a conexão; prompt, modelos, ajustes e conversas ficam |
@@ -192,6 +194,8 @@ Worker arq, mesmo código do backend, container `worker`:
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
 | `limpar_midia` | cron diário | apaga arquivos de mídia com mais de 90 dias |
 
+Fora do worker, no host: `asimov-waha.timer` (systemd, domingo de madrugada) roda `deploy/atualiza_waha.sh`, que atualiza a imagem da WAHA e volta para a anterior se algum número não reconectar. Fica no host porque atualizar contêiner pede o Docker, e dar o socket do Docker a um contêiner é dar a VPS inteira.
+
 Digitando por canal: WhatsApp pelo indicador de digitação da Cloud API junto da confirmação de leitura; WAHA `startTyping`/`stopTyping` e `sendSeen`; nativo guarda o digitando no Redis para o terminal mostrar; Chatwoot `toggle_typing_status`.
 
 Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persistindo, mensagem curta de expectativa ao contato, registro em Falha e handoff. Nunca resposta inventada.
@@ -199,7 +203,7 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 ## 8. Segredos
 
 - Tudo em `.env`, gerado pelo setup. O repositório tem só `.env.example` com as chaves e nenhum valor.
-- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `OPENAI_RACIOCINIO` (desde a v0.8.5), `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`. Entram depois: `WAHA_API_KEY` (fase 5) e `MODELO_EMBEDDINGS` (fase 6).
+- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `OPENAI_RACIOCINIO` (desde a v0.8.5), `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`, `WAHA_API_KEY` (gerada na instalação mesmo sem a WAHA, para ligar o WhatsApp depois não reiniciar a API) e, quando o WhatsApp é ligado, `WAHA_ATIVA=1` e `VERSAO_WAHA`. Entra depois: `MODELO_EMBEDDINGS` (fase 6).
 - Senha do Postgres, `CHAVE_API_ADMIN` e `CHAVE_CRIPTOGRAFIA` são geradas pelo setup com `openssl rand`, nunca pedidas ao operador.
 - Credenciais de canal não ficam no `.env`: ficam criptografadas no banco, por agente. O token de administrador do Chatwoot também fica no banco, cifrado, em `acessos/`.
 - Nunca no repositório: `.env`, dumps, backups, mídia, documentos de clientes, `.venv`. O `.gitignore` do projeto gerado já cobre tudo isso.

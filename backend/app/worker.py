@@ -1,8 +1,11 @@
 from typing import Any
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.conversas.turno import processar_turno
+from app.handoff import servico as handoff
+from app.plataforma.banco import fabrica_sessao
 from app.plataforma.config import config
 from app.plataforma.log import configura_log
 
@@ -11,8 +14,15 @@ async def ao_iniciar(ctx: dict[str, Any]) -> None:
     configura_log(config().log_nivel)
 
 
+async def retomada_automatica(ctx: dict[str, Any]) -> int:
+    """De minuto em minuto: conversa cujo prazo de handoff venceu volta para o agente."""
+    async with fabrica_sessao()() as s:
+        return await handoff.retomada_automatica(s)
+
+
 class Configuracao:
     functions = [processar_turno]
+    cron_jobs = [cron(retomada_automatica, second=0, run_at_startup=False)]
     on_startup = ao_iniciar
     redis_settings = RedisSettings.from_dsn(config().redis_url)
     max_jobs = 20
