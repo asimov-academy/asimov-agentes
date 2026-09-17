@@ -14,8 +14,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 |---|---|
 | 1. Setup de ponta a ponta com agente de texto no Chatwoot | Concluída e validada em VPS real (texto respondido pelo Chatwoot com WhatsApp) |
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2): áudio, imagem e PDF respondidos; 4 áudios seguidos numa resposta só; reenvio dos mesmos áudios sem nova transcrição |
-| 3. Handoff no Chatwoot | **Construída na v0.4.0**, falta validar em VPS real |
-| 4. Menu do operador | Parcial: `asimov novo-agente` e `asimov agentes` prontos; faltam editar, remover e consumo |
+| 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1): conversa atribuída com resumo em nota privada, agente calado com a conversa Aberta, volta ao marcar Pendente |
+| 4. Menu do operador | **Próxima**. Parcial: `asimov novo-agente` e `asimov agentes` prontos; faltam editar, remover e consumo |
 | 5. WhatsApp oficial e Telegram diretos | Não iniciada |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup e domínio próprio do setup |
@@ -44,12 +44,13 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Destino por agente: usuário, time ou caixa. `asimov handoff` troca; a atualização pergunta uma vez para agentes antigos. `PATCH` do agente aceita só `handoff_destino` por enquanto.
 - Ainda sem tool que altera estado além do handoff: a regra de turno com mídia continua sem efeito prático.
 
-## Para validar a fase 3 na VPS
+- Validada na VPS em 2026-09-16. O teste achou a nota longa demais, encurtada na v0.4.1 (spec/decisoes.md).
 
-1. `asimov atualizar` e escolher quem recebe o handoff do agente existente.
-2. Pedir para falar com uma pessoa: conversa atribuída, Aberta, com resumo em nota privada.
-3. Mandar mensagens com a conversa Aberta: agente calado.
-4. Marcar como Pendente, mandar mensagem: agente responde.
+## Para a fase 4
+
+- `PATCH` do agente já existe só com `handoff_destino`; completar com os demais campos.
+- A pergunta de handoff da atualização pede o token uma vez por agente sem destino; no menu, pedir uma vez por Chatwoot.
+- Teste de dois clientes precisa de um segundo Agent Bot e uma segunda caixa no Chatwoot.
 
 ## Fluxo de publicação combinado com o operador
 
