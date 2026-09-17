@@ -127,6 +127,15 @@ pergunta_numero() {
 }
 
 # normaliza "texto": sem acento, maiúscula, espaço ou pontuação, como o slug da API.
+# normaliza_linhas: como `normaliza`, mas em lote, uma linha por vez do stdin. Um processo só
+# para listas grandes (os grupos do WhatsApp).
+normaliza_linhas() {
+  python3 -c 'import sys, unicodedata, re
+for linha in sys.stdin.read().split("\n"):
+    t = unicodedata.normalize("NFKD", linha).encode("ascii", "ignore").decode().lower()
+    print(re.sub(r"[^a-z0-9]+", "", t))'
+}
+
 normaliza() {
   python3 -c 'import sys, unicodedata, re
 t = unicodedata.normalize("NFKD", sys.argv[1]).encode("ascii", "ignore").decode().lower()
