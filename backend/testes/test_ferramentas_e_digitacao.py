@@ -89,6 +89,7 @@ async def test_turno_entrega_ao_modelo_so_as_ferramentas_ligadas(http, canal, fi
     # Ferramenta ligada vem com a instrução de quando usar; sem ela o modelo não buscava (v0.8.3).
     assert "use a busca na web" in instrucoes[0] and "passa pela calculadora" in instrucoes[0]
     assert "busca na web" not in instrucoes[2] and "calculadora" not in instrucoes[2]
+    assert all("no horário de Brasília" in i for i in instrucoes)
     assert esperas and all(e >= DIGITANDO_MINIMO_SEGUNDOS for e in esperas)
 
 

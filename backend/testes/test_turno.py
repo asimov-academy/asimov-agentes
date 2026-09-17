@@ -53,6 +53,30 @@ def test_divisao_nunca_passa_do_maximo() -> None:
     assert limita_mensagens(["a", "b"], 1) == ["a\n\nb"]
 
 
+def test_mensagem_sai_sem_markdown() -> None:
+    from app.conversas.divisao import sem_markdown
+
+    # Citação da busca da OpenAI, como chegou na VPS.
+    assert sem_markdown(
+        "A PTAX foi R$ 5,1490, segundo o Banco Central. ([numerando.com.br](https://www.numerando.com.br/dolar-hoje?utm_source=openai))"
+    ) == "A PTAX foi R$ 5,1490, segundo o Banco Central. (numerando.com.br)"
+    assert sem_markdown("Veja o [site do BC](https://www.bcb.gov.br) e **confira**") == "Veja o site do BC e confira"
+    assert sem_markdown("## Horários\nSeg a sex") == "Horários\nSeg a sex"
+    assert sem_markdown("https://exemplo.com.br/pagina?utm_source=openai") == "https://exemplo.com.br/pagina"
+    assert limita_mensagens(["**Oi**", "([x](https://x.com))"], 3) == ["Oi", "(x)"]
+
+
+def test_modelo_recebe_data_e_hora_de_brasilia() -> None:
+    from datetime import datetime
+
+    from app.ia.agente import agora_em_brasilia
+    from app.ia.ferramentas.calculadora import FUSO_BRASILIA
+
+    assert agora_em_brasilia(datetime(2026, 9, 17, 14, 5, tzinfo=FUSO_BRASILIA)).startswith(
+        "Agora é quinta-feira, 17/09/2026, 14:05 no horário de Brasília."
+    )
+
+
 async def test_tres_mensagens_no_buffer_geram_um_turno(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     recebidas: list[str] = []
     monkeypatch.setattr(

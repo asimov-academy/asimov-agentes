@@ -5,6 +5,7 @@ edita o arquivo e a mudança vale na próxima mensagem, sem publicar de novo.
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,7 @@ from pydantic_ai.usage import UsageLimits
 
 from app.handoff.tool import transferir_para_humano
 from app.ia import ferramentas
+from app.ia.ferramentas.calculadora import FUSO_BRASILIA
 from app.ia.contexto import ContextoTurno
 from app.ia.provedores import modelo_de_resposta
 from app.plataforma.config import config
@@ -132,6 +134,18 @@ def conteudo(m: "Mensagem") -> str:
     return "\n".join(partes) or f"[{m.tipo} sem texto]"
 
 
+DIAS_DA_SEMANA = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo")
+
+
+def agora_em_brasilia(agora: datetime | None = None) -> str:
+    """O modelo não sabe a data: sem isto a Isa só acertou "que dia é hoje" porque tinha buscado antes (v0.8.10)."""
+    agora = agora or datetime.now(FUSO_BRASILIA)
+    return (
+        f"Agora é {DIAS_DA_SEMANA[agora.weekday()]}, {agora:%d/%m/%Y}, {agora:%H:%M} no horário de Brasília. "
+        "Use isso para hoje, ontem, dias da semana e prazos."
+    )
+
+
 def tipo_de_saida(modelo: "Model") -> Any:
     """Resposta no formato estruturado nativo quando todo modelo do agente aceita; senão, por tool.
 
@@ -204,6 +218,8 @@ async def roda_turno(
             INSTRUCAO_DE_MIDIA,
             *instrucoes_das_ferramentas,
             INSTRUCAO_DE_HANDOFF,
+            # Por último: muda a cada minuto e não pode quebrar o cache do prompt fixo que vem antes.
+            agora_em_brasilia(),
         ],
     )
     contexto = ContextoTurno()
