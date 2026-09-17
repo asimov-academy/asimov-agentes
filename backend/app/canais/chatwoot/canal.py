@@ -113,17 +113,6 @@ def _id_conversa(payload: dict[str, Any]) -> str | None:
     return None
 
 
-def _id_inbox(payload: dict[str, Any]) -> int | None:
-    conversa = _conversa(payload)
-    for fonte in (payload.get("inbox"), conversa.get("inbox")):
-        if isinstance(fonte, dict) and isinstance(fonte.get("id"), int):
-            return fonte["id"]
-    for fonte in (payload, conversa):
-        if isinstance(fonte.get("inbox_id"), int):
-            return fonte["inbox_id"]
-    return None
-
-
 TIPOS_ANEXO = {"audio": "audio", "image": "imagem", "video": "video", "file": "documento"}
 """Localização, contato e cartões do Instagram não têm arquivo para baixar."""
 
@@ -264,10 +253,13 @@ class Chatwoot:
                         json={"agent_bot": bot["id"]},
                         headers=cabecalho,
                     )
-                    if ligado.status_code >= 400:
+                    if ligado.status_code >= 400 or not await self._bot_ligado(
+                        http, base, cabecalho, inbox_id, bot["id"]
+                    ):
                         await http.delete(f"{base}/agent_bots/{bot['id']}", headers=cabecalho)
                         raise CredencialInvalida(
-                            f"não consegui ligar o bot na caixa de entrada {inbox_id}"
+                            f"o Chatwoot não ligou o bot na caixa de entrada {inbox_id}; "
+                            "confira se ela aceita bot e tente de novo"
                         )
         except httpx.HTTPError as erro:
             raise CredencialInvalida(
@@ -282,6 +274,24 @@ class Chatwoot:
             bot_id=bot["id"],
             bot_secret=bot["secret"],
         ).model_dump()
+
+    async def _bot_ligado(
+        self, http: httpx.AsyncClient, base: str, cabecalho: dict[str, str], inbox_id: int, bot_id: int
+    ) -> bool:
+        """Confere na caixa qual bot ficou. O Chatwoot responde 200 mesmo quando não liga.
+
+        Chatwoot sem a rota de consulta (versão antiga) não impede: vale a resposta da ligação.
+        """
+        resp = await http.get(f"{base}/inboxes/{inbox_id}/agent_bot", headers=cabecalho)
+        if resp.status_code == 404:
+            return True
+        if resp.status_code >= 400:
+            return False
+        try:
+            ligado = (resp.json() or {}).get("agent_bot") or {}
+        except ValueError:
+            return True
+        return ligado.get("id") == bot_id
 
     async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
         """Apaga o Agent Bot; o Chatwoot desliga o bot das caixas junto. Bot que já não existe é ok."""
@@ -334,10 +344,8 @@ class Chatwoot:
         if evento not in EVENTOS_ACEITOS:
             return Evento(Acao.IGNORAR, f"evento fora da lista: {evento!r}")
 
-        inbox = _id_inbox(payload)
-        if inbox is not None and inbox not in credenciais.get("inbox_ids", []):
-            return Evento(Acao.IGNORAR, f"inbox {inbox} não é deste agente ({credenciais.get('inbox_ids')})")
-
+        # Sem filtro por caixa: o Chatwoot só chama o bot a partir das caixas em que ele está ligado,
+        # e a assinatura prova qual bot é. Ligar o bot em outra caixa pelo Chatwoot também vale.
         conversa = _id_conversa(payload)
         if conversa is None:
             return Evento(Acao.IGNORAR, "payload sem id de conversa")

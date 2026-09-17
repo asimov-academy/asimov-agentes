@@ -95,6 +95,29 @@ async def test_conectar_sem_ser_administrador() -> None:
         await canal.conectar(CONEXAO, WEBHOOK, "Ana")
 
 
+async def test_chatwoot_que_nao_liga_o_bot_apaga_o_bot_criado() -> None:
+    def outro_bot_na_caixa(req, corpo):  # type: ignore[no-untyped-def]
+        if req.url.path == "/api/v1/accounts/1/inboxes/3/agent_bot":
+            return httpx.Response(200, json={})
+        return chatwoot_real(req, corpo)
+
+    canal = ChatwootHttp(outro_bot_na_caixa)
+    with pytest.raises(CredencialInvalida, match="não ligou o bot na caixa de entrada 3"):
+        await canal.conectar(CONEXAO, WEBHOOK, "Ana")
+    assert ("DELETE", "/api/v1/accounts/1/agent_bots/99", None) in canal.chamadas
+
+
+async def test_conectar_confere_o_bot_ligado_na_caixa() -> None:
+    def bot_ligado(req, corpo):  # type: ignore[no-untyped-def]
+        if req.url.path == "/api/v1/accounts/1/inboxes/3/agent_bot":
+            return httpx.Response(200, json={"agent_bot": {"id": 99, "name": "Ana"}})
+        return chatwoot_real(req, corpo)
+
+    canal = ChatwootHttp(bot_ligado)
+    assert (await canal.conectar(CONEXAO, WEBHOOK, "Ana"))["inbox_ids"] == [3]
+    assert ("GET", "/api/v1/accounts/1/inboxes/3/agent_bot", None) in canal.chamadas
+
+
 async def test_falha_ao_ligar_na_caixa_apaga_o_bot_criado() -> None:
     canal = ChatwootHttp(lambda req, corpo: chatwoot_real(req, corpo, set_agent_bot_status=404))
     with pytest.raises(CredencialInvalida, match="caixa de entrada 3"):
@@ -183,8 +206,9 @@ def test_devolucao_para_pendente_vira_retomada_e_atribuicao_nao() -> None:
     assert canal.interpretar(_evento_de_status("conversation_updated", "pending", atribuiu), CREDENCIAIS).acao is Acao.IGNORAR
     abriu = [{"status": {"previous_value": "pending", "current_value": "open"}}]
     assert canal.interpretar(_evento_de_status("conversation_status_changed", "open", abriu), CREDENCIAIS).acao is Acao.IGNORAR
+    # Caixa fora das credenciais: o bot foi ligado nela pelo Chatwoot, e a assinatura já provou o bot.
     outra_caixa = {**_evento_de_status("conversation_status_changed", "pending", mudou_status), "inbox_id": 9}
-    assert canal.interpretar(outra_caixa, CREDENCIAIS).acao is Acao.IGNORAR
+    assert canal.interpretar(outra_caixa, CREDENCIAIS).acao is Acao.RETOMAR
 
 
 async def test_desconectar_apaga_o_bot_com_o_token_do_administrador() -> None:

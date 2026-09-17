@@ -87,12 +87,18 @@ async def test_mensagem_do_proprio_agente_e_ignorada(http, canal, fila, sessao) 
     assert await _conta(sessao, Mensagem) == 1
 
 
-async def test_inbox_de_outro_agente_e_ignorada(http, canal, fila, sessao) -> None:  # type: ignore[no-untyped-def]
-    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+async def test_caixa_ligada_pelo_chatwoot_vale_e_o_isolamento_vem_da_assinatura(http, canal, fila, sessao) -> None:  # type: ignore[no-untyped-def]
+    ana = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    bia = await cria_cliente_e_agente(http, "Padaria", "Bia")
 
-    await envia_webhook(http, agente["token"], payload_chatwoot(inbox=99))
+    # Bot da Ana ligado pelo operador numa segunda caixa do Chatwoot.
+    await envia_webhook(http, ana["token"], payload_chatwoot(mensagem_id=1, inbox=2))
+    assert await _conta(sessao, Mensagem) == 1
 
-    assert await _conta(sessao, Mensagem) == 0
+    # Evento no endereço da Bia com a assinatura de outro bot não entra.
+    resp = await envia_webhook(http, bia["token"], payload_chatwoot(mensagem_id=2, inbox=2), secret="segredo-de-outro-bot")
+    assert resp.status_code == 200
+    assert await _conta(sessao, Mensagem) == 1
 
 
 async def test_fila_fora_do_ar_responde_500(http, canal, sessao) -> None:  # type: ignore[no-untyped-def]

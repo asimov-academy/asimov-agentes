@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Bot conferido na caixa e caixa ligada pelo Chatwoot aceita (v0.6.2)
+
+- **Achado no teste com uma caixa do Instagram**: o setup disse que o agente estava no ar, mas o bot não ficou ligado na caixa escolhida. O operador ligou o bot na caixa pelo Chatwoot, e o webhook passou a ignorar o evento porque a caixa não estava em `inbox_ids`.
+- **Criar agente confere a ligação** (`GET /inboxes/{id}/agent_bot`): se o bot não ficou na caixa, apaga o bot e mostra o erro. Chatwoot sem essa rota (404) não impede. spec/arquitetura.md.
+- **Webhook não filtra mais por caixa.** O Chatwoot só chama o bot a partir das caixas em que ele está ligado e a assinatura prova qual bot é: ligar o bot em outra caixa pelo Chatwoot passa a valer, e as conversas continuam separadas por agente. Substitui a regra "inbox está em `inbox_ids`" da fase 1.
+
 ## 2026-09-16: Token de administrador do Chatwoot guardado (v0.6.0)
 
 - **Pedido do operador: não digitar o token a cada ação do menu.** Substitui "o token do administrador não é guardado" (v0.1.3). O token é pedido uma vez por URL do Chatwoot e fica criptografado no banco, na entidade Acesso ao canal (`backend/app/acessos/`). Custo aceito: quem tiver a VPS passa a ter também esse token. spec/dados.md, spec/arquitetura.md.
