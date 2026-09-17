@@ -58,10 +58,19 @@ def construir_modelo(nome_modelo: str) -> "Model":
 
     if provedor == "openai":
         # Responses, não Chat Completions: só nela a OpenAI tem busca na web nativa.
-        from pydantic_ai.models.openai import OpenAIResponsesModel
+        from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIResponsesModelSettings
         from pydantic_ai.providers.openai import OpenAIProvider
 
-        return OpenAIResponsesModel(modelo, provider=OpenAIProvider(api_key=chave))
+        openai = OpenAIResponsesModel(modelo, provider=OpenAIProvider(api_key=chave))
+        esforco = config().openai_raciocinio or "low"
+        perfil = openai.profile
+        if esforco == "none" or not perfil.get("openai_supports_reasoning") or perfil.get("openai_reasoning_enabled_by_default"):
+            return openai
+        return OpenAIResponsesModel(
+            modelo,
+            provider=OpenAIProvider(api_key=chave),
+            settings=OpenAIResponsesModelSettings(openai_reasoning_effort=esforco),
+        )
     if provedor == "anthropic":
         from pydantic_ai.models.anthropic import AnthropicModel
         from pydantic_ai.providers.anthropic import AnthropicProvider

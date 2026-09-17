@@ -198,7 +198,7 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 ## 8. Segredos
 
 - Tudo em `.env`, gerado pelo setup. O repositório tem só `.env.example` com as chaves e nenhum valor.
-- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`. Entram depois: `WAHA_API_KEY` (fase 5) e `MODELO_EMBEDDINGS` (fase 6).
+- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `OPENAI_RACIOCINIO` (desde a v0.8.5), `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`. Entram depois: `WAHA_API_KEY` (fase 5) e `MODELO_EMBEDDINGS` (fase 6).
 - Senha do Postgres, `CHAVE_API_ADMIN` e `CHAVE_CRIPTOGRAFIA` são geradas pelo setup com `openssl rand`, nunca pedidas ao operador.
 - Credenciais de canal não ficam no `.env`: ficam criptografadas no banco, por agente. O token de administrador do Chatwoot também fica no banco, cifrado, em `acessos/`.
 - Nunca no repositório: `.env`, dumps, backups, mídia, documentos de clientes, `.venv`. O `.gitignore` do projeto gerado já cobre tudo isso.

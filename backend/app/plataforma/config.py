@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,6 +27,10 @@ class Config(BaseSettings):
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
     groq_api_key: str = ""
+    # Nível de raciocínio dos modelos da OpenAI que vêm com ele desligado (gpt-5.1). Desligado, o modelo
+    # tinha a busca e não usava o resultado; com `low` buscou e respondeu (teste na VPS, v0.8.5).
+    # Vazio vale `low`; `none` mantém o padrão do modelo. Modelos que já raciocinam ou não aceitam ficam como estão.
+    openai_raciocinio: Literal["", "none", "minimal", "low", "medium", "high"] = "low"
 
     diretorio_prompts: Path = Path("/app/prompts")
     diretorio_modelos: Path = Path("/app/modelos")
