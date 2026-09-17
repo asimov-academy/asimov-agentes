@@ -179,10 +179,10 @@ tela_modo() {
 
 tela_modelos() {
   [ -n "$(env_get MODELO_CONVERSA)" ] && estado_tem modelos_confirmados && return 0
-  secao "Modelos de IA"
-  dica "Cada função pode usar um provedor diferente. A chave de cada provedor é pedida uma vez."
   local fallback
   while true; do
+    secao "Modelos de IA"
+    dica "Cada função pode usar um provedor diferente. A chave de cada provedor é pedida uma vez."
     escolhe_modelo MODELO_CONVERSA "Resposta ao contato" conversa
     escolhe_modelo MODELO_FALLBACK "Fallback, se a resposta falhar" conversa opcional
     escolhe_modelo MODELO_VISAO "Visão (imagens e PDF)" visao

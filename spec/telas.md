@@ -1,6 +1,6 @@
 # Etapa 3: Telas e ações da primeira versão
 
-As telas são telas de terminal do setup, exibidas via SSH. Não existe front nesta versão. Funções de referência: ver spec/visao.md, Funções essenciais da primeira versão. Papéis: ver spec/usuarios.md.
+As telas são telas de terminal do setup, exibidas via SSH. Não existe front nesta versão. Toda escolha e todo Sim/Não andam com as setas e confirmam com Enter (números de 1 a 9 e S/N como atalho). Cada tela nova limpa o terminal e redesenha o banner; o que o operador precisa ler antes de voltar ao menu (listagem, consumo, resultado de criar ou remover) espera um Enter. Funções de referência: ver spec/visao.md, Funções essenciais da primeira versão. Papéis: ver spec/usuarios.md.
 
 ## Telas da primeira versão
 

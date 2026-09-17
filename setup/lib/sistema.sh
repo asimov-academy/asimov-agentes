@@ -16,11 +16,7 @@ tela_boas_vindas() {
   info "prontos para evoluir com Claude Code ou Codex."
   dica "Instala Docker, banco, HTTPS e a plataforma. Licença MIT, crédito à Asimov Academy."
   echo
-  local resposta=""
-  _prompt "Continuar?"
-  printf ' %s(Y/N)%s: ' "$CINZA" "$NORMAL"
-  ler resposta
-  if [[ ! "$resposta" =~ ^[YySs]$ ]]; then
+  if ! confirma "Continuar?"; then
     dica "Cancelado. Nada foi alterado."
     exit 0
   fi
