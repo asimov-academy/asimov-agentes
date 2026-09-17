@@ -205,3 +205,13 @@ async def test_devolver_ao_agente_marca_pendente_com_token_do_bot() -> None:
     canal = ChatwootHttp(lambda req, corpo: httpx.Response(200, json={}))
     await canal.devolver_ao_agente(CREDENCIAIS, "12")
     assert canal.chamadas == [("POST", "/api/v1/accounts/1/conversations/12/toggle_status", {"status": "pending"})]
+
+
+async def test_renomear_troca_o_nome_do_bot_com_token_do_administrador() -> None:
+    canal = ChatwootHttp(lambda req, corpo: httpx.Response(200, json={}))
+    await canal.renomear({"token_admin": ADMIN}, CREDENCIAIS, "Ticotico")
+    assert canal.chamadas == [("PATCH", "/api/v1/accounts/1/agent_bots/99", {"name": "Ticotico"})]
+
+    canal = ChatwootHttp(lambda req, corpo: httpx.Response(401))
+    with pytest.raises(CredencialInvalida, match="administrador"):
+        await canal.renomear({"token_admin": "x"}, CREDENCIAIS, "Ticotico")

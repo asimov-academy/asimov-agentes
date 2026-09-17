@@ -126,6 +126,13 @@ pergunta_numero() {
   done
 }
 
+# normaliza "texto": sem acento, maiúscula, espaço ou pontuação, como o slug da API.
+normaliza() {
+  python3 -c 'import sys, unicodedata, re
+t = unicodedata.normalize("NFKD", sys.argv[1]).encode("ascii", "ignore").decode().lower()
+print(re.sub(r"[^a-z0-9]+", "", t))' "$1"
+}
+
 # coluna "texto" largura: alinha contando caracteres (o printf conta bytes e desalinha acentos).
 coluna() {
   local __texto=$1 __largura=$2
@@ -377,6 +384,29 @@ confirma() {
   printf ': %s\n' "$([ "$__sim" -eq 1 ] && echo Sim || echo Não)"
   printf '\033[?25h'
   [ "$__sim" -eq 1 ]
+}
+
+# diagnostico_teclas: mostra os bytes que o terminal manda em cada tecla e o intervalo entre eles.
+# Serve para entender terminais que se comportam diferente (painel da Hostinger no navegador).
+diagnostico_teclas() {
+  local __byte __grupo __inicio __agora __tempos
+  info "Aperte, uma de cada vez: Shift sozinho, Shift+T, Esc, seta para baixo, Backspace."
+  dica "Cada linha é o que chegou de uma vez. Digite q para sair."
+  echo
+  while true; do
+    IFS= read -rsn1 -d '' __byte <&3 || break
+    __grupo=$__byte
+    __inicio=${EPOCHREALTIME:-0}
+    # Junta o que chegar em até 1 s seguido, com o tempo de cada byte.
+    __tempos=""
+    while IFS= read -rsn1 -d '' -t 1 __byte <&3; do
+      __agora=${EPOCHREALTIME:-0}
+      __grupo+=$__byte
+      __tempos+=" +$(( (${__agora/[.,]/} - ${__inicio/[.,]/}) / 1000 ))ms"
+    done
+    [ "$__grupo" = q ] && break
+    printf '  %q%s\n' "$__grupo" "${__tempos:+  ${CINZA}bytes seguintes:$__tempos${NORMAL}}"
+  done
 }
 
 # pausa: segura a tela até uma tecla, antes de o menu limpar o que foi mostrado.

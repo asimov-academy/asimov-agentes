@@ -134,6 +134,32 @@ async def _sempre() -> bool:
     return True
 
 
+async def test_renomear_leva_o_nome_ao_canal_so_com_acesso(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Samuelson")
+
+    await http.patch(_caminho(agente), json={"nome": "Tico"}, headers=ADMIN)
+    assert canal.renomeados == []
+
+    canal.desconectar_recusa = True
+    resp = await http.patch(_caminho(agente), json={"nome": "Ticotico", "conexao": {"token_admin": "de-atendente"}}, headers=ADMIN)
+    assert resp.status_code == 422
+    assert (await http.get(_caminho(agente), headers=ADMIN)).json()["nome"] == "Tico"
+
+    canal.desconectar_recusa = False
+    resp = await http.patch(_caminho(agente), json={"nome": "Ticotico", "conexao": {"token_admin": "de-admin"}}, headers=ADMIN)
+    assert resp.status_code == 200 and resp.json()["nome"] == "Ticotico"
+    assert canal.renomeados == ["Ticotico"]
+
+
+async def test_remover_agente_renomeado_aceita_o_nome_atual(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Samuelson")
+    await http.patch(_caminho(agente), json={"nome": "Ticotico"}, headers=ADMIN)
+
+    resp = await http.request("DELETE", _caminho(agente), json={"confirmacao": "ticotico"}, headers=ADMIN)
+
+    assert resp.status_code == 200, resp.text
+
+
 async def test_remover_com_acesso_apaga_o_bot_e_recusa_nao_remove(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
 

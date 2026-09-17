@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Remover agente renomeado e nome do bot no Chatwoot (v0.5.4)
+
+- **Agente renomeado não podia ser removido**: a confirmação comparava com o slug, que guarda o nome de quando o agente foi criado. Agora vale o nome atual ou o original. O menu mostra o nome a digitar e, se não conferir, o que foi digitado.
+- **Renomear pelo menu pode trocar o nome do bot no Chatwoot**, com o token de administrador (opcional). `PATCH` do agente aceita `conexao`; o canal ganhou `renomear`. Se o Chatwoot recusar, nada é salvo. Substitui "o bot mantém o nome antigo" da v0.5.0. spec/arquitetura.md.
+- **`asimov teclas`**: mostra os bytes de cada tecla e o intervalo entre eles. O operador ainda vê o menu voltar ao usar Shift no terminal do navegador da Hostinger, sem reprodução local: a correção seguinte depende dessa leitura.
+
 ## 2026-09-16: Shift não volta mais ao menu (v0.5.3)
 
 - **Achado pelo operador no terminal do navegador da Hostinger**: ao usar Shift para digitar o nome do agente na remoção, o menu voltava. Reproduzido no bash 5: quando a sequência de escape da tecla chega mais de 0,1 s depois do Esc, era lida como Esc sozinho.
@@ -24,7 +30,7 @@ Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arqu
 
 - **O menu abre ao rodar o setup de novo e com `asimov` sem argumento.** Cada ação também é subcomando (`editar`, `remover`, `consumo`), para quem prefere ir direto. `asimov atualizar` para no resumo, sem menu. spec/telas.md, tela 8.
 - **Editar não troca credenciais do canal nem retomada por tempo no Chatwoot.** As credenciais do Chatwoot são do bot que o setup cria, e a retomada é devolver a conversa para pendente. Trocar de Chatwoot ou de caixa é remover e criar de novo; o prompt volta junto (item abaixo). A edição de credenciais entra com os canais diretos (fase 5). A API recusa `retomada_automatica_horas` em canal que não retoma por tempo (`retoma_por_tempo` em `canais/base.py`). spec/arquitetura.md.
-- **Nome editado não muda slug nem pasta de prompts**, e o bot no Chatwoot mantém o nome antigo: renomear lá exige token de administrador.
+- **Nome editado não muda slug nem pasta de prompts.** Até a v0.5.3 o bot no Chatwoot mantinha o nome antigo (ver v0.5.4).
 - **Modelo do resumo do handoff escolhível no menu**, com sugestões baratas primeiro. Só aparecem provedores com chave no `.env`: chave nova só vale depois de reconstruir a plataforma.
 - **Remover pede o nome do agente e, opcionalmente, o token de administrador do Chatwoot para apagar o Agent Bot.** Sem o token, o bot fica ligado na caixa e o webhook dele cai em Falha `webhook_token_desconhecido`; o menu avisa para tirar o bot da caixa. Se o Chatwoot recusar o token, nada é removido. O contrato pedia confirmação pelo slug; a API compara o slug do nome digitado.
 - **Slug do removido ganha `~removido-<id>`**: cliente e agente novos com o mesmo nome podem ser criados, e o agente novo reaproveita a pasta de prompts do removido (o setup nunca sobrescreve prompt). spec/dados.md.

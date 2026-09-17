@@ -126,11 +126,16 @@ async def criar_agente(
 
 
 async def editar_agente(
-    sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID, campos: dict[str, Any]
+    sessao: AsyncSession,
+    cliente_id: uuid.UUID,
+    agente_id: uuid.UUID,
+    campos: dict[str, Any],
+    acesso: dict[str, Any] | None = None,
 ) -> Agente:
     """Altera só os campos enviados. O slug e a pasta de prompts não mudam com o nome.
 
-    Vale na próxima mensagem: webhook e turno releem o agente a cada chamada.
+    Com `acesso` do operador, o nome novo também vai para o canal (no Chatwoot, o nome do bot);
+    se o canal recusar, nada é salvo. Vale na próxima mensagem: webhook e turno releem o agente.
     """
     agente = await repo.obter(sessao, cliente_id, agente_id)
     if agente is None:
@@ -152,6 +157,8 @@ async def editar_agente(
     if "retomada_automatica_horas" in campos:
         _valida_retomada(canal, campos["retomada_automatica_horas"])
     valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
+    if acesso and "nome" in campos:
+        await canal.renomear(acesso, credenciais(agente), campos["nome"])
 
     for campo, valor in campos.items():
         setattr(agente, campo, valor)
@@ -169,13 +176,13 @@ async def remover_agente(
 ) -> bool:
     """Exclusão lógica: webhook invalidado e credenciais apagadas. Conversas e consumo ficam.
 
-    `confirmacao` é o nome (ou slug) do agente. Com `acesso` do operador, desfaz a conexão no canal
+    `confirmacao` é o nome atual do agente (ou o de quando foi criado, que deu o slug). Com `acesso` do operador, desfaz a conexão no canal
     antes (no Chatwoot, apaga o Agent Bot); se o canal recusar, nada é removido. Devolve se desfez.
     """
     agente = await repo.obter(sessao, cliente_id, agente_id)
     if agente is None:
         raise NaoEncontrado("agente não encontrado")
-    if slug(confirmacao) != agente.slug:
+    if slug(confirmacao) not in (agente.slug, slug(agente.nome)):
         raise CampoInvalido(f"confirmação não confere: digite o nome do agente, {agente.nome}")
 
     desconectado = False
