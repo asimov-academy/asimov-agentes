@@ -15,6 +15,7 @@ from arq.connections import RedisSettings
 from pydantic_ai.models.function import FunctionModel
 from sqlalchemy import select
 
+from app.canais.base import CredencialInvalida
 from app.canais.waha import api
 from app.canais.waha.assinatura import assina
 from app.canais.waha.canal import numero_legivel
@@ -45,14 +46,24 @@ class WahaFalsa:
         self.digitando_chamadas: list[bool] = []
         self.lidas: list[str] = []
         self.desconectadas: list[str] = []
+        self.recusados: set[str] = set()
+        self.numeros: dict[str, str] = {}
 
     def instala(self, monkeypatch: pytest.MonkeyPatch) -> "WahaFalsa":
         async def cria_sessao(nome: str, url_webhook: str, chave_hmac: str) -> None:
             self.sessao, self.url_webhook, self.hmac = nome, url_webhook, chave_hmac
 
         async def envia_texto(sessao: str, chat_id: str, texto: str) -> str:
+            if chat_id in self.recusados:
+                raise CredencialInvalida(f"a WAHA recusou enviar a mensagem: HTTP 422 ({chat_id})")
             self.enviadas.append((chat_id, texto))
             return f"waha-{len(self.enviadas)}"
+
+        async def confere_numero(sessao: str, telefone: str) -> dict[str, Any]:
+            achado = self.numeros.get("".join(c for c in telefone if c.isdigit()))
+            if achado is None:
+                return {"existe": False, "chat_id": None, "telefone": telefone}
+            return {"existe": True, "chat_id": achado, "telefone": telefone}
 
         async def digitando(sessao: str, chat_id: str, ligado: bool) -> None:
             self.digitando_chamadas.append(ligado)
@@ -69,6 +80,7 @@ class WahaFalsa:
         for nome, funcao in (
             ("cria_sessao", cria_sessao),
             ("envia_texto", envia_texto),
+            ("confere_numero", confere_numero),
             ("digitando", digitando),
             ("marca_lida", marca_lida),
             ("sai_do_whatsapp", sai_do_whatsapp),
@@ -659,3 +671,31 @@ async def test_ronda_avisa_uma_vez_por_hora(http, fila, waha, redis, sessao, mon
     assert len(falhas) == 1, "uma falha por hora, não uma por ronda"
     assert falhas[0].detalhe["situacao"] == "STOPPED"
     assert falhas[0].agente_id == uuid.UUID(agente["id"])
+
+
+# ── Id de verdade do número do handoff ─────────────────────────────────────
+
+
+async def test_aviso_de_handoff_vai_para_o_id_que_o_whatsapp_reconhece(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """O mesmo celular vale com e sem o nono dígito: guardar o id errado não chega em ninguém."""
+    agente = await cria_waha(http, handoff_destino={"tipo": "numero", "telefone": "5551986392419"})
+    waha.recusados = {"5551986392419@c.us"}
+    waha.numeros = {"5551986392419": "555186392419@c.us"}
+
+    await transfere(http, fila, redis, waha, agente)
+
+    destinos = [chat for chat, _ in waha.enviadas]
+    assert "555186392419@c.us" in destinos, "o aviso precisa chegar no id que o WhatsApp reconhece"
+    async with sessao() as s:
+        falha = (await s.scalars(select(Falha).where(Falha.tipo == "handoff_incompleto"))).one()
+    assert "troque o destino do handoff" in str(falha.detalhe["problemas"])
+
+
+async def test_numero_conferido_guarda_o_id_devolvido_pelo_whatsapp(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
+    """O setup confere o número antes de gravar; aqui vale o que a API aceita e guarda."""
+    agente = await cria_waha(
+        http, handoff_destino={"tipo": "numero", "telefone": "5551986392419", "chat_id": "23423462304912@lid"}
+    )
+
+    assert agente["handoff_destino"]["chat_id"] == "23423462304912@lid"
+    assert agente["handoff_destino"]["telefone"] == "5551986392419"

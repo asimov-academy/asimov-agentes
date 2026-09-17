@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Quem diz o id do número do handoff é o WhatsApp (v0.12.1)
+
+- **Achado no teste**: o handoff abriu (o agente calou), mas o aviso não chegou: `handoff_incompleto` com "aviso de handoff não chegou: CredencialInvalida". Os números que apareceram nas falhas do mesmo teste (`555197035844`, `555186389892`) mostraram a causa provável: naquela região o WhatsApp usa o número **sem** o nono dígito, e o destino estava cadastrado com ele.
+- **`check-exists` na escolha do destino**: o setup pergunta ao WhatsApp se o número existe e guarda o `chatId` que ele devolve, que hoje pode até ser um `@lid`. Número sem WhatsApp é recusado na hora, com o motivo, em vez de virar um handoff mudo semanas depois.
+- **Rede de segurança no envio**: se o aviso falhar com o id guardado, o canal pergunta o id de verdade e tenta uma vez, registrando na falha que o destino precisa ser trocado no menu. Assim o agente já existente volta a avisar sem depender de reconfiguração.
+- **Erro do envio passou a levar o motivo** da WAHA, não só o tipo da exceção. Foi a terceira vez que um erro genérico custou uma rodada de diagnóstico (antes: download de mídia e sessão).
+
 ## 2026-09-17: Número que sai do ar deixa de ser silêncio (v0.12.0)
 
 - **Lacuna conhecida desde a v0.9.0**: o WhatsApp derruba o aparelho sem avisar (número em outro celular, muito tempo offline, alguém desconectou na mão) e o agente ficava mudo sem ninguém saber. O evento `session.status` chegava e era ignorado.

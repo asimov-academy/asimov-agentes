@@ -37,6 +37,16 @@ class GrupoSaida(BaseModel):
     nome: str
 
 
+class Numero(BaseModel):
+    telefone: str
+
+
+class NumeroSaida(BaseModel):
+    existe: bool
+    chat_id: str | None
+    telefone: str | None
+
+
 async def _agente_waha(s: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID) -> Agente:
     agente = await agentes_repo.obter(s, cliente_id, agente_id)
     if agente is None or not agente.ativo:
@@ -108,6 +118,22 @@ async def reconfigurar_webhook(
         await api.atualiza_webhook(
             _sessao(agente), agentes_servico.url_webhook(agente), credenciais.get("hmac_key", "")
         )
+    except CredencialInvalida as erro:
+        raise _erro_da_waha(erro) from erro
+
+
+@router.post("/clientes/{cliente_id}/agentes/{agente_id}/waha/numero", response_model=NumeroSaida)
+async def conferir_numero(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, dados: Numero, s: AsyncSession = Depends(sessao)
+) -> NumeroSaida:
+    """O WhatsApp diz se o número existe e qual é o id dele, que é para onde a mensagem vai.
+
+    O mesmo celular circula com e sem o nono dígito e hoje pode ser um `@lid`: guardar o id errado
+    faz o aviso de handoff não chegar em ninguém.
+    """
+    nome_sessao = _sessao(await _agente_waha(s, cliente_id, agente_id))
+    try:
+        return NumeroSaida(**await api.confere_numero(nome_sessao, dados.telefone))
     except CredencialInvalida as erro:
         raise _erro_da_waha(erro) from erro
 
