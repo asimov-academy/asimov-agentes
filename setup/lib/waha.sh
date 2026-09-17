@@ -361,11 +361,27 @@ escolhe_destino_waha() {
   while true; do
     pergunta telefone "Número que recebe o handoff"
     telefone=$(tr -cd '0-9' <<<"$telefone")
-    if [ "${#telefone}" -ge 10 ] && [ "${#telefone}" -le 15 ]; then
+    if [ "${#telefone}" -lt 10 ] || [ "${#telefone}" -gt 15 ]; then
+      falha "Número fora do formato: use DDI, DDD e o número, só dígitos."
+      continue
+    fi
+    # Quem diz o id é o WhatsApp: o mesmo celular vale com e sem o nono dígito, e o aviso do
+    # handoff só chega no id certo.
+    api_com_token POST "$(caminho_do_agente "$agente")/waha/numero" \
+      "$(jq -n --arg t "$telefone" '{telefone: $t}')" "Conferindo o número…"
+    if [ "$API_STATUS" != 200 ]; then
+      aviso "Não consegui conferir o número agora: $(detalhe_erro "$API_RESPOSTA")"
+      confirma "Usar assim mesmo?" || continue
       HANDOFF_DESTINO=$(jq -n --arg t "$telefone" '{tipo: "numero", telefone: $t}')
       return 0
     fi
-    falha "Número fora do formato: use DDI, DDD e o número, só dígitos."
+    if [ "$(jq -r '.existe' <<<"$API_RESPOSTA")" != true ]; then
+      falha "$(destaque "+$telefone") não tem WhatsApp. Confira o DDD e o nono dígito."
+      continue
+    fi
+    HANDOFF_DESTINO=$(jq -c '{tipo: "numero", telefone: .telefone, chat_id: .chat_id}' <<<"$API_RESPOSTA")
+    ok "Número conferido no WhatsApp"
+    return 0
   done
 }
 

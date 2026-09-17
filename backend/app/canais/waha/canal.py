@@ -74,8 +74,11 @@ class DestinoWaha(BaseModel):
         digitos = re.sub(r"\D", "", self.telefone or self.chat_id)
         if not 10 <= len(digitos) <= 15:
             raise ValueError("número inválido")
-        self.chat_id = f"{digitos}@c.us"
         self.telefone = digitos
+        # Id que o próprio WhatsApp devolveu (pode ser `@lid`) manda mais que o número digitado:
+        # o mesmo celular vale com e sem o nono dígito, e só um dos dois recebe mensagem.
+        if not self.chat_id.endswith(SUFIXOS_DE_PESSOA):
+            self.chat_id = f"{digitos}@c.us"
         return self
 
 
@@ -391,11 +394,35 @@ class Waha:
         try:
             await api.envia_texto(credenciais["sessao"], chat, aviso)
         except Exception as erro:
-            return [f"aviso de handoff não chegou: {type(erro).__name__}"]
+            # O id pode estar velho (cadastrado com o nono dígito que o WhatsApp não usa, ou antes
+            # de o número virar `@lid`): pergunta o id de verdade e tenta uma vez.
+            problema = f"aviso de handoff não chegou para {chat}: {erro}"
+            certo = await self._id_de_verdade(credenciais, destino, chat)
+            if certo is None:
+                return [problema]
+            try:
+                await api.envia_texto(credenciais["sessao"], certo, aviso)
+            except Exception as outro:
+                return [f"{problema}; nem para {certo}: {outro}"]
+            return [f"{problema}; o aviso foi para {certo}, troque o destino do handoff no menu"]
         return []
 
     def rotulo_da_conversa(self, conversa_externa: str) -> str:
         return numero_legivel(conversa_externa)
+
+    async def _id_de_verdade(
+        self, credenciais: dict[str, Any], destino: dict[str, Any] | None, usado: str
+    ) -> str | None:
+        """Pergunta ao WhatsApp o id do número do destino. None quando não há o que tentar."""
+        telefone = (destino or {}).get("telefone")
+        if not telefone:
+            return None
+        try:
+            achado = await api.confere_numero(credenciais["sessao"], str(telefone))
+        except Exception:
+            return None
+        chat_id = achado.get("chat_id")
+        return str(chat_id) if achado.get("existe") and chat_id and chat_id != usado else None
 
     async def avisa_destino(
         self, credenciais: dict[str, Any], destino: dict[str, Any] | None, texto: str

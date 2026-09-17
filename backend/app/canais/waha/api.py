@@ -186,6 +186,30 @@ async def grupos(nome: str) -> list[dict[str, Any]]:
     return encontrados
 
 
+async def confere_numero(sessao: str, telefone: str) -> dict[str, Any]:
+    """Pergunta ao WhatsApp qual é o id de um número e se ele existe por lá.
+
+    O mesmo celular circula com e sem o nono dígito, e só o WhatsApp sabe qual dos dois é o de
+    verdade; hoje o id pode até ser um `@lid`. Mandar para o id errado não chega em ninguém.
+    """
+    digitos = "".join(c for c in telefone if c.isdigit())
+    resposta = await _chama(
+        "GET",
+        f"/api/contacts/check-exists?phone={digitos}&session={sessao}",
+        "conferir o número",
+        aceita=(404, 422),
+    )
+    if not isinstance(resposta, dict) or not resposta.get("numberExists"):
+        return {"existe": False, "chat_id": None, "telefone": digitos}
+    chat_id = resposta.get("chatId")
+    numero = str(resposta.get("pn") or digitos).split("@")[0]
+    return {
+        "existe": True,
+        "chat_id": str(chat_id) if chat_id else f"{digitos}@c.us",
+        "telefone": numero,
+    }
+
+
 async def envia_texto(sessao: str, chat_id: str, texto: str) -> str | None:
     resposta = await _chama(
         "POST", "/api/sendText", "enviar a mensagem", {"session": sessao, "chatId": chat_id, "text": texto}
