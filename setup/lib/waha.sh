@@ -49,24 +49,38 @@ garante_waha() {
   env_set WAHA_ATIVA 1
 
   PASSO_ATUAL=0
-  PASSO_TOTAL=3
-  command -v qrencode >/dev/null 2>&1 ||
-    passo qrencode_waha "qrencode (desenha o QR code aqui)" "Veja o log." apt_instala qrencode
-  passo waha_container "WAHA no ar" "Veja: source deploy/compose.sh && dc logs waha" sobe_waha
-  passo waha_api "API conversando com a WAHA" "Veja: source deploy/compose.sh && dc logs api" --sem-repetir sobe_api
-  espera_url http://127.0.0.1:8000/health >/dev/null 2>&1 || true
-  # Versão da WAHA envelhece rápido: o WhatsApp muda o protocolo e a imagem antiga para de conectar.
-  instala_timer_waha
+  PASSO_TOTAL=2
+  if ! command -v qrencode >/dev/null 2>&1; then
+    PASSO_TOTAL=3
+    passo qrencode_waha "Leitor de QR code no terminal" "Veja o log." apt_instala qrencode
+  fi
+  passo waha_container "Serviço do WhatsApp (WAHA)" \
+    "Veja: source deploy/compose.sh && dc logs waha" sobe_waha
+  passo waha_api "Plataforma ligada ao WhatsApp" \
+    "Veja: source deploy/compose.sh && dc logs api" --sem-repetir sobe_api
+  # A API acabou de ser recriada para enxergar a chave da WAHA: espera ela responder de novo,
+  # senão a primeira chamada do fluxo do agente cai em cima de uma API que ainda está subindo.
+  espera_url http://127.0.0.1:8000/health 24 >/dev/null 2>&1 || true
   # Os passos valem só para esta subida: o contêiner pode ser removido e precisar subir de novo.
   estado_remove passo_qrencode_waha passo_waha_container passo_waha_api
+  # Versão da WAHA envelhece rápido: o WhatsApp muda o protocolo e a imagem antiga para de conectar.
+  # Nada aqui pode derrubar a criação do agente: o timer é conforto, o agente é o que o operador quer.
+  if ! instala_timer_waha; then
+    aviso "Não consegui ligar a atualização automática da WAHA. Ligue depois no menu, em WhatsApp (WAHA)."
+  fi
   echo
 }
 
 # instala_timer_waha: confere versão nova da WAHA toda semana, domingo de madrugada.
 # O timer roda no host (o contêiner não fala com o Docker), como o serviço que instalou o setup.
 instala_timer_waha() {
+  local quando="Sun *-*-* 04:00:00 America/Sao_Paulo"
   command -v systemctl >/dev/null 2>&1 || return 0
-  $SUDO tee /etc/systemd/system/asimov-waha.service >/dev/null <<UNIDADE
+  # Fuso no OnCalendar pede systemd 252+; em systemd mais velho, vale o fuso da VPS.
+  if ! systemd-analyze calendar "$quando" >/dev/null 2>&1; then
+    quando="Sun *-*-* 04:00:00"
+  fi
+  $SUDO tee /etc/systemd/system/asimov-waha.service >/dev/null <<UNIDADE || return 1
 [Unit]
 Description=Atualiza a WAHA (WhatsApp) do Asimov Agentes
 After=docker.service
@@ -77,20 +91,21 @@ Type=oneshot
 Environment=HOME=$HOME
 ExecStart=$RAIZ_PROJETO/deploy/atualiza_waha.sh
 UNIDADE
-  $SUDO tee /etc/systemd/system/asimov-waha.timer >/dev/null <<UNIDADE
+  $SUDO tee /etc/systemd/system/asimov-waha.timer >/dev/null <<UNIDADE || return 1
 [Unit]
 Description=Confere toda semana se saiu versão nova da WAHA
 
 [Timer]
-OnCalendar=Sun *-*-* 04:00:00 America/Sao_Paulo
+OnCalendar=$quando
 RandomizedDelaySec=30m
 Persistent=true
 
 [Install]
 WantedBy=timers.target
 UNIDADE
-  $SUDO systemctl daemon-reload
-  $SUDO systemctl enable --now asimov-waha.timer >/dev/null 2>&1
+  $SUDO systemctl daemon-reload >/dev/null 2>&1 || return 1
+  $SUDO systemctl enable --now asimov-waha.timer >/dev/null 2>&1 || return 1
+  return 0
 }
 
 timer_waha_ligado() {
@@ -215,6 +230,19 @@ fluxo_waha() {
   esac
 }
 
+# aviso_nao_oficial: o operador precisa saber o que está escolhendo antes de parear um número.
+# Devolve 1 se ele desistir. Aparece na criação e ao ligar um agente já existente no WhatsApp.
+aviso_nao_oficial() {
+  echo
+  aviso "A WAHA é uma API $(destaque "não oficial"): ela conversa com o WhatsApp como se fosse o aplicativo do celular."
+  dica "A Meta não homologa nem dá suporte. O número pode ser bloqueado a qualquer momento, sem aviso."
+  dica "Use um chip só para o agente, nunca o número principal da empresa."
+  dica "As regras do WhatsApp continuam valendo: nada de disparo em massa nem mensagem para quem não falou com você."
+  dica "O WhatsApp oficial (Cloud API da Meta), sem esse risco e com custo por conversa, entra numa próxima versão."
+  echo
+  confirma "Entendi o risco. Continuar?"
+}
+
 # waha_situacao AGENTE_JSON: consulta a sessão. Define WAHA_STATUS, WAHA_QR e WAHA_NUMERO.
 waha_situacao() {
   api GET "$(caminho_do_agente "$1")/waha"
@@ -333,11 +361,11 @@ pergunta_retomada() {
 fluxo_agente_waha() {
   local nome corpo ferramentas
   AGENTE_CANAL=waha
-  garante_waha
   secao "Agente no WhatsApp"
   dica "Um número de WhatsApp por agente, pareado aqui pelo QR code."
-  dica "Use um chip só para o agente: o WhatsApp pode bloquear número que responde demais."
-  echo
+  aviso_nao_oficial || return 0
+  garante_waha
+  secao "Agente no WhatsApp"
   pergunta nome "Nome do agente"
   escolhe_empresa ""
   escolhe_ferramentas ferramentas ""

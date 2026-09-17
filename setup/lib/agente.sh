@@ -169,7 +169,7 @@ fluxo_novo_agente() {
   AGENTE_CAIXA=""
   escolha op "Canal" \
     "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
-    "WhatsApp  ${CINZA}um número seu, pareado por QR code aqui na VPS${NORMAL}" \
+    "WhatsApp  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}" \
     "Nativo  ${CINZA}sem canal: você conversa com ele aqui no terminal${NORMAL}"
   echo
   case "$op" in

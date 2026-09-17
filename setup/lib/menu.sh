@@ -174,7 +174,7 @@ conecta_canal() {
   echo
   escolha op "Canal" \
     "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
-    "WhatsApp  ${CINZA}um número seu, pareado por QR code aqui na VPS${NORMAL}"
+    "WhatsApp  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}"
   if [ "$op" = 1 ]; then
     conecta_chatwoot "$nome"
   else
@@ -203,6 +203,7 @@ conecta_chatwoot() {
 
 conecta_waha() {
   local nome=$1 rapido=""
+  aviso_nao_oficial || return 0
   garante_waha
   pergunta_retomada
   ritmo_do_whatsapp && rapido=1

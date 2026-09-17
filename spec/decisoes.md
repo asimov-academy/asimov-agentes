@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Aviso de API não oficial e correções do primeiro teste da WAHA (v0.9.1)
+
+- **Aviso de que a WAHA é API não oficial**, pedido pelo operador ao ver a tela de canais: o rótulo do canal passou a dizer "API não oficial" e, antes de qualquer coisa (antes até de subir o contêiner), o fluxo mostra o que isso significa (a Meta não homologa nem dá suporte, o número pode ser bloqueado, use um chip só do agente, valem as regras do WhatsApp) e pede confirmação. Vale na criação e ao ligar um agente que já existe. spec/telas.md.
+- **Selecionar o WhatsApp voltava ao menu sem criar o agente**: `instala_timer_waha` era a última coisa de `garante_waha` e, quando o systemd recusava a unidade, o `set -e` derrubava a ação inteira. Agora o timer é conforto, não requisito: falhar só gera aviso, e a criação segue. O fuso no `OnCalendar` (systemd 252+) é conferido com `systemd-analyze calendar` antes de gravar.
+- **`espera_url` sem o número de tentativas** virava erro de variável não definida com `set -u` e a API não era esperada depois de ser recriada para enxergar a chave da WAHA: a primeira chamada do fluxo caía numa API ainda subindo. Passou a ter padrão de 24 tentativas, e `garante_waha` espera de verdade.
+- **Nomes dos passos**, também apontados pelo operador: "qrencode (desenha o QR code aqui)" e "WAHA no ar" viraram "Leitor de QR code no terminal", "Serviço do WhatsApp (WAHA)" e "Plataforma ligada ao WhatsApp". O total de passos passou a contar só os que vão rodar (antes marcava 3 e mostrava 2 quando o `qrencode` já existia).
+
 ## 2026-09-17: WhatsApp pela WAHA, parte 2 da fase 5 (v0.9.0)
 
 - **A WAHA não sobe na instalação** (decisão do operador): nada muda no onboarding e quem só usa Chatwoot não carrega o contêiner. Ela entra quando o operador escolhe o canal WhatsApp ao criar ou conectar um agente (`garante_waha` em `setup/lib/waha.sh`): grava `WAHA_ATIVA=1` e `VERSAO_WAHA` no `.env`, baixa a imagem e sobe o serviço do perfil `waha` do Compose. A partir daí o `dc` (deploy/compose.sh) sempre inclui o perfil, para um `dc up` não derrubar o contêiner. A `WAHA_API_KEY`, ao contrário, nasce na instalação mesmo sem a WAHA: assim ligar o WhatsApp depois não obriga a API a reiniciar para enxergar a chave.
