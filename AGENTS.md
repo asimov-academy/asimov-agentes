@@ -64,6 +64,7 @@ Fale com o operador em português, curto e direto.
 - Helpers de tela (`pergunta`, `escolha`, `le_tecla`) usam locais com prefixo `__`; nome igual ao da variável de quem chama quebra o `printf -v`.
 - Setas só com terminal (`tem_terminal`); com `ASIMOV_TTY` apontando para arquivo a leitura é por linha. Teste de teclas: pty com `pyte`, esperando o script carregar antes da primeira tecla.
 - Teste teclas com bash 5 (o da VPS), não o 3.2 do macOS: o tempo de espera do Esc é outro.
+- Terminal no navegador da Hostinger manda Enter como `\r\n`: toda leitura com terminal começa por `descarta_pendentes`, senão o Enter sobra e responde a pergunta seguinte.
 - Ação do menu roda em `com_voltar` (subshell, para o Esc voltar): variável alterada lá dentro some, a não ser que saia por `devolve`.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.

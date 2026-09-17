@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Enter duplo do terminal no navegador (v0.6.3)
+
+- **Causa do bot na caixa errada**: o terminal do navegador da Hostinger manda Enter como `\r\n`. O Enter da URL do Chatwoot sobrava e escolhia sozinho a primeira caixa da lista seguinte. Conferido no Chatwoot do operador: o bot novo estava na caixa 1 e a do Instagram (2) sem bot. Reproduzido num pty.
+- **Também explica o "voltou ao menu" da v0.5.x**: o Enter que sobrava fechava a pausa antes de o operador ler a mensagem.
+- **Cada pergunta, escolha, confirmação e pausa descarta o que chegou antes de aparecer** (`descarta_pendentes`, 0,05 s), com terminal e bash 4+.
+
 ## 2026-09-17: Bot conferido na caixa e caixa ligada pelo Chatwoot aceita (v0.6.2)
 
 - **Achado no teste com uma caixa do Instagram**: o setup disse que o agente estava no ar, mas o bot não ficou ligado na caixa escolhida. O operador ligou o bot na caixa pelo Chatwoot, e o webhook passou a ignorar o evento porque a caixa não estava em `inbox_ids`.

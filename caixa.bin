@@ -1,0 +1,26 @@
+[36m❯[0m [1mURL do Chatwoot[0m: https://chatwoot.exemplo.com.br
+  [90mConectando…[0m[K  [32m✓[0m Conta do Chatwoot: [1mConta[0m
+
+[36m❯[0m [1mCaixa de entrada[0m  [90m↑ ↓ e Enter[0m
+[?25l[K  [36m❯[0m [1mWhatsApp[0m
+[K    Instagram
+[2A[K    WhatsApp
+[K  [36m❯[0m [1mInstagram[0m
+[3A[J[36m❯[0m [1mCaixa de entrada[0m: Instagram
+[?25h
+  [90mQuando o agente passar a conversa para uma pessoa, ela vai para quem você escolher.[0m
+[36m❯[0m [1mQuem recebe o handoff[0m  [90m↑ ↓ e Enter[0m
+[?25l[K  [36m❯[0m [1mJoana[0m
+[K    Quem estiver na caixa  [90msem atribuir[0m
+[3A[J[36m❯[0m [1mQuem recebe o handoff[0m: Joana
+[?25h
+[36m❯[0m [1mNome do agente[0m: Insta
+
+[36m❯[0m [1mEmpresa[0m  [90m↑ ↓ e Enter[0m
+[?25l[K  [36m❯[0m [1mLoja[0m
+[K    [36m+ nova empresa[0m
+[3A[J[36m❯[0m [1mEmpresa[0m: Loja
+[?25h  [90mCriando o bot no Chatwoot…[0m[K  [32m✓[0m [1mInsta[0m no ar na caixa [1mInstagram[0m [90m· Loja[0m
+  [32m✓[0m Handoff para [1mJoana[0m
+RESULTADO [2]
+[?25h
