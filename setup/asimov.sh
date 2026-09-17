@@ -10,6 +10,7 @@ ajuda() {
   printf '\n  %sasimov%s %sv%s%s\n\n' "$NEGRITO" "$NORMAL" "$CINZA" "$VERSAO" "$NORMAL"
   printf '    %snovo-agente%s   cria um agente no Chatwoot\n' "$CIANO" "$NORMAL"
   printf '    %sagentes%s       lista os agentes e as empresas\n' "$CIANO" "$NORMAL"
+  printf '    %shandoff%s       troca quem recebe a conversa passada pelo agente\n' "$CIANO" "$NORMAL"
   printf '    %satualizar%s     baixa a versão nova e republica\n' "$CIANO" "$NORMAL"
   echo
 }
@@ -31,6 +32,10 @@ case "${1:-ajuda}" in
   agentes)
     exige_instalacao
     lista_agentes
+    ;;
+  handoff)
+    exige_instalacao
+    fluxo_handoff
     ;;
   atualizar)
     # O install.sh local tem fixa a versão já instalada: baixa o da main.

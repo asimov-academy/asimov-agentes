@@ -11,15 +11,18 @@ Comportamentos do Chatwoot que este arquivo respeita (conferidos no código do C
 - criar bot e ligar bot em caixa de entrada exige administrador;
 - a conversa é endereçada pelo display_id, que no payload do webhook vem no campo `id`;
 - resposta não 2xx ao webhook faz o Chatwoot silenciar o bot na conversa;
-- status `pending` é o agente conduzindo; qualquer outro é humano conduzindo.
+- status `pending` é o agente conduzindo; qualquer outro é humano conduzindo;
+- `toggle_status` de `pending` para `open` feito pelo bot é o handoff do Chatwoot (`bot_handoff!`);
+- mudança de status chega ao bot como `conversation_status_changed` e `conversation_updated`,
+  com `changed_attributes`; atribuição sozinha chega só como `conversation_updated`.
 """
 
 import mimetypes
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import httpx
-from pydantic import BaseModel, Field, HttpUrl, ValidationError
+from pydantic import BaseModel, Field, HttpUrl, ValidationError, model_validator
 
 from app.canais.base import (
     Acao,
@@ -27,6 +30,7 @@ from app.canais.base import (
     ArquivoBaixado,
     ArquivoGrandeDemais,
     CredencialInvalida,
+    DestinoInvalido,
     EntradaWebhook,
     Evento,
 )
@@ -34,7 +38,8 @@ from app.canais.chatwoot.assinatura import assinatura_confere, timestamp_recente
 
 TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 TIMEOUT_DOWNLOAD = httpx.Timeout(60.0, connect=5.0)
-EVENTOS_ACEITOS = frozenset({"message_created", "conversation_updated"})
+EVENTOS_DE_STATUS = frozenset({"conversation_status_changed", "conversation_updated"})
+EVENTOS_ACEITOS = frozenset({"message_created"}) | EVENTOS_DE_STATUS
 
 
 class AcessoChatwoot(BaseModel):
@@ -45,6 +50,22 @@ class AcessoChatwoot(BaseModel):
 class ConexaoChatwoot(AcessoChatwoot):
     account_id: int = Field(gt=0)
     inbox_ids: list[int] = Field(min_length=1)
+
+
+class DestinoHandoff(BaseModel):
+    """Quem recebe a conversa: um usuário, um time ou a caixa sem atribuição."""
+
+    tipo: Literal["usuario", "time", "caixa"]
+    id: int | None = Field(default=None, gt=0)
+    nome: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def _id_quando_precisa(self) -> "DestinoHandoff":
+        if self.tipo != "caixa" and self.id is None:
+            raise ValueError(f"destino {self.tipo} precisa do id")
+        if self.tipo == "caixa":
+            self.id = None
+        return self
 
 
 class CredenciaisChatwoot(BaseModel):
@@ -125,6 +146,14 @@ def _lista(corpo: Any) -> list[dict[str, Any]]:
     return [i for i in itens or [] if isinstance(i, dict)]
 
 
+def _status_mudou(payload: dict[str, Any]) -> bool:
+    """`changed_attributes` vem como lista de `{campo: {previous_value, current_value}}`."""
+    mudancas = payload.get("changed_attributes")
+    if isinstance(mudancas, dict):
+        mudancas = [mudancas]
+    return any(isinstance(m, dict) and "status" in m for m in mudancas or [])
+
+
 class Chatwoot:
     nome = "chatwoot"
     campos_secretos = frozenset({"api_access_token", "bot_secret"})
@@ -150,10 +179,14 @@ class Chatwoot:
                 perfil.raise_for_status()
                 contas = []
                 for conta in perfil.json().get("accounts", []):
-                    resp = await http.get(
-                        f"{self._base(acesso.url, conta['id'])}/inboxes", headers=cabecalho
-                    )
+                    base = self._base(acesso.url, conta["id"])
+                    resp = await http.get(f"{base}/inboxes", headers=cabecalho)
                     caixas = _lista(resp.json()) if resp.status_code == 200 else []
+                    # Destinos de handoff. Time pode estar desligado na conta: vira lista vazia.
+                    resp = await http.get(f"{base}/agents", headers=cabecalho)
+                    atendentes = _lista(resp.json()) if resp.status_code == 200 else []
+                    resp = await http.get(f"{base}/teams", headers=cabecalho)
+                    times = _lista(resp.json()) if resp.status_code == 200 else []
                     contas.append(
                         {
                             "id": conta["id"],
@@ -162,6 +195,8 @@ class Chatwoot:
                                 {"id": c["id"], "nome": c.get("name"), "tipo": c.get("channel_type")}
                                 for c in caixas
                             ],
+                            "atendentes": [{"id": a["id"], "nome": a.get("name")} for a in atendentes],
+                            "times": [{"id": i["id"], "nome": i.get("name")} for i in times],
                         }
                     )
         except CredencialInvalida:
@@ -259,9 +294,12 @@ class Chatwoot:
         if conversa is None:
             return Evento(Acao.IGNORAR, "payload sem id de conversa")
 
-        if evento == "conversation_updated":
-            # Retomada e transferência chegam por aqui na fase 3.
-            return Evento(Acao.IGNORAR, "conversation_updated ainda sem uso", conversa)
+        if evento in EVENTOS_DE_STATUS:
+            # Só mudança de status para pendente devolve. A atribuição feita no handoff chega
+            # como conversation_updated ainda com status pendente e não pode fechar o handoff.
+            if _conversa(payload).get("status") == "pending" and _status_mudou(payload):
+                return Evento(Acao.RETOMAR, "conversa devolvida ao agente", conversa)
+            return Evento(Acao.IGNORAR, f"{evento} sem devolução", conversa)
 
         if payload.get("private") is True:
             return Evento(Acao.IGNORAR, "nota privada", conversa)
@@ -297,6 +335,60 @@ class Chatwoot:
             )
 
         return Evento(Acao.IGNORAR, f"message_type {tipo_mensagem!r}", conversa)
+
+    def valida_destino_handoff(self, destino: dict[str, Any] | None) -> dict[str, Any] | None:
+        if destino is None:
+            return None
+        try:
+            return DestinoHandoff.model_validate(destino).model_dump()
+        except ValidationError as erro:
+            raise DestinoInvalido(
+                "destino de handoff do Chatwoot deve ser usuário ou time com id, ou caixa"
+            ) from erro
+
+    async def transferir(
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        destino: dict[str, Any] | None,
+        nota: str,
+    ) -> list[str]:
+        """Nota privada, atribuição e status aberto, nessa ordem.
+
+        Atribuir antes de abrir evita que a distribuição automática da caixa escolha outra pessoa.
+        Sem destino (ou destino `caixa`) a conversa fica aberta na caixa, sem atribuição.
+        """
+        base = f"{self._base_operacao(credenciais)}/conversations/{conversa_externa}"
+        cabecalho = self._cabecalho_bot(credenciais)
+        problemas: list[str] = []
+        async with self._http() as http:
+            try:
+                resp = await http.post(
+                    f"{base}/messages",
+                    json={"content": nota, "message_type": "outgoing", "private": True},
+                    headers=cabecalho,
+                )
+                if resp.status_code >= 400:
+                    problemas.append(f"nota recusada: HTTP {resp.status_code}")
+            except httpx.HTTPError as erro:
+                problemas.append(f"nota falhou: {type(erro).__name__}")
+
+            alvo = destino or {}
+            if alvo.get("tipo") in ("usuario", "time"):
+                chave = "assignee_id" if alvo["tipo"] == "usuario" else "team_id"
+                corpo = {chave: alvo["id"]}
+                try:
+                    resp = await http.post(f"{base}/assignments", json=corpo, headers=cabecalho)
+                    if resp.status_code >= 400:
+                        problemas.append(f"atribuição recusada: HTTP {resp.status_code}")
+                except httpx.HTTPError as erro:
+                    problemas.append(f"atribuição falhou: {type(erro).__name__}")
+
+            resp = await http.post(
+                f"{base}/toggle_status", json={"status": "open"}, headers=cabecalho
+            )
+            resp.raise_for_status()
+        return problemas
 
     def _base_operacao(self, credenciais: dict[str, Any]) -> str:
         return self._base(credenciais["url"], credenciais["account_id"])

@@ -73,6 +73,8 @@ class ChatwootFalso(Chatwoot):
         self.status = "pending"
         self.arquivos: dict[str, ArquivoBaixado] = {}
         self.baixados: list[str] = []
+        self.transferencias: list[tuple[str, dict[str, Any] | None, str]] = []
+        self.transferir_quebra = False
 
     async def conectar(self, dados: dict[str, Any], url_webhook: str, nome_agente: str) -> dict[str, Any]:
         return {
@@ -96,6 +98,13 @@ class ChatwootFalso(Chatwoot):
     async def enviar_texto(self, credenciais: dict[str, Any], conversa_externa: str, texto: str) -> str:
         self.enviadas.append((conversa_externa, texto))
         return str(900000 + len(self.enviadas))
+
+    async def transferir(self, credenciais: dict[str, Any], conversa_externa: str, destino: dict[str, Any] | None, nota: str) -> list[str]:
+        if self.transferir_quebra:
+            raise ConnectionError("chatwoot fora do ar")
+        self.transferencias.append((conversa_externa, destino, nota))
+        self.status = "open"
+        return []
 
     async def baixar_midia(self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int) -> ArquivoBaixado:
         self.baixados.append(anexo.referencia)

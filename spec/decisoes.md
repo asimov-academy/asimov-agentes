@@ -2,6 +2,20 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Handoff no Chatwoot (fase 3, v0.4.0)
+
+- **A tool só registra o pedido; a transferência roda no fim do turno, depois do envio.** Se o contato mandar mensagem nova antes do envio, resposta e pedido são descartados juntos e o turno seguinte decide de novo. Transferir antes de enviar deixaria o contato sem o aviso de que alguém vai continuar. Mesma regra para tools futuras que alteram estado. spec/arquitetura.md, Tools padrão.
+- **Ordem no Chatwoot: nota privada, atribuição, status aberto.** Atribuir antes de abrir evita a distribuição automática da caixa escolher outra pessoa; `toggle_status` de pendente para aberto pelo bot é o `bot_handoff` do Chatwoot. Conferido no código do Chatwoot: o token do bot alcança os três. Nota e atribuição que falham viram Falha `handoff_incompleto`, sem impedir a pausa; pausa que falha não grava Handoff e registra `handoff_falhou`.
+- **Handoff só é gravado depois que o canal aceitou a transferência.** Um índice único parcial (um handoff aberto por conversa) garante a idempotência.
+- **Retomada por `conversation_status_changed` ou `conversation_updated` só quando `changed_attributes` traz status e o status atual é pendente.** A atribuição feita no próprio handoff chega como `conversation_updated` ainda pendente e fecharia o handoff recém aberto. Conversa resolvida que o contato reabre volta pendente (caixa com bot) e também retoma.
+- **Devolução perdida é fechada no turno**: se o Chatwoot diz pendente e a conversa ainda está com handoff aberto, o turno fecha com `retomado_por` `chatwoot` antes de responder.
+- **Destino de handoff no Chatwoot**: `{"tipo": "usuario"|"time"|"caixa", "id", "nome"}`. `caixa` (e agente sem destino) abre a conversa sem atribuição. A descoberta do canal passou a listar atendentes e times da conta. spec/dados.md, spec/telas.md.
+- **`PATCH` do agente antecipado da fase 4, só com `handoff_destino`**, e comando `asimov handoff`: agentes criados antes da v0.4.0 não têm destino. A atualização pergunta uma vez. spec/arquitetura.md, spec/telas.md.
+- **Falha do modelo depois das tentativas**: mensagem fixa de expectativa, conversa marcada como respondida e handoff com o motivo. Resumo com o modelo fora do ar cai para as últimas falas do contato na nota, com Falha `resumo_handoff_falhou`.
+- **Arquivo acima do limite vai para humano**: o modelo é instruído a avisar e transferir; se não pedir, o turno transfere mesmo assim.
+- **Resumo registra Turno com `funcao` `resumo_handoff`** no modelo auxiliar. spec/dados.md, Turno.
+- **Handoff ganhou `agente_id`** para o código ser único por agente. `retomado_por` usa o nome do canal (`chatwoot`).
+
 ## 2026-09-16: Mensagem enviada durante o turno ficava sem resposta (v0.3.2)
 
 - **Achado no teste da fase 2 em VPS**: dois áudios com 10 s de diferença; o segundo chegou enquanto o primeiro era transcrito e respondido e nunca teve turno. Pendente era "fala do contato depois da última fala do agente", e a resposta é gravada no fim do turno, depois da mensagem nova. Existia desde a fase 1; leitura de mídia deixou o turno longo o bastante para acontecer.

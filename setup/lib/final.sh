@@ -58,6 +58,7 @@ mostra_resumo() {
   printf '  %sComandos%s\n' "$NEGRITO" "$NORMAL"
   printf '    %sasimov novo-agente%s   %soutro agente, para empresa nova ou existente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov agentes%s       %slista agentes e empresas%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %sasimov handoff%s       %squem recebe a conversa passada pelo agente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
   echo
 }

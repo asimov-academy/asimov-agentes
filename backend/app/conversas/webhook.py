@@ -19,6 +19,7 @@ from app.canais.registro import CANAIS, obter_canal
 from app.consumo.repo import registra_falha
 from app.conversas import buffer, repo
 from app.conversas.modelos import Mensagem
+from app.handoff import servico as handoff
 from app.plataforma.banco import sessao
 from app.plataforma.cripto import hash_token
 
@@ -92,6 +93,9 @@ async def receber(
         return Response(status_code=200)
 
     assert evento.conversa_externa is not None
+    if evento.acao is Acao.RETOMAR:
+        return await _retoma(s, agente.cliente_id, agente.id, agente.canal, evento.conversa_externa)
+
     try:
         if evento.autor == "contato":
             assert evento.contato_externo is not None
@@ -137,4 +141,19 @@ async def receber(
             return Response(status_code=500)
 
     log.info("webhook_aceito", acao=str(evento.acao), motivo=evento.motivo)
+    return Response(status_code=200)
+
+
+async def _retoma(
+    s: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID, canal: str, conversa_externa: str
+) -> Response:
+    """Idempotente: o Chatwoot manda a mesma devolução em dois eventos."""
+    try:
+        conversa = await repo.conversa_por_externo(s, cliente_id, agente_id, conversa_externa)
+        if conversa is not None:
+            await handoff.retomar(s, cliente_id, conversa.id, canal)
+            await s.commit()
+    except Exception as erro:
+        log.error("webhook_retomada_falhou", erro=repr(erro))
+        return Response(status_code=500)
     return Response(status_code=200)

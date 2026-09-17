@@ -16,6 +16,12 @@ class Acao(StrEnum):
     """Grava na conversa, mas o agente não responde."""
     PROCESSAR = "processar"
     """Grava e agenda o buffer do turno."""
+    RETOMAR = "retomar"
+    """O atendente devolveu a conversa ao agente: fecha o handoff aberto."""
+
+
+class DestinoInvalido(ValueError):
+    """Destino de handoff fora do formato do canal. Mensagem em português."""
 
 
 class ArquivoGrandeDemais(ValueError):
@@ -100,6 +106,23 @@ class Canal(Protocol):
     async def enviar_texto(
         self, credenciais: dict[str, Any], conversa_externa: str, texto: str
     ) -> str | None: ...
+
+    def valida_destino_handoff(self, destino: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Normaliza o `handoff_destino` do agente ou levanta DestinoInvalido."""
+        ...
+
+    async def transferir(
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        destino: dict[str, Any] | None,
+        nota: str,
+    ) -> list[str]:
+        """Passa a conversa para humano: nota interna, atribuição ao destino e pausa do agente.
+
+        Levanta se a pausa falhar. Devolve o que deu errado sem impedir a pausa (nota, atribuição).
+        """
+        ...
 
     async def baixar_midia(
         self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int

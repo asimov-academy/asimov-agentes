@@ -225,16 +225,18 @@ async def test_cache_de_midia_nao_e_reaproveitado_entre_clientes(http, canal, fi
     assert len(donos) == 2
 
 
-async def test_arquivo_acima_do_limite_nao_e_processado(http, canal, fila, sessao, redis, modelo, transcricoes, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+async def test_arquivo_acima_do_limite_nao_e_processado_e_vai_para_humano(http, canal, fila, sessao, redis, modelo, transcricoes, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(config(), "midia_limite_bytes", len(AUDIO) - 1)
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     canal.arquivos[URL_AUDIO] = ArquivoBaixado(AUDIO, "audio/ogg")
     await envia_webhook(http, agente["token"], payload_chatwoot(conteudo="", anexos=[anexo_chatwoot()]))
 
-    assert await _roda_turno(sessao, redis, agente) == "respondido"
+    assert await _roda_turno(sessao, redis, agente) == "transferido"
 
     assert transcricoes == []
     assert "arquivo grande ou longo demais" in modelo.recebido_na_resposta[0]
+    assert [t for _, t in canal.enviadas] == ["Entendi!"]
+    assert len(canal.transferencias) == 1 and "arquivo grande" in canal.transferencias[0][2]
     async with sessao() as s:
         assert await s.scalar(select(Falha.tipo)) == "midia_acima_do_limite"
     assert await _conta(sessao, select(Midia)) == 0

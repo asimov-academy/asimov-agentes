@@ -16,6 +16,7 @@ atualiza() {
   tela_instalacao
   ajusta_permissoes
   instala_comando
+  tela_handoff_pendente
   mostra_resumo
 }
 
@@ -38,6 +39,7 @@ principal() {
   tela_instalacao
   ajusta_permissoes
   tela_primeiro_agente
+  estado_set handoff_perguntado "$(date -Is)"
   tela_final
 }
 

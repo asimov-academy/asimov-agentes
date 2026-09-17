@@ -60,9 +60,10 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Ações, nesta ordem:
   - URL do Chatwoot (lembrada da última vez) e token de acesso de um administrador (não é guardado).
   - Conta e caixa de entrada em menu; com uma opção só, escolhe sozinho.
+  - Quem recebe o handoff: times e atendentes da conta, ou quem estiver na caixa (sem atribuir).
   - Nome do agente.
   - Empresa: no modo empresa, a primeira vez pede o nome da empresa (sugere o nome da conta do Chatwoot) e depois usa sempre a mesma; no modo revenda, menu com as empresas existentes e "nova empresa".
-- Mostra ao final: uma linha confirmando o agente no ar, a caixa e a empresa. A API cria o Agent Bot já com a URL do webhook e liga na caixa.
+- Mostra ao final: uma linha confirmando o agente no ar, a caixa e a empresa, e outra com o destino do handoff. A API cria o Agent Bot já com a URL do webhook e liga na caixa.
 - WhatsApp e Telegram diretos entram na fase 5.
 
 ### 7. Resumo final
@@ -78,7 +79,8 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Objetivo: operar os agentes sem front.
 - Quem acessa: operador.
 - Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo, modelos), reconstrói se o código mudou e mostra o resumo.
-- `asimov novo-agente` e `asimov agentes` existem desde a v0.2.0; as ações abaixo que ainda não existem entram como subcomandos do `asimov`.
+- `asimov novo-agente` e `asimov agentes` existem desde a v0.2.0; `asimov handoff` (trocar o destino do handoff, pedindo o token de administrador do Chatwoot) desde a v0.4.0. As ações abaixo que ainda não existem entram como subcomandos do `asimov`.
+- Atualizar para a v0.4.0 pergunta uma vez o destino do handoff dos agentes que não têm.
 - Ações:
   - Criar agente (mesmo fluxo da tela 6).
   - Listar agentes: cliente, nome, canal, destino do handoff, URL do webhook e status.

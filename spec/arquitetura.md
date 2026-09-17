@@ -81,7 +81,7 @@ Modelos de IA:
 - **Credenciais de canal:** criptografadas com Fernet usando `CHAVE_CRIPTOGRAFIA` do `.env` antes de gravar; decifradas só na memória do processo que usa. Nunca aparecem em log, resposta da API ou tela do menu (o menu mostra só os 4 últimos caracteres).
 - **`.env`:** gerado pelo setup, permissão 600, dono root, fora do git. O setup e a API recusam iniciar se ele estiver legível por outros.
 - **Conteúdo de conversa:** logs em nível informativo registram ids e tipos, não o texto. Texto só em nível de depuração, desligado por padrão.
-- **Mídia recebida:** baixada para `/var/lib/asimov/midia/<cliente>/<agente>/<hash>` em volume Docker, fora de qualquer rota pública. Limite de 20 MB por arquivo (conferido durante o download) e 5 minutos de áudio; acima disso, não processa, registra Falha e o agente pede para o contato escrever (handoff a partir da fase 3). O link do Chatwoot é baixado sem o token do bot.
+- **Mídia recebida:** baixada para `/var/lib/asimov/midia/<cliente>/<agente>/<hash>` em volume Docker, fora de qualquer rota pública. Limite de 20 MB por arquivo (conferido durante o download) e 5 minutos de áudio; acima disso, não processa, registra Falha, o agente avisa e a conversa vai para humano. O link do Chatwoot é baixado sem o token do bot.
 - **Conteúdo de mídia é entrada hostil:** o texto extraído entra na conversa rotulado como dado do contato, nunca no prompt de sistema, e o turno que processa mídia roda sem tools que alteram estado, exceto handoff.
 - **Documentos da base:** copiados para `/var/lib/asimov/conhecimento/<cliente>/<agente>/`.
 - **Exclusão:** lógica em Cliente, Agente e Documento. Trechos de documento removido são apagados. Remover Agente apaga as credenciais e invalida o `token_webhook`. Job diário apaga do disco mídias com mais de 90 dias, mantendo `texto_extraido`.
@@ -130,10 +130,10 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 | Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, token de administrador, conta, caixas), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook e liga nas caixas; se a gravação falhar, apaga o bot); guarda só o token e o secret do bot; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; no Telegram registra o webhook |
 | Listar agentes | `GET /admin/agentes?cliente_id=` | filtro opcional | lista com canal, destino de handoff, URL do webhook, ativo | credenciais nunca devolvidas |
 | Ver agente | `GET /admin/clientes/{cliente_id}/agentes/{agente_id}` | ids | agente | agente pertence ao cliente |
-| Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | campos alterados | agente | agente pertence ao cliente; credencial alterada é testada antes |
+| Editar agente | `PATCH /admin/clientes/{cliente_id}/agentes/{agente_id}` | campos alterados (hoje só `handoff_destino`; o resto na fase 4) | agente | agente pertence ao cliente; destino validado pelo canal; credencial alterada é testada antes |
 | Remover agente | `DELETE /admin/clientes/{cliente_id}/agentes/{agente_id}` | confirmação com o slug | ok | agente pertence ao cliente; remove webhook no Telegram; apaga credenciais |
 | Listar empresas | `GET /admin/clientes` | nada | lista | usada pelo `asimov novo-agente` no modo revenda |
-| Descobrir no canal | `POST /admin/canais/{canal}/descobrir` | acesso do operador (Chatwoot: url e token de administrador) | contas e caixas de entrada | não grava nada; acesso não é guardado |
+| Descobrir no canal | `POST /admin/canais/{canal}/descobrir` | acesso do operador (Chatwoot: url e token de administrador) | contas, caixas de entrada, atendentes e times | não grava nada; acesso não é guardado |
 | Enviar documento | `POST /admin/clientes/{cliente_id}/agentes/{agente_id}/documentos` | caminho do arquivo na VPS ou upload multipart | documento com status `processando` | formato aceito (PDF, DOCX, TXT, MD); hash repetido no mesmo agente é recusado; enfileira ingestão |
 | Listar documentos | `GET .../agentes/{agente_id}/documentos` | ids | lista com status e trechos | agente pertence ao cliente |
 | Remover documento | `DELETE .../documentos/{documento_id}` | ids | ok | documento pertence ao agente e ao cliente; apaga trechos |
@@ -147,7 +147,7 @@ Webhooks, chamados pelos canais:
 | Verificação da Meta | `GET /webhook/whatsapp/{token}` | `hub.verify_token` confere com o agente; devolve `hub.challenge` |
 | Receber WhatsApp | `POST /webhook/whatsapp/{token}` | assinatura; agente ativo; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando |
 | Receber Telegram | `POST /webhook/telegram/{token}` | secret token; agente ativo; deduplica por `update_id`; mensagem do grupo de handoff vira comando |
-| Receber Chatwoot | `POST /webhook/chatwoot/{token}` | HMAC; aceita só `message_created` de entrada e `conversation_updated`; inbox está em `inbox_ids`; deduplica por `X-Chatwoot-Delivery` |
+| Receber Chatwoot | `POST /webhook/chatwoot/{token}` | HMAC; aceita só `message_created`, `conversation_status_changed` e `conversation_updated`; inbox está em `inbox_ids`; deduplica mensagem pelo id; mudança de status para `pending` fecha o handoff aberto (idempotente) |
 
 Todo webhook valida, grava a mensagem, agenda o buffer e responde em menos de 1 segundo. Nenhum processamento de IA acontece dentro da requisição.
 
@@ -156,7 +156,7 @@ Tools padrão que todo agente recebe:
 | Tool | O que faz | Regras |
 |---|---|---|
 | `buscar_base_conhecimento(pergunta)` | devolve os trechos mais próximos | só do agente e cliente do turno; sem base, devolve vazio |
-| `transferir_para_humano(motivo)` | abre handoff, gera resumo com o modelo auxiliar, avisa e pausa | idempotente se já há handoff aberto |
+| `transferir_para_humano(motivo)` | registra o pedido; no fim do turno, depois de enviar a resposta, gera resumo com o modelo auxiliar e transfere no canal (Chatwoot: nota privada, atribuição ao destino, status aberto) | idempotente se já há handoff aberto; resposta descartada por mensagem nova descarta o pedido junto |
 
 ## 7. Processamento em segundo plano
 
