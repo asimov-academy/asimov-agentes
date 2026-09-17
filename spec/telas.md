@@ -84,7 +84,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Ações do menu:
   - Criar agente (mesmo fluxo da tela 6).
   - Listar agentes: por empresa, nome, canal, modelo de resposta, destino do handoff, status e URL do webhook.
-  - Editar agente: escolhe o agente, vê a configuração e muda nome, tempo de buffer, mensagens por resposta, modelos (resposta, fallback, resumo do handoff, visão, áudio; só provedores com chave) ou destino do handoff. Vale na próxima mensagem. Credenciais do canal e tempo de retomada automática entram com os canais diretos (fase 5): no Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente.
+  - Editar agente: escolhe o agente, vê a configuração e muda nome (com o token de administrador, também o nome do bot no Chatwoot), tempo de buffer, mensagens por resposta, modelos (resposta, fallback, resumo do handoff, visão, áudio; só provedores com chave) ou destino do handoff. Vale na próxima mensagem. Credenciais do canal e tempo de retomada automática entram com os canais diretos (fase 5): no Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente.
   - Remover agente: pede o nome do agente para confirmar e, opcionalmente, o token de administrador do Chatwoot para apagar o bot. No modo revenda, empresa que ficou sem agentes pode ser removida junto.
   - Subir base de conhecimento (fase 6): escolher o agente e a pasta ou arquivo; listar e remover documentos já carregados.
   - Ver consumo e falhas: por empresa e agente, últimos 7 e 30 dias lado a lado, com turnos, tokens e custo estimado em dólar, e as últimas falhas (derivado).

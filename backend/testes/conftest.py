@@ -77,6 +77,7 @@ class ChatwootFalso(Chatwoot):
         self.transferir_quebra = False
         self.desconectar_recusa = False
         self.devolvidas: list[str] = []
+        self.renomeados: list[str] = []
 
     async def conectar(self, dados: dict[str, Any], url_webhook: str, nome_agente: str) -> dict[str, Any]:
         return {
@@ -92,6 +93,11 @@ class ChatwootFalso(Chatwoot):
         if self.desconectar_recusa:
             raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
         self.desconectados.append(credenciais["bot_id"])
+
+    async def renomear(self, dados: dict[str, Any], credenciais: dict[str, Any], nome: str) -> None:
+        if self.desconectar_recusa:
+            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+        self.renomeados.append(nome)
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:
         self.devolvidas.append(conversa_externa)

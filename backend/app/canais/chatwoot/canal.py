@@ -289,6 +289,25 @@ class Chatwoot:
         if resp.status_code >= 400 and resp.status_code != 404:
             raise CredencialInvalida(f"o Chatwoot recusou apagar o bot: HTTP {resp.status_code}")
 
+    async def renomear(self, dados: dict[str, Any], credenciais: dict[str, Any], nome: str) -> None:
+        """Nome do Agent Bot, que aparece nas mensagens do agente. Editar bot exige administrador."""
+        acesso: AcessoAdmin = _valida(AcessoAdmin, dados)
+        try:
+            async with self._http() as http:
+                resp = await http.patch(
+                    f"{self._base_operacao(credenciais)}/agent_bots/{credenciais['bot_id']}",
+                    json={"name": nome},
+                    headers={"api_access_token": acesso.token_admin},
+                )
+        except httpx.HTTPError as erro:
+            raise CredencialInvalida(
+                f"não consegui falar com o Chatwoot em {credenciais['url']}"
+            ) from erro
+        if resp.status_code in (401, 403):
+            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+        if resp.status_code >= 400:
+            raise CredencialInvalida(f"o Chatwoot recusou renomear o bot: HTTP {resp.status_code}")
+
     # ── Operação (token do bot) ────────────────────────────────────────────
 
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool:

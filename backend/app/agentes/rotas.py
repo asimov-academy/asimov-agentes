@@ -53,6 +53,10 @@ class EdicaoAgente(BaseModel):
     modelo_auxiliar: str | None = None
     modelo_visao: str | None = None
     modelo_transcricao: str | None = None
+    conexao: dict[str, Any] | None = Field(
+        default=None,
+        description="Acesso do operador para levar o nome novo ao canal (Chatwoot: token_admin). Nunca é guardado.",
+    )
 
 
 class Remocao(BaseModel):
@@ -170,11 +174,11 @@ async def editar(
 ) -> AgenteSaida:
     try:
         agente = await servico.editar_agente(
-            s, cliente_id, agente_id, dados.model_dump(exclude_unset=True)
+            s, cliente_id, agente_id, dados.model_dump(exclude_unset=True, exclude={"conexao"}), dados.conexao
         )
     except servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
-    except (DestinoInvalido, ModeloInvalido, servico.CampoInvalido) as erro:
+    except (DestinoInvalido, ModeloInvalido, servico.CampoInvalido, CredencialInvalida) as erro:
         raise HTTPException(status_code=422, detail=str(erro)) from erro
     return _saida(agente)
 

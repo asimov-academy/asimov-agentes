@@ -91,10 +91,17 @@ fluxo_editar_agente() {
 }
 
 edita_nome() {
-  local valor
-  dica "O nome do bot no Chatwoot e a pasta do prompt continuam os mesmos."
+  local valor token conexao=null
+  dica "A pasta do prompt continua a mesma."
   pergunta valor "Nome" "$(jq -r '.nome' <<<"$AGENTE")"
-  salva_agente "$(jq -n --arg v "$valor" '{nome: $v}')"
+  echo
+  dica "O nome aparece nas mensagens do agente no Chatwoot. Trocar lá pede o token de administrador."
+  if confirma "Trocar o nome do bot no Chatwoot também?"; then
+    pergunta_secreta token "Token de acesso"
+    conexao=$(jq -n --arg token "$token" '{token_admin: $token}')
+    unset token
+  fi
+  salva_agente "$(jq -n --arg v "$valor" --argjson conexao "$conexao" '{nome: $v, conexao: $conexao}')"
 }
 
 edita_buffer() {
@@ -131,9 +138,9 @@ fluxo_remover_agente() {
   dica "Conversas e consumo ficam guardados. O prompt fica em prompts/ e volta se você criar"
   dica "um agente com o mesmo nome nessa empresa."
   echo
-  pergunta confirmacao "Digite o nome do agente para confirmar"
-  if [ "$(jq -n --arg a "$confirmacao" --arg b "$nome" '($a | ascii_downcase | ltrimstr(" ") | rtrimstr(" ")) == ($b | ascii_downcase)')" != true ]; then
-    falha "O nome não confere. Nada foi removido."
+  pergunta confirmacao "Para confirmar, digite $(destaque "$nome")"
+  if [ "$(normaliza "$confirmacao")" != "$(normaliza "$nome")" ]; then
+    falha "Você digitou $(destaque "$confirmacao"), e o agente se chama $(destaque "$nome"). Nada foi removido."
     return 0
   fi
 
