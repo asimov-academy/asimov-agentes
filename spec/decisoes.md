@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Resposta no formato estruturado nativo (v0.8.9)
+
+- **Achado na VPS**: agente novo (Isa, gpt-5.5, terminal) perguntado sobre o dólar de ontem buscou na web e respondeu "Esse erro indica que o JSON enviado está vazio ou mal formatado. Me manda o JSON?". Histórico limpo; o turno gastou 19,8 mil tokens de entrada e 359 de saída, o dobro de um turno normal.
+- **Causa provável, não reproduzida**: a resposta saía pela tool `final_result`. Quando o modelo erra o formato, a PydanticAI manda o aviso de correção e, pela API Responses, o aviso sem tool vai como mensagem do usuário: o modelo achou que o contato mandou um erro de JSON. Refeito 4 vezes no container, o turno deu certo nas 4 com uma chamada só.
+- **Resposta no formato estruturado nativo** (`NativeOutput`, `json_schema` estrito) quando todo modelo do agente aceita (principal e fallback; perfil da PydanticAI); senão, tool como antes. Aceitam: OpenAI, Anthropic, Gemini e gpt-oss da Groq; llama da Groq não. No teste nativo foi mais rápido (5,2 a 5,5 s contra 6,7 a 9,1 s). Sem tool de resposta, `tool_choice` volta a `auto`: o modelo não é mais obrigado a chamar alguma tool, o que levava o gpt-5.1 a chamar a calculadora com "1+1".
+- **Instrução de saída**: aviso sobre formato, JSON ou validação vem do sistema e fala da própria resposta, nunca do contato.
+- **Falha `resposta_corrigida`** com os avisos recebidos quando o modelo precisa corrigir a resposta no turno: da próxima vez a causa aparece em Ver consumo e falhas, em vez de deduzida.
+
 ## 2026-09-17: Uma ferramenta por arquivo (v0.8.8)
 
 - **Pedido do operador**: toda ferramenta dos agentes num `.py` separado, para ir adicionando ferramentas novas. `ia/ferramentas.py` virou o pacote `ia/ferramentas/`: `base.py` (ficha `Ferramenta`), `calculadora.py`, `busca_web.py` e `registro.py` (catálogo, padrão, valida, monta).

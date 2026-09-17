@@ -63,6 +63,20 @@ CONEXAO_EXEMPLO = {
 }
 
 
+def e_resposta(info: Any) -> bool:
+    """Chamada do turno de resposta (saída estruturada), e não resumo do handoff ou leitura de mídia (texto)."""
+    return bool(info.output_tools) or info.model_request_parameters.output_mode == "native"
+
+
+def resposta_falsa(info: Any, mensagens: list[str]) -> Any:
+    """Resposta do modelo falso no formato que o agente pediu: nativo (texto JSON) ou pela tool de resposta."""
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+
+    if info.output_tools:
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": mensagens})])
+    return ModelResponse(parts=[TextPart(json.dumps({"mensagens": mensagens}, ensure_ascii=False))])
+
+
 class ChatwootFalso(Chatwoot):
     """Assinatura e interpretação reais; rede substituída por registro em memória."""
 

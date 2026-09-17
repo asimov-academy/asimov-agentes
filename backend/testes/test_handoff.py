@@ -16,7 +16,7 @@ from app.conversas.modelos import Conversa
 from app.handoff import servico as handoff
 from app.handoff.modelos import Handoff
 from app.plataforma.config import config
-from testes.conftest import ADMIN, cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import ADMIN, cria_cliente_e_agente, e_resposta, envia_webhook, payload_chatwoot, resposta_falsa
 
 RESUMO = "Maria quer trocar um produto com defeito e já enviou o número do pedido"
 DESTINO = {"tipo": "usuario", "id": 7, "nome": "Joana"}
@@ -29,14 +29,14 @@ class ModeloQueTransfere:
         self.transfere = transfere
 
     def __call__(self, historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        if not info.output_tools:
+        if not e_resposta(info):
             return ModelResponse(parts=[TextPart(RESUMO)])
         ultima = historico[-1]
         voltou_da_tool = isinstance(ultima, ModelRequest) and any(isinstance(p, ToolReturnPart) for p in ultima.parts)
         if self.transfere and not voltou_da_tool:
             return ModelResponse(parts=[ToolCallPart("transferir_para_humano", {"motivo": "contato pediu para falar com uma pessoa"})])
         texto = "Vou chamar alguém da equipe" if voltou_da_tool else "Posso ajudar"
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": [texto]})])
+        return resposta_falsa(info, [texto])
 
 
 @pytest.fixture(autouse=True)
@@ -241,7 +241,7 @@ async def test_depois_da_devolucao_o_modelo_ve_que_o_pedido_de_pessoa_ja_foi_ate
     original = modelo.__call__
 
     def espia(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        if info.output_tools:
+        if e_resposta(info):
             vistos.append(list(historico))
         return original(historico, info)
 
@@ -270,14 +270,14 @@ async def test_tool_de_handoff_chamada_de_novo_no_mesmo_turno_nao_repete(http, c
     retornos: list[str] = []
 
     def chama_duas_vezes(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        if not info.output_tools:
+        if not e_resposta(info):
             return ModelResponse(parts=[TextPart(RESUMO)])
         ultima = historico[-1]
         voltas = [p for p in ultima.parts if isinstance(p, ToolReturnPart)] if isinstance(ultima, ModelRequest) else []
         retornos.extend(str(p.content) for p in voltas)
         if len(retornos) < 2:
             return ModelResponse(parts=[ToolCallPart("transferir_para_humano", {"motivo": f"pedido {len(retornos) + 1}"})])
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Já chamei alguém"]})])
+        return resposta_falsa(info, ["Já chamei alguém"])
 
     monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(chama_duas_vezes))
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
@@ -293,7 +293,7 @@ async def test_modelo_em_loop_para_no_teto_do_turno_sem_tentar_de_novo(http, can
     chamadas: list[int] = []
 
     def em_loop(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        if not info.output_tools:
+        if not e_resposta(info):
             return ModelResponse(parts=[TextPart(RESUMO)])
         chamadas.append(1)
         return ModelResponse(parts=[ToolCallPart("transferir_para_humano", {"motivo": "de novo"})])

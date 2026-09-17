@@ -12,7 +12,7 @@ from app.conversas import buffer, turno
 from app.conversas.divisao import DIGITANDO_MINIMO_SEGUNDOS, tempos_de_digitacao
 from app.conversas.modelos import Conversa
 from app.plataforma.config import config
-from testes.conftest import ADMIN, cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import ADMIN, cria_cliente_e_agente, e_resposta, envia_webhook, payload_chatwoot, resposta_falsa
 
 
 def test_digitando_segue_a_velocidade_com_teto_e_desconta_o_que_ja_passou() -> None:
@@ -64,7 +64,7 @@ async def test_turno_entrega_ao_modelo_so_as_ferramentas_ligadas(http, canal, fi
         nativas = {f"nativa:{n.kind}" for n in info.model_request_parameters.native_tools}
         vistas.append({t.name for t in info.function_tools} | nativas)
         instrucoes.append(info.instructions or "")
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Oi Maria, tudo bem?"]})])
+        return resposta_falsa(info, ["Oi Maria, tudo bem?"])
 
     perfis: list[dict[str, Any] | None] = [None, {"supported_native_tools": frozenset()}, None]
     monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde, profile=perfis[0]))

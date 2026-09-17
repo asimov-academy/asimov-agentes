@@ -15,7 +15,7 @@ from app.consumo.modelos import Turno
 from app.conversas import turno
 from app.conversas.modelos import Conversa, Mensagem
 from app.plataforma.config import config
-from testes.conftest import ADMIN, BOT_ID, CONEXAO_EXEMPLO, cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import ADMIN, BOT_ID, CONEXAO_EXEMPLO, cria_cliente_e_agente, e_resposta, envia_webhook, payload_chatwoot, resposta_falsa
 from testes.test_handoff import ModeloQueTransfere
 
 
@@ -65,9 +65,9 @@ async def _roda_turno(fila: Any, redis: Any) -> str:
 
 def _responde(*mensagens: str) -> FunctionModel:
     def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        if not info.output_tools:
+        if not e_resposta(info):
             return ModelResponse(parts=[TextPart("resumo")])
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": list(mensagens)})])
+        return resposta_falsa(info, list(mensagens))
 
     return FunctionModel(responde)
 

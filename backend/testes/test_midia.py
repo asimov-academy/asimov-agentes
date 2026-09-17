@@ -20,7 +20,7 @@ from app.midia import extracao
 from app.midia import servico as midia_servico
 from app.midia.modelos import Midia
 from app.plataforma.config import config
-from testes.conftest import cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import cria_cliente_e_agente, e_resposta, envia_webhook, payload_chatwoot, resposta_falsa
 
 AUDIO = b"OggS-audio-de-teste-quero-trocar-um-produto"
 URL_AUDIO = "https://chatwoot.exemplo.com.br/rails/active_storage/blobs/redirect/abc/audio.ogg"
@@ -41,13 +41,13 @@ class ModeloFalso:
     def __call__(self, historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         ultima = historico[-1]
         assert isinstance(ultima, ModelRequest)
-        if not info.output_tools:
+        if not e_resposta(info):
             for parte in ultima.parts:
                 if isinstance(parte, UserPromptPart) and isinstance(parte.content, list):
                     self.arquivos_na_visao += [c for c in parte.content if isinstance(c, BinaryContent)]
             return ModelResponse(parts=[TextPart(self.leitura)])
         self.recebido_na_resposta.append(str(ultima.parts[-1].content))  # type: ignore[union-attr]
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Entendi!"]})])
+        return resposta_falsa(info, ["Entendi!"])
 
 
 @pytest.fixture(autouse=True)
