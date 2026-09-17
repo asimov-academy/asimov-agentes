@@ -98,7 +98,12 @@ pergunta() {
     [ -n "$__padrao" ] && printf ' %s(%s)%s' "$CINZA" "$__padrao" "$NORMAL"
     printf ': '
     __resposta=""
-    ler __resposta
+    if tem_terminal; then
+      ler_linha __resposta
+      echo
+    else
+      ler __resposta
+    fi
     __resposta=${__resposta:-$__padrao}
     if [ -n "$__resposta" ]; then
       printf -v "$__var" '%s' "$__resposta"
@@ -135,7 +140,11 @@ pergunta_secreta() {
     _prompt "$__texto"
     printf ': '
     __resposta=""
-    ler -s __resposta
+    if tem_terminal; then
+      ler_linha __resposta secreta
+    else
+      ler -s __resposta
+    fi
     if [ -n "$__resposta" ]; then
       printf '%s••••••••%s\n' "$CINZA" "$NORMAL"
       printf -v "$__var" '%s' "$__resposta"
@@ -149,6 +158,55 @@ pergunta_secreta() {
 # Com terminal, escolhas andam com as setas e confirmam com Enter. Sem terminal (ASIMOV_TTY com
 # arquivo de respostas, usado na simulação), a resposta é uma linha com o número ou S/N.
 tem_terminal() { [ -t 3 ] && [ -t 1 ]; }
+
+# Esc sozinho chega como um byte só; setas chegam como Esc seguido da sequência no mesmo instante.
+ESPERA_SEQUENCIA=1
+[ "${BASH_VERSINFO[0]}" -ge 4 ] && ESPERA_SEQUENCIA=0.1
+SAIDA_VOLTAR=20
+
+# volta_se_puder: Esc dentro de `com_voltar` (base.sh) encerra a ação e volta à tela anterior.
+# Fora dele (primeira instalação) não há para onde voltar e o Esc não faz nada.
+volta_se_puder() {
+  [ -n "${VOLTA_ATIVA:-}" ] || return 0
+  printf '\033[?25h\n'
+  exit "$SAIDA_VOLTAR"
+}
+
+# ler_linha VAR [secreta]: resposta digitada tecla a tecla, para o Esc voltar. Backspace apaga.
+ler_linha() {
+  local __destino=$1 __secreta=${2:-} __digitado="" __letra __sequencia
+  while true; do
+    if ! IFS= read -rsn1 __letra <&3; then
+      printf '\033[?25h\n'
+      exit 1
+    fi
+    case "$__letra" in
+      "") break ;;
+      $'\033')
+        __sequencia=""
+        IFS= read -rsn2 -t "$ESPERA_SEQUENCIA" __sequencia <&3 || true
+        if [ -z "$__sequencia" ]; then
+          volta_se_puder
+        elif [[ "$__sequencia" =~ [0-9]$ ]]; then
+          # Delete, Page Up e parecidas terminam em ~: descarta o resto.
+          IFS= read -rsn1 -t "$ESPERA_SEQUENCIA" __sequencia <&3 || true
+        fi
+        ;;
+      $'\177' | $'\b')
+        if [ -n "$__digitado" ]; then
+          __digitado=${__digitado%?}
+          [ -n "$__secreta" ] || printf '\b \b'
+        fi
+        ;;
+      [[:cntrl:]]) ;;
+      *)
+        __digitado+=$__letra
+        [ -n "$__secreta" ] || printf '%s' "$__letra"
+        ;;
+    esac
+  done
+  printf -v "$__destino" '%s' "$__digitado"
+}
 
 if tem_terminal; then
   trap 'printf "\033[?25h"' EXIT
@@ -164,8 +222,9 @@ le_tecla() {
   case "$__lida" in
     "") __lida=enter ;;
     $'\033')
-      IFS= read -rsn2 -t 1 __sequencia <&3 || true
+      IFS= read -rsn2 -t "$ESPERA_SEQUENCIA" __sequencia <&3 || true
       case "$__sequencia" in
+        "") __lida=esc ;;
         "[A" | "OA") __lida=cima ;;
         "[B" | "OB") __lida=baixo ;;
         "[C" | "OC") __lida=direita ;;
@@ -178,6 +237,7 @@ le_tecla() {
 }
 
 # escolha VAR "texto" opção1 opção2 ...: devolve o número escolhido.
+# Esc escolhe a opção ESC_ESCOLHE quando definida (ex.: Voltar, Sair); senão volta à tela anterior.
 escolha() {
   local __var=$1 __texto=$2 __atual=1 __tecla __i __item
   shift 2
@@ -186,7 +246,7 @@ escolha() {
     return 0
   fi
   _prompt "$__texto"
-  printf '  %s↑ ↓ e Enter%s\n' "$CINZA" "$NORMAL"
+  printf '  %s↑ ↓ e Enter%s%s\n' "$CINZA" "$([ -n "${ESC_ESCOLHE:-}${VOLTA_ATIVA:-}" ] && echo ' · Esc volta')" "$NORMAL"
   printf '\033[?25l'
   while true; do
     __i=1
@@ -204,6 +264,13 @@ escolha() {
       baixo | j) __atual=$((__atual == $# ? 1 : __atual + 1)) ;;
       [1-9]) [ "$__tecla" -le "$#" ] && __atual=$__tecla ;;
       enter) break ;;
+      esc)
+        if [ -n "${ESC_ESCOLHE:-}" ]; then
+          __atual=$ESC_ESCOLHE
+          break
+        fi
+        volta_se_puder
+        ;;
     esac
     printf '\033[%sA' "$#"
   done
@@ -262,6 +329,7 @@ confirma() {
       [SsYy]) __sim=1 && break ;;
       [Nn]) __sim=0 && break ;;
       enter) break ;;
+      esc) volta_se_puder ;;
     esac
   done
   printf '\r\033[K'
