@@ -4,6 +4,7 @@ from typing import Any
 from arq import cron
 from arq.connections import RedisSettings
 
+from app.canais.waha import vigia
 from app.conversas.turno import processar_turno
 from app.handoff import servico as handoff
 from app.plataforma.banco import fabrica_sessao
@@ -29,9 +30,19 @@ async def retomada_automatica(ctx: dict[str, Any]) -> int:
         return await handoff.retomada_automatica(s)
 
 
+async def confere_whatsapp(ctx: dict[str, Any]) -> int:
+    """De dez em dez minutos: número desconectado do WhatsApp deixa o agente mudo, e isso precisa
+    aparecer em Ver consumo e falhas mesmo quando o evento da WAHA não chega."""
+    async with fabrica_sessao()() as s:
+        return await vigia.confere_sessoes(s, ctx["redis"])
+
+
 class Configuracao:
     functions = [processar_turno, assumir_conversa]
-    cron_jobs = [cron(retomada_automatica, second=0, run_at_startup=False)]
+    cron_jobs = [
+        cron(retomada_automatica, second=0, run_at_startup=False),
+        cron(confere_whatsapp, minute={0, 10, 20, 30, 40, 50}, second=30, run_at_startup=False),
+    ]
     on_startup = ao_iniciar
     redis_settings = RedisSettings.from_dsn(config().redis_url)
     max_jobs = 20

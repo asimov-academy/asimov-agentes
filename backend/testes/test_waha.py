@@ -613,3 +613,49 @@ def test_baixar_arquivo_nao_pede_json() -> None:
     WAHA recusava o arquivo, deixando todo áudio e imagem como `falhou`."""
     assert "Accept" not in api.cabecalho()
     assert api.cabecalho_json()["Accept"] == "application/json"
+
+
+# ── Número que saiu do ar ──────────────────────────────────────────────────
+
+
+async def test_sessao_que_cai_vira_falha_visivel(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
+    """Sem isso o agente fica mudo em silêncio e o operador só descobre pelo cliente reclamando."""
+    agente = await cria_waha(http)
+
+    resposta = await manda(
+        http, agente, waha, {"event": "session.status", "payload": {"name": waha.sessao, "status": "FAILED"}}
+    )
+
+    assert resposta.status_code == 200
+    async with sessao() as s:
+        falha = (await s.scalars(select(Falha).where(Falha.tipo == "canal_fora_do_ar"))).one()
+    assert falha.detalhe["situacao"] == "FAILED"
+
+
+async def test_pareamento_em_andamento_nao_assusta_ninguem(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http)
+
+    for status in ("STARTING", "SCAN_QR_CODE", "WORKING"):
+        await manda(http, agente, waha, {"event": "session.status", "payload": {"status": status}})
+
+    async with sessao() as s:
+        assert list(await s.scalars(select(Falha).where(Falha.tipo == "canal_fora_do_ar"))) == []
+
+
+async def test_ronda_avisa_uma_vez_por_hora(http, fila, waha, redis, sessao, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """A ronda cobre o caso em que nem o evento chega (WAHA reiniciada, fora do ar)."""
+    from app.canais.waha import vigia
+
+    agente = await cria_waha(http)
+
+    async def situacao(nome: str) -> dict[str, Any]:
+        return {"status": "STOPPED", "me": None}
+
+    monkeypatch.setattr(vigia.api, "situacao", situacao)
+    async with fabrica_sessao()() as s:
+        assert await vigia.confere_sessoes(s, redis) == 1
+        assert await vigia.confere_sessoes(s, redis) == 1, "continua fora do ar"
+        falhas = list(await s.scalars(select(Falha).where(Falha.tipo == "canal_fora_do_ar")))
+    assert len(falhas) == 1, "uma falha por hora, não uma por ronda"
+    assert falhas[0].detalhe["situacao"] == "STOPPED"
+    assert falhas[0].agente_id == uuid.UUID(agente["id"])

@@ -89,6 +89,17 @@ async def receber(
         return _recusa(pune, 400)
 
     evento = canal_obj.interpretar(payload, credenciais, agente.handoff_destino)
+    if evento.acao is Acao.ALERTA:
+        # O agente fica mudo até alguém parear de novo: isso precisa aparecer para o operador.
+        log.error("canal_fora_do_ar", motivo=evento.motivo)
+        await registra_falha(
+            "canal_fora_do_ar",
+            {"canal": canal, "situacao": evento.texto, "motivo": evento.motivo},
+            agente.cliente_id,
+            agente.id,
+        )
+        return Response(status_code=200)
+
     if evento.acao is Acao.IGNORAR:
         # Info de propósito: evento ignorado sem motivo visível é o que mais atrasa o debug de canal novo.
         log.info("webhook_ignorado", motivo=evento.motivo)

@@ -257,6 +257,24 @@ reconfigura_sessoes_waha() {
   return 0
 }
 
+# avisa_numeros_fora_do_ar: define AVISO_WAHA com os agentes cujo número saiu do ar no WhatsApp.
+# Chamado uma vez ao abrir o menu: o agente fica mudo quando isso acontece, e é o operador que
+# precisa ler o QR code de novo.
+avisa_numeros_fora_do_ar() {
+  AVISO_WAHA=""
+  [ "$(env_get WAHA_ATIVA)" = 1 ] || return 0
+  local linha nome
+  api GET /admin/agentes
+  [ "$API_STATUS" = 200 ] || return 0
+  while IFS= read -r linha; do
+    nome=$(jq -r '.nome' <<<"$linha")
+    if waha_situacao "$linha" && [ "$WAHA_STATUS" != WORKING ] && [ "$WAHA_STATUS" != SCAN_QR_CODE ]; then
+      AVISO_WAHA+="${AVISO_WAHA:+; }$nome ($WAHA_STATUS)"
+    fi
+  done < <(jq -c '.[] | select(.canal == "waha" and .ativo)' <<<"$API_RESPOSTA")
+  return 0
+}
+
 # waha_situacao AGENTE_JSON: consulta a sessão. Define WAHA_STATUS, WAHA_QR e WAHA_NUMERO.
 waha_situacao() {
   api GET "$(caminho_do_agente "$1")/waha"
