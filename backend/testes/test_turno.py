@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from arq import create_pool
 from arq.connections import RedisSettings
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import select
 
@@ -14,7 +14,7 @@ from app.conversas.divisao import limita_mensagens
 from app.conversas.modelos import Conversa, Mensagem
 from app.handoff.servico import MENSAGEM_DE_EXPECTATIVA
 from app.plataforma.config import config
-from testes.conftest import cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import cria_cliente_e_agente, e_resposta, envia_webhook, payload_chatwoot, resposta_falsa
 
 
 def modelo_que_responde(mensagens: list[str], recebidas: list[str] | None = None) -> FunctionModel:
@@ -22,7 +22,7 @@ def modelo_que_responde(mensagens: list[str], recebidas: list[str] | None = None
         if recebidas is not None:
             ultima = historico[-1]
             recebidas.append(str(getattr(ultima.parts[-1], "content", "")))
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": mensagens})])
+        return resposta_falsa(info, mensagens)
 
     return FunctionModel(responde)
 
@@ -203,7 +203,7 @@ async def test_mensagem_que_chega_durante_o_turno_e_respondida_no_seguinte(http,
 
     def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         recebidas.append(str(historico[-1].parts[-1].content))  # type: ignore[union-attr]
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["ok"]})])
+        return resposta_falsa(info, ["ok"])
 
     monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
     enviar_original = canal.enviar_texto
@@ -254,7 +254,7 @@ async def test_mensagem_que_chega_enquanto_o_modelo_pensa_e_respondida_junto(htt
         if len(recebidas) == 1:
             await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=2, conteudo="e o frete?"))
             tokens.append(await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1))
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"mensagens": ["Custa 50 e o frete é grátis"]})])
+        return resposta_falsa(info, ["Custa 50 e o frete é grátis"])
 
     monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
     await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=1, conteudo="quanto custa?"))
@@ -288,3 +288,41 @@ def test_raciocinio_baixo_so_nos_modelos_openai_que_vem_com_ele_desligado(monkey
     assert esforco("openai:gpt-5.1") == "medium"
     monkeypatch.setattr(config(), "openai_raciocinio", "none")
     assert esforco("openai:gpt-5.1") is None
+
+
+def test_saida_nativa_so_quando_todo_modelo_do_agente_aceita() -> None:
+    from pydantic_ai import NativeOutput
+
+    from app.ia.agente import Resposta, tipo_de_saida
+    from app.ia.provedores import modelo_de_resposta
+
+    assert isinstance(tipo_de_saida(modelo_de_resposta("openai:gpt-5.1", None)), NativeOutput)
+    assert isinstance(tipo_de_saida(modelo_de_resposta("openai:gpt-5.5", "groq:openai/gpt-oss-120b")), NativeOutput)
+    # Llama da Groq não tem saída estruturada nativa: o agente inteiro fica na tool de resposta.
+    assert tipo_de_saida(modelo_de_resposta("openai:gpt-5.1", "groq:llama-3.3-70b-versatile")) is Resposta
+
+
+@pytest.mark.parametrize("nativo", [True, False])
+async def test_resposta_fora_do_formato_e_corrigida_e_registrada(http, canal, fila, sessao, redis, monkeypatch, nativo) -> None:  # type: ignore[no-untyped-def]
+    chamadas: list[str] = []
+
+    def erra_e_corrige(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        chamadas.append(info.model_request_parameters.output_mode)
+        if len(chamadas) == 1:
+            # Na VPS o modelo errou o formato e o aviso de correção virou "mensagem do contato".
+            return ModelResponse(parts=[TextPart("{}" if nativo else "texto solto sem a tool")])
+        return resposta_falsa(info, ["A PTAX de ontem fechou em R$ 5,15"])
+
+    perfil = {"supports_json_schema_output": nativo}
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(erra_e_corrige, profile=perfil))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    await envia_webhook(http, agente["token"], payload_chatwoot(conteudo="qual o dólar de ontem?"))
+    conversa = await _conversa(sessao)
+    token = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+
+    assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), token) == "respondido"
+    assert chamadas == (["native", "native"] if nativo else ["tool", "tool"])
+    assert [t for _, t in canal.enviadas] == ["A PTAX de ontem fechou em R$ 5,15"]
+    async with sessao() as s:
+        [falha] = list(await s.scalars(select(Falha).where(Falha.tipo == "resposta_corrigida")))
+    assert falha.detalhe["avisos"] and falha.agente_id is not None

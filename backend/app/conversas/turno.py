@@ -197,6 +197,10 @@ async def _turno(
                 tools_chamadas=resultado.tools_chamadas or None,
             ),
         )
+        if resultado.correcoes:
+            await registra_falha(
+                "resposta_corrigida", {"avisos": resultado.correcoes}, cliente_id, agente.id
+            )
         motivo = resultado.motivo_handoff or _motivo_por_midia(pendentes)
         transferencia = None
         if motivo is not None:

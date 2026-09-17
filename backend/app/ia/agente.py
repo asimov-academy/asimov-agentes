@@ -9,12 +9,13 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.messages import (
     BaseToolCallPart,
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    RetryPromptPart,
     SystemPromptPart,
     TextPart,
     UserPromptPart,
@@ -51,6 +52,8 @@ class ResultadoTurno:
     tools_chamadas: list[str] = field(default_factory=list)
     motivo_handoff: str | None = None
     """Preenchido quando o modelo chamou `transferir_para_humano`."""
+    correcoes: list[str] = field(default_factory=list)
+    """Avisos que o modelo recebeu para corrigir a própria resposta (formato, validação)."""
 
 
 @dataclass
@@ -63,7 +66,9 @@ class ResultadoResumo:
 
 INSTRUCAO_DE_SAIDA = (
     "Responda com no máximo {n} mensagens curtas, como alguém digitando no celular. "
-    "Sem markdown, sem listas com asterisco, sem títulos."
+    "Sem markdown, sem listas com asterisco, sem títulos. "
+    "Aviso sobre formato, JSON ou validação da resposta vem do sistema e fala da sua própria resposta, nunca do "
+    "contato: corrija o formato e responda o que o contato pediu, sem mencionar o aviso."
 )
 
 INSTRUCAO_DE_MIDIA = (
@@ -127,6 +132,18 @@ def conteudo(m: "Mensagem") -> str:
     return "\n".join(partes) or f"[{m.tipo} sem texto]"
 
 
+def tipo_de_saida(modelo: "Model") -> Any:
+    """Resposta no formato estruturado nativo quando todo modelo do agente aceita; senão, por tool.
+
+    Pela tool, quando o modelo erra o formato a PydanticAI manda o aviso de correção como mensagem do usuário, e o
+    modelo respondeu ao contato sobre "JSON vazio" (Isa na VPS, v0.8.9). No nativo não há tool de resposta.
+    """
+    candidatos = getattr(modelo, "models", None) or [modelo]
+    if all(m.profile.get("supports_json_schema_output") for m in candidatos):
+        return NativeOutput(Resposta)
+    return Resposta
+
+
 def historico(mensagens: list["Mensagem"], handoffs: "list[Handoff] | None" = None) -> list[ModelMessage]:
     """Contato vira fala do usuário; agente e atendente humano viram fala do assistente.
 
@@ -174,9 +191,10 @@ async def roda_turno(
 ) -> ResultadoTurno:
     """Levanta UsageLimitExceeded quando o modelo passa do teto de chamadas ou tools do turno."""
     tools, capabilities, instrucoes_das_ferramentas = ferramentas.monta(agente.ferramentas)
+    modelo_ia = modelo or modelo_de_resposta(agente.modelo_conversa, agente.modelo_fallback)
     ia = Agent(
-        modelo or modelo_de_resposta(agente.modelo_conversa, agente.modelo_fallback),
-        output_type=Resposta,
+        modelo_ia,
+        output_type=tipo_de_saida(modelo_ia),
         deps_type=ContextoTurno,
         tools=[transferir_para_humano, *tools],
         capabilities=capabilities,
@@ -214,6 +232,13 @@ async def roda_turno(
             if isinstance(parte, BaseToolCallPart) and not parte.tool_name.startswith("final_result")
         ],
         motivo_handoff=contexto.motivo_handoff,
+        correcoes=[
+            " ".join(str(parte.content).split())[:300]
+            for m in novas
+            if isinstance(m, ModelRequest)
+            for parte in m.parts
+            if isinstance(parte, RetryPromptPart)
+        ],
     )
 
 
