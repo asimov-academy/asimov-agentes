@@ -22,6 +22,7 @@ from app.conversas.modelos import Mensagem
 from app.handoff import servico as handoff
 from app.plataforma.banco import sessao
 from app.plataforma.cripto import hash_token
+from app.plataforma.textos import mesmo_telefone
 
 log = structlog.get_logger()
 router = APIRouter()
@@ -97,6 +98,11 @@ async def receber(
         assert evento.codigo is not None
         return await _retoma_por_codigo(s, agente, evento.codigo)
 
+    if not _contato_permitido(agente, evento):
+        # Agente em teste: só os números da lista são atendidos, o resto nem vira conversa.
+        log.info("webhook_ignorado", motivo="contato fora da lista do agente")
+        return Response(status_code=200)
+
     assert evento.conversa_externa is not None
     if evento.acao is Acao.RETOMAR:
         return await _retoma(s, agente.cliente_id, agente.id, agente.canal, evento.conversa_externa)
@@ -147,6 +153,21 @@ async def receber(
 
     log.info("webhook_aceito", acao=str(evento.acao), motivo=evento.motivo)
     return Response(status_code=200)
+
+
+def _contato_permitido(agente: Any, evento: Evento) -> bool:
+    """Lista vazia (o normal) atende qualquer pessoa. Só vale para mensagem de contato.
+
+    Devolução da conversa (pelo atendente ou pelo `/retomar` de quem recebeu o handoff) passa
+    sempre: quem recebe o handoff não precisa estar na lista de quem conversa com o agente.
+    """
+    permitidos = agente.contatos_permitidos or []
+    if not permitidos or evento.autor != "contato":
+        return True
+    if evento.acao in (Acao.RETOMAR, Acao.RETOMAR_POR_CODIGO):
+        return True
+    do_canal = evento.contato_telefone or evento.contato_externo or ""
+    return any(mesmo_telefone(p, do_canal) for p in permitidos)
 
 
 async def _retoma_por_codigo(s: AsyncSession, agente: Any, codigo: str) -> Response:

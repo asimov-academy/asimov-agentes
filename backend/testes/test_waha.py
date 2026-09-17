@@ -383,3 +383,51 @@ def test_numero_legivel() -> None:
     assert numero_legivel("551188887777@c.us") == "+55 11 8888-7777"
     assert numero_legivel("12132132130@c.us") == "+12132132130"
     assert numero_legivel("12345-abc@g.us") == "12345-abc@g.us"
+
+
+# ── Quem o agente atende ───────────────────────────────────────────────────
+
+
+async def test_lista_de_numeros_deixa_so_eles_falarem(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http, contatos_permitidos=["+55 (11) 98888-7777"])
+    assert agente["contatos_permitidos"] == ["5511988887777"]
+
+    permitida = await manda(http, agente, waha, payload_waha("oi"))
+    estranho = await manda(
+        http, agente, waha, payload_waha("oi", de="5511900001111@c.us", id_mensagem="false_outro_FFF")
+    )
+
+    assert permitida.status_code == 200 and estranho.status_code == 200
+    assert len(fila.jobs) == 1, "só o número da lista gera turno"
+    async with sessao() as s:
+        conversas = [c.id_externo for c in await s.scalars(select(Conversa))]
+    assert conversas == [CONTATO], "quem está fora da lista não vira conversa"
+
+
+async def test_numero_com_ddi_e_mascara_e_o_mesmo_da_lista(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http, contatos_permitidos=["11988887777"])
+
+    await manda(http, agente, waha, payload_waha("oi"))
+
+    assert len(fila.jobs) == 1
+
+
+async def test_sem_lista_o_agente_atende_qualquer_pessoa(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http)
+
+    await manda(http, agente, waha, payload_waha("oi", de="5521912345678@c.us"))
+
+    assert len(fila.jobs) == 1
+
+
+async def test_retomar_do_destino_vale_mesmo_fora_da_lista(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """O número do handoff não precisa estar na lista de quem conversa com o agente."""
+    agente = await cria_waha(http, contatos_permitidos=["5511988887777"])
+    codigo = await transfere(http, fila, redis, waha, agente)
+
+    await manda(
+        http, agente, waha, payload_waha(f"/retomar {codigo}", de=CHAT_DO_DESTINO, id_mensagem="false_dest_GGG")
+    )
+
+    async with sessao() as s:
+        assert (await s.scalars(select(Handoff))).one().retomado_em is not None

@@ -59,6 +59,7 @@ A empresa atendida pelo operador.
 | digitacao_caracteres_por_segundo | inteiro, 1 a 30 | sim, padrão 6 |
 | digitacao_maximo_segundos | inteiro, 1 a 30; teto do digitando por mensagem | sim, padrão 20 |
 | ferramentas | lista de nomes do catálogo (`calculadora`, `busca_web`) | sim; o agente novo nasce só com as marcadas na criação (vazia sem escolha, desde a v0.8.11) |
+| contatos_permitidos | telefones que o agente atende, só dígitos; lista vazia (o normal) atende qualquer pessoa. Serve para testar um número novo sem responder a quem escrever para ele | sim, `[]` |
 | handoff_destino | estruturado por canal: na WAHA `{tipo: numero ou grupo, chat_id, telefone, nome}` (o número é normalizado para `<dígitos>@c.us`); no nativo, vazio; no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
 | handoff_template | nome do template aprovado na Meta para o aviso de handoff | sim no canal WhatsApp; vazio nos outros |
 | retomada_automatica_horas | inteiro | não; padrão 4 no WhatsApp direto (assumido); vazio no Chatwoot (retomada é devolver a conversa para pendente) |

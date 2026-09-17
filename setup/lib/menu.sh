@@ -19,6 +19,7 @@ mostra_agente() {
       campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")$(jq -r '
         if .retomada_automatica_horas then "; volta sozinho em \(.retomada_automatica_horas) h"
         else "; volta só com /retomar" end' <<<"$AGENTE")"
+      campo "Atende" "$(atende_do_agente "$AGENTE")"
       ;;
     *) campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")" ;;
   esac
