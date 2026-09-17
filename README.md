@@ -36,7 +36,7 @@ O setup pergunta, nesta ordem:
 3. Claude Code ou Codex
 4. Provedor e modelo para resposta, fallback, visão e transcrição, com as chaves de API
 5. O registro DNS `bot.<seu-domínio>` (ele mostra o IP e espera propagar)
-6. URL e token de administrador do Chatwoot, conta, caixa de entrada, quem recebe o handoff e nome do agente
+6. URL e token de administrador do Chatwoot (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente
 
 Se algo falhar, ele mostra o motivo. Rode o mesmo comando de novo e ele continua de onde parou.
 
@@ -50,7 +50,7 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde.
 | `asimov novo-agente` | Cria outro agente, para empresa nova ou existente |
 | `asimov agentes` | Lista agentes, empresas e webhooks |
 | `asimov editar` | Muda nome, tempo de buffer, mensagens por resposta, modelos ou handoff de um agente |
-| `asimov remover` | Remove um agente (e o bot no Chatwoot, com o token de administrador) |
+| `asimov remover` | Remove um agente e o bot dele no Chatwoot |
 | `asimov consumo` | Turnos, tokens, custo estimado e falhas dos últimos 7 e 30 dias |
 | `asimov handoff` | Troca quem recebe a conversa passada pelo agente |
 | `asimov atualizar` | Baixa a versão nova e republica |

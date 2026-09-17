@@ -41,7 +41,7 @@ import pytest  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from app.canais import registro  # noqa: E402
-from app.canais.base import Anexo, ArquivoBaixado, ArquivoGrandeDemais, CredencialInvalida  # noqa: E402
+from app.canais.base import AcessoRecusado, Anexo, ArquivoBaixado, ArquivoGrandeDemais  # noqa: E402
 from app.canais.chatwoot.assinatura import assina  # noqa: E402
 from app.canais.chatwoot.canal import Chatwoot  # noqa: E402
 from app.main import app  # noqa: E402
@@ -78,8 +78,19 @@ class ChatwootFalso(Chatwoot):
         self.desconectar_recusa = False
         self.devolvidas: list[str] = []
         self.renomeados: list[str] = []
+        self.tokens_usados: list[str | None] = []
+
+    def _confere_admin(self, dados: dict[str, Any]) -> None:
+        self.tokens_usados.append(dados.get("token_admin"))
+        if dados.get("token_admin") != TOKEN_ADMIN or self.desconectar_recusa:
+            raise AcessoRecusado("o token precisa ser de um administrador da conta do Chatwoot")
+
+    async def descobrir(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self._confere_admin(dados)
+        return {"contas": [{"id": 1, "nome": "Loja Exemplo", "caixas": [{"id": 3, "nome": "WhatsApp"}], "atendentes": [], "times": []}]}
 
     async def conectar(self, dados: dict[str, Any], url_webhook: str, nome_agente: str) -> dict[str, Any]:
+        self._confere_admin(dados)
         return {
             "url": dados["url"],
             "account_id": dados["account_id"],
@@ -90,13 +101,11 @@ class ChatwootFalso(Chatwoot):
         }
 
     async def desconectar(self, dados: dict[str, Any], credenciais: dict[str, Any]) -> None:
-        if self.desconectar_recusa:
-            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+        self._confere_admin(dados)
         self.desconectados.append(credenciais["bot_id"])
 
     async def renomear(self, dados: dict[str, Any], credenciais: dict[str, Any], nome: str) -> None:
-        if self.desconectar_recusa:
-            raise CredencialInvalida("o token precisa ser de um administrador da conta do Chatwoot")
+        self._confere_admin(dados)
         self.renomeados.append(nome)
 
     async def devolver_ao_agente(self, credenciais: dict[str, Any], conversa_externa: str) -> None:

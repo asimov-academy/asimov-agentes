@@ -16,7 +16,7 @@ from app.handoff.modelos import Handoff
 from app.plataforma import cripto
 from app.plataforma.banco import agora
 from app.plataforma.config import config
-from testes.conftest import ADMIN, cria_cliente_e_agente, envia_webhook, payload_chatwoot
+from testes.conftest import ADMIN, TOKEN_ADMIN, cria_cliente_e_agente, envia_webhook, payload_chatwoot
 
 
 def _caminho(agente: dict[str, Any], cliente_id: str | None = None) -> str:
@@ -109,7 +109,7 @@ async def test_agente_removido_para_de_responder_e_perde_credenciais(http, canal
 
     resp = await _remove(http, agente)
 
-    assert resp.status_code == 200 and resp.json() == {"removido": True, "canal_desconectado": False}
+    assert resp.status_code == 200 and resp.json() == {"removido": True, "canal_desconectado": True}
     assert (await http.get(_caminho(agente), headers=ADMIN)).status_code == 404
     assert (await http.get("/admin/agentes", headers=ADMIN)).json() == []
 
@@ -134,21 +134,20 @@ async def _sempre() -> bool:
     return True
 
 
-async def test_renomear_leva_o_nome_ao_canal_so_com_acesso(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+async def test_renomear_leva_o_nome_ao_canal_com_o_token_guardado(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Samuelson")
 
-    await http.patch(_caminho(agente), json={"nome": "Tico"}, headers=ADMIN)
-    assert canal.renomeados == []
-
-    canal.desconectar_recusa = True
-    resp = await http.patch(_caminho(agente), json={"nome": "Ticotico", "conexao": {"token_admin": "de-atendente"}}, headers=ADMIN)
-    assert resp.status_code == 422
-    assert (await http.get(_caminho(agente), headers=ADMIN)).json()["nome"] == "Tico"
-
-    canal.desconectar_recusa = False
-    resp = await http.patch(_caminho(agente), json={"nome": "Ticotico", "conexao": {"token_admin": "de-admin"}}, headers=ADMIN)
+    resp = await http.patch(_caminho(agente), json={"nome": "Ticotico"}, headers=ADMIN)
     assert resp.status_code == 200 and resp.json()["nome"] == "Ticotico"
     assert canal.renomeados == ["Ticotico"]
+
+    canal.desconectar_recusa = True
+    resp = await http.patch(_caminho(agente), json={"nome": "Tico"}, headers=ADMIN)
+    assert resp.status_code == 428
+    assert (await http.get(_caminho(agente), headers=ADMIN)).json()["nome"] == "Ticotico"
+
+    resp = await http.patch(_caminho(agente), json={"nome": "Tico", "renomear_no_canal": False}, headers=ADMIN)
+    assert resp.status_code == 200 and canal.renomeados == ["Ticotico"]
 
 
 async def test_remover_agente_renomeado_aceita_o_nome_atual(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
@@ -160,18 +159,27 @@ async def test_remover_agente_renomeado_aceita_o_nome_atual(http, canal, fila) -
     assert resp.status_code == 200, resp.text
 
 
-async def test_remover_com_acesso_apaga_o_bot_e_recusa_nao_remove(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+async def test_remover_apaga_o_bot_com_o_token_guardado_e_recusa_nao_remove(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
 
     canal.desconectar_recusa = True
-    resp = await _remove(http, agente, conexao={"token_admin": "de-atendente"})
-    assert resp.status_code == 422 and "administrador" in resp.json()["detail"]
+    resp = await _remove(http, agente)
+    assert resp.status_code == 428 and "administrador" in resp.json()["detail"]
     assert (await http.get(_caminho(agente), headers=ADMIN)).status_code == 200
 
     canal.desconectar_recusa = False
-    resp = await _remove(http, agente, conexao={"token_admin": "de-admin"})
+    resp = await _remove(http, agente, conexao={"token_admin": TOKEN_ADMIN})
     assert resp.json() == {"removido": True, "canal_desconectado": True}
     assert canal.desconectados == [42]
+
+
+async def test_remover_sem_desfazer_no_canal(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+
+    resp = await _remove(http, agente, desconectar_canal=False)
+
+    assert resp.json() == {"removido": True, "canal_desconectado": False}
+    assert canal.desconectados == []
 
 
 async def test_agente_novo_com_o_mesmo_nome_reaproveita_o_prompt(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
@@ -182,7 +190,7 @@ async def test_agente_novo_com_o_mesmo_nome_reaproveita_o_prompt(http, canal, fi
 
     resp = await http.post(
         f"/admin/clientes/{agente['cliente_id']}/agentes",
-        json={"nome": "Ana", "canal": "chatwoot", "conexao": {"url": "https://chatwoot.exemplo.com.br", "token_admin": "x", "account_id": 1, "inbox_ids": [3]}},
+        json={"nome": "Ana", "canal": "chatwoot", "conexao": {"url": "https://chatwoot.exemplo.com.br", "token_admin": TOKEN_ADMIN, "account_id": 1, "inbox_ids": [3]}},
         headers=ADMIN,
     )
 

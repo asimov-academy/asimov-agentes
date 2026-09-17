@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-16: Token de administrador do Chatwoot guardado (v0.6.0)
+
+- **Pedido do operador: não digitar o token a cada ação do menu.** Substitui "o token do administrador não é guardado" (v0.1.3). O token é pedido uma vez por URL do Chatwoot e fica criptografado no banco, na entidade Acesso ao canal (`backend/app/acessos/`). Custo aceito: quem tiver a VPS passa a ter também esse token. spec/dados.md, spec/arquitetura.md.
+- **Acesso ao canal não tem `cliente_id`**: é da instalação, porque um Chatwoot atende várias empresas na revenda. Única exceção à regra de toda consulta filtrar por cliente; não guarda dado de contato.
+- **A API decide quando falta token**: sem token guardado nem informado, ou com o Chatwoot recusando, responde 428 e o menu pede (`api_com_token`). Token informado que funcionou é guardado; guardado que o Chatwoot recusou é apagado. Recusa vem de `AcessoRecusado` (401 e 403), separada de Chatwoot fora do ar.
+- **Remover sempre apaga o bot e renomear sempre renomeia no Chatwoot.** Sem a pergunta, o bot não fica esquecido na caixa. Com o Chatwoot fora, o menu oferece remover deixando o bot (`desconectar_canal: false`) ou salvar o nome só na plataforma (`renomear_no_canal: false`).
+- **Menu ganhou "Token do Chatwoot"** para ver onde há token guardado e esquecê-lo. spec/telas.md, tela 8.
+
 ## 2026-09-16: Remover agente renomeado e nome do bot no Chatwoot (v0.5.4)
 
 - **Agente renomeado não podia ser removido**: a confirmação comparava com o slug, que guarda o nome de quando o agente foi criado. Agora vale o nome atual ou o original. O menu mostra o nome a digitar e, se não conferir, o que foi digitado.

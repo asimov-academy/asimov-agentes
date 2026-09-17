@@ -5,6 +5,7 @@ from typing import Any
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.acessos.servico import usa_acesso
 from app.agentes import repo
 from app.agentes.modelos import Agente
 from app.canais.registro import obter_canal
@@ -66,6 +67,17 @@ def _cria_prompts(cliente: Cliente, nome_agente: str, slug_agente: str) -> tuple
     return str(relativa / ARQUIVO_PERSONA), str(relativa / ARQUIVO_RESUMO)
 
 
+async def descobrir(sessao: AsyncSession, canal: str, conexao: dict[str, Any]) -> dict[str, Any]:
+    """O que o acesso do operador enxerga no canal. Acesso novo que funcionou fica guardado."""
+    canal_obj = obter_canal(canal)
+    resultado = await usa_acesso(
+        sessao, canal_obj, canal_obj.endereco(conexao), conexao,
+        lambda acesso: canal_obj.descobrir({**conexao, **acesso}),
+    )
+    await sessao.commit()
+    return resultado
+
+
 async def criar_agente(
     sessao: AsyncSession,
     cliente_id: uuid.UUID,
@@ -96,7 +108,13 @@ async def criar_agente(
     opcoes["handoff_destino"] = canal_obj.valida_destino_handoff(opcoes.get("handoff_destino"))
     _valida_retomada(canal_obj, opcoes.get("retomada_automatica_horas"))
     token = cripto.novo_token()
-    credenciais_ok = await canal_obj.conectar(conexao, config().url_webhook(canal, token), nome)
+    acesso: dict[str, Any] = {}
+
+    async def conecta(informado: dict[str, Any]) -> dict[str, Any]:
+        acesso.update(informado)
+        return await canal_obj.conectar({**conexao, **informado}, config().url_webhook(canal, token), nome)
+
+    credenciais_ok = await usa_acesso(sessao, canal_obj, canal_obj.endereco(conexao), conexao, conecta)
 
     try:
         arquivo_prompt, arquivo_resumo = _cria_prompts(cliente, nome, slug_agente)
@@ -118,7 +136,7 @@ async def criar_agente(
     except Exception:
         await sessao.rollback()
         try:
-            await canal_obj.desconectar(conexao, credenciais_ok)
+            await canal_obj.desconectar({**conexao, **acesso}, credenciais_ok)
         except Exception as erro:
             log.error("desconectar_falhou", canal=canal, erro=repr(erro))
         raise
@@ -131,11 +149,13 @@ async def editar_agente(
     agente_id: uuid.UUID,
     campos: dict[str, Any],
     acesso: dict[str, Any] | None = None,
+    no_canal: bool = True,
 ) -> Agente:
     """Altera só os campos enviados. O slug e a pasta de prompts não mudam com o nome.
 
-    Com `acesso` do operador, o nome novo também vai para o canal (no Chatwoot, o nome do bot);
-    se o canal recusar, nada é salvo. Vale na próxima mensagem: webhook e turno releem o agente.
+    Com `no_canal`, o nome novo também vai para o canal (no Chatwoot, o nome do bot), com o acesso
+    informado ou o guardado; se o canal recusar, nada é salvo. Vale na próxima mensagem: webhook e
+    turno releem o agente.
     """
     agente = await repo.obter(sessao, cliente_id, agente_id)
     if agente is None:
@@ -157,8 +177,12 @@ async def editar_agente(
     if "retomada_automatica_horas" in campos:
         _valida_retomada(canal, campos["retomada_automatica_horas"])
     valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
-    if acesso and "nome" in campos:
-        await canal.renomear(acesso, credenciais(agente), campos["nome"])
+    if no_canal and "nome" in campos and campos["nome"] != agente.nome:
+        cred = credenciais(agente)
+        await usa_acesso(
+            sessao, canal, canal.endereco(cred), acesso,
+            lambda a: canal.renomear(a, cred, campos["nome"]),
+        )
 
     for campo, valor in campos.items():
         setattr(agente, campo, valor)
@@ -173,11 +197,13 @@ async def remover_agente(
     agente_id: uuid.UUID,
     confirmacao: str,
     acesso: dict[str, Any] | None = None,
+    no_canal: bool = True,
 ) -> bool:
     """Exclusão lógica: webhook invalidado e credenciais apagadas. Conversas e consumo ficam.
 
-    `confirmacao` é o nome atual do agente (ou o de quando foi criado, que deu o slug). Com `acesso` do operador, desfaz a conexão no canal
-    antes (no Chatwoot, apaga o Agent Bot); se o canal recusar, nada é removido. Devolve se desfez.
+    `confirmacao` é o nome atual do agente (ou o de quando foi criado, que deu o slug). Com
+    `no_canal`, desfaz a conexão no canal antes (no Chatwoot, apaga o Agent Bot), com o acesso
+    informado ou o guardado; se o canal recusar, nada é removido. Devolve se desfez.
     """
     agente = await repo.obter(sessao, cliente_id, agente_id)
     if agente is None:
@@ -186,8 +212,12 @@ async def remover_agente(
         raise CampoInvalido(f"confirmação não confere: digite o nome do agente, {agente.nome}")
 
     desconectado = False
-    if acesso:
-        await obter_canal(agente.canal).desconectar(acesso, credenciais(agente))
+    if no_canal:
+        canal = obter_canal(agente.canal)
+        cred = credenciais(agente)
+        await usa_acesso(
+            sessao, canal, canal.endereco(cred), acesso, lambda a: canal.desconectar(a, cred)
+        )
         desconectado = True
 
     # Slug liberado: um agente novo com o mesmo nome reaproveita a pasta de prompts.

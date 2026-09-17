@@ -72,11 +72,33 @@ escolhe_empresa() {
   done
 }
 
-# acessa_chatwoot [URL]: preenche CHATWOOT_URL, CHATWOOT_TOKEN e CHATWOOT_CONTAS (JSON da API).
-# Com URL, não pergunta o endereço (agente que já existe).
+# api_com_token MÉTODO CAMINHO JSON "aguarde": como `api`, mas se a API pedir o token de
+# administrador do Chatwoot (428: nenhum guardado, ou o guardado foi recusado), pergunta e repete com
+# ele em `conexao.token_admin`. A API guarda o token que funcionar: ele é pedido uma vez só.
+api_com_token() {
+  local metodo=$1 caminho=$2 corpo=$3 aguarde=${4:-} token tentou=""
+  while true; do
+    [ -n "$aguarde" ] && printf '  %s%s%s' "$CINZA" "$aguarde" "$NORMAL"
+    api "$metodo" "$caminho" "$corpo"
+    [ -n "$aguarde" ] && printf '\r\033[K'
+    [ "$API_STATUS" = 428 ] || return 0
+    if [ -n "$tentou" ]; then
+      falha "$(detalhe_erro "$API_RESPOSTA")"
+    else
+      dica "Token de administrador: no Chatwoot, avatar > Configurações do perfil > Token de acesso."
+      dica "Fica guardado criptografado; só é pedido de novo se o Chatwoot recusar."
+    fi
+    pergunta_secreta token "Token de acesso do Chatwoot"
+    corpo=$(jq -c --arg t "$token" '.conexao = ((.conexao // {}) + {token_admin: $t})' <<<"$corpo")
+    unset token
+    tentou=1
+  done
+}
+
+# acessa_chatwoot [URL]: preenche CHATWOOT_URL e CHATWOOT_CONTAS (JSON da API).
+# Com URL (agente que já existe) não pergunta o endereço e devolve 1 se o Chatwoot falhar.
 acessa_chatwoot() {
   local corpo url_fixa=${1:-}
-  dica "Token: no Chatwoot, avatar > Configurações do perfil > Token de acesso (administrador)."
   while true; do
     if [ -n "$url_fixa" ]; then
       CHATWOOT_URL=$url_fixa
@@ -85,17 +107,15 @@ acessa_chatwoot() {
     fi
     CHATWOOT_URL=${CHATWOOT_URL%%/app*}
     CHATWOOT_URL=${CHATWOOT_URL%/}
-    pergunta_secreta CHATWOOT_TOKEN "Token de acesso"
-    printf '  %sConectando…%s' "$CINZA" "$NORMAL"
-    corpo=$(jq -n --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" '{conexao: {url: $url, token_admin: $token}}')
-    api POST /admin/canais/chatwoot/descobrir "$corpo"
-    printf '\r\033[K'
+    corpo=$(jq -n --arg url "$CHATWOOT_URL" '{conexao: {url: $url}}')
+    api_com_token POST /admin/canais/chatwoot/descobrir "$corpo" "Conectando…"
     if [ "$API_STATUS" = 200 ]; then
       estado_set chatwoot_url "$CHATWOOT_URL"
       CHATWOOT_CONTAS=$API_RESPOSTA
       return 0
     fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
+    [ -z "$url_fixa" ] || return 1
   done
 }
 
@@ -161,19 +181,16 @@ fluxo_novo_agente() {
   escolhe_empresa "$conta_nome"
 
   while true; do
-    corpo=$(jq -n --arg nome "$nome" --arg url "$CHATWOOT_URL" --arg token "$CHATWOOT_TOKEN" \
+    corpo=$(jq -n --arg nome "$nome" --arg url "$CHATWOOT_URL" \
       --argjson conta "$conta_id" --argjson caixa "$caixa_id" --argjson destino "$HANDOFF_DESTINO" \
       '{nome: $nome, canal: "chatwoot", handoff_destino: $destino,
-        conexao: {url: $url, token_admin: $token, account_id: $conta, inbox_ids: [$caixa]}}')
-    printf '  %sCriando o bot no Chatwoot…%s' "$CINZA" "$NORMAL"
-    api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
-    printf '\r\033[K'
+        conexao: {url: $url, account_id: $conta, inbox_ids: [$caixa]}}')
+    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando o bot no Chatwoot…"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
       AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
       ok "$(destaque "$nome") no ar na caixa $(destaque "$AGENTE_CAIXA") ${CINZA}· $EMPRESA_NOME${NORMAL}"
       ok "Handoff para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
-      unset CHATWOOT_TOKEN
       return 0
     fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
@@ -274,8 +291,10 @@ configura_handoff() {
   conta_id=$(jq -r .credenciais.account_id <<<"$agente")
   echo
   printf '  %s%s%s %s· hoje: %s%s\n' "$NEGRITO" "$nome" "$NORMAL" "$CINZA" "$(nome_do_destino "$(jq -c .handoff_destino <<<"$agente")")" "$NORMAL"
-  acessa_chatwoot "$url"
-  unset CHATWOOT_TOKEN
+  if ! acessa_chatwoot "$url"; then
+    RESULTADO=$(falha "Não consegui listar quem pode receber o handoff. Tente de novo em instantes.")
+    return 0
+  fi
   conta=$(jq -c --argjson id "$conta_id" '.contas[] | select(.id == $id)' <<<"$CHATWOOT_CONTAS")
   if [ -z "$conta" ]; then
     RESULTADO=$(falha "Esse token não enxerga a conta $conta_id do Chatwoot. Use o token de um administrador dela.")
