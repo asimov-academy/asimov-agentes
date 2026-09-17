@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Mensagem sem markdown e data no turno (v0.8.10)
+
+- **Teste do operador na VPS com a v0.8.9** (Isa, gpt-5.5, terminal): sem o erro de JSON; buscou quando precisava. Três achados.
+- **Citação da busca em markdown**: a busca da OpenAI anexa "([site](link?utm_source=openai))", que no WhatsApp aparece cru. A instrução já proibia markdown; agora `sem_markdown` (em `conversas/divisao.py`) limpa toda mensagem antes do envio, em qualquer canal: citação vira "(site)", link vira o texto, some negrito com `**`, título com `#` e o `utm_source=openai`.
+- **Data**: o modelo não recebia a data; acertou "que dia é hoje" por ter buscado antes. Toda chamada de resposta leva "Agora é <dia da semana>, dd/mm/aaaa, hh:mm no horário de Brasília", por último nas instruções para não quebrar o cache do prompt fixo.
+- **Fica com o operador**: prompt da persona (a Isa, de um escritório de advocacia, ofereceu curso da Asimov) e custo do gpt-5.5, que raciocina por padrão (15,7 s e US$ 0,076 no turno com busca). A cotação veio incoerente (venda abaixo da compra, de um site de terceiros citado como Banco Central): erro do modelo lendo a fonte, sem trava na plataforma.
+
 ## 2026-09-17: Resposta no formato estruturado nativo (v0.8.9)
 
 - **Achado na VPS**: agente novo (Isa, gpt-5.5, terminal) perguntado sobre o dólar de ontem buscou na web e respondeu "Esse erro indica que o JSON enviado está vazio ou mal formatado. Me manda o JSON?". Histórico limpo; o turno gastou 19,8 mil tokens de entrada e 359 de saída, o dobro de um turno normal.
