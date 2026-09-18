@@ -423,3 +423,75 @@ async def test_melhorar_texto_com_provedor_fora_do_ar_nao_derruba_o_onboarding(d
     resposta = await dentro.post("/painel/api/texto/melhorar", json={"texto": "oi"})
     assert resposta.status_code == 502
     assert "tente de novo" in resposta.json()["detail"]
+
+
+# Ligar um agente a um canal
+#
+# Era só do terminal: o painel mostrava o canal na ficha e não deixava mudá-lo, e como todo agente
+# nasce no nativo desde a v0.24.0, quem criava pelo navegador ficava com um agente que não atendia
+# ninguém.
+
+
+async def test_descobrir_lista_o_que_o_token_do_operador_enxerga(dentro, canal):
+    resposta = await dentro.post(
+        "/painel/api/canais/chatwoot/descobrir",
+        json={"conexao": {"url": CONEXAO_EXEMPLO["url"], "token_admin": CONEXAO_EXEMPLO["token_admin"]}},
+    )
+    assert resposta.status_code == 200, resposta.text
+    contas = resposta.json()["contas"]
+    assert contas[0]["caixas"][0]["nome"] == "WhatsApp"
+
+
+async def test_descobrir_em_canal_que_nao_existe_e_404(dentro):
+    resposta = await dentro.post("/painel/api/canais/telepatia/descobrir", json={"conexao": {}})
+    assert resposta.status_code == 404
+
+
+async def test_agente_nativo_e_ligado_a_um_canal_pelo_painel(dentro, http, canal):
+    empresa = await cria_empresa(dentro, "Loja Exemplo")
+    agente = (
+        await dentro.post(
+            f"/painel/api/empresas/{empresa['id']}/agentes",
+            json={"nome": "Ana", "canal": "nativo"},
+        )
+    ).json()
+    assert agente["canal"] == "nativo"
+
+    resposta = await dentro.post(
+        f"/painel/api/agentes/{agente['id']}/canal",
+        json={"canal": "chatwoot", "conexao": CONEXAO_EXEMPLO},
+    )
+    assert resposta.status_code == 200, resposta.text
+    ligado = resposta.json()
+    assert ligado["canal"] == "chatwoot"
+    # O endereço do webhook passa a ser o do canal novo, com o mesmo token.
+    assert ligado["url_webhook"] and "chatwoot" in ligado["url_webhook"]
+    # E a credencial continua saindo mascarada, como em toda saída do painel.
+    assert CONEXAO_EXEMPLO["token_admin"] not in resposta.text
+
+    no_terminal = (await http.get("/admin/agentes", headers=ADMIN)).json()
+    assert [a["canal"] for a in no_terminal if a["id"] == agente["id"]] == ["chatwoot"]
+
+
+async def test_agente_que_ja_tem_canal_externo_nao_troca_de_canal(dentro, http, canal):
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    resposta = await dentro.post(
+        f"/painel/api/agentes/{agente['id']}/canal",
+        json={"canal": "chatwoot", "conexao": CONEXAO_EXEMPLO},
+    )
+    assert resposta.status_code == 409
+    assert "remova e crie de novo" in resposta.json()["detail"]
+
+
+async def test_ligar_em_canal_que_nao_existe_e_422(dentro):
+    empresa = await cria_empresa(dentro, "Loja Exemplo")
+    agente = (
+        await dentro.post(
+            f"/painel/api/empresas/{empresa['id']}/agentes",
+            json={"nome": "Ana", "canal": "nativo"},
+        )
+    ).json()
+    resposta = await dentro.post(
+        f"/painel/api/agentes/{agente['id']}/canal", json={"canal": "telepatia"}
+    )
+    assert resposta.status_code == 422
