@@ -73,6 +73,21 @@ INSTRUCAO_DE_SAIDA = (
     "contato: corrija o formato e responda o que o contato pediu, sem mencionar o aviso."
 )
 
+INSTRUCAO_DE_EMOJI = {
+    "nenhum": "Não use emoji nas respostas.",
+    "pouco": (
+        "Emoji só de vez em quando: no máximo um na resposta inteira, e apenas quando ele "
+        "acrescentar algo."
+    ),
+    "medio": "Pode usar um emoji por mensagem quando ele ajudar o tom, e nenhum quando não couber.",
+    "muito": (
+        "Use emoji com liberdade, um ou dois por mensagem. Nunca enfileire emoji nem troque "
+        "palavra por emoji."
+    ),
+}
+"""Nível de emoji do agente. `livre` não entra aqui: é o valor dos agentes criados antes desta
+escolha existir, e para eles a plataforma não diz nada, como sempre fez."""
+
 INSTRUCAO_DE_MIDIA = (
     "Quando o contato envia áudio, imagem ou documento, a fala dele traz um bloco <midia_do_contato> "
     "com o que foi dito no áudio ou o que está no arquivo. Responda como quem ouviu e viu, sem "
@@ -229,6 +244,7 @@ async def roda_turno(
         instructions=[
             le_prompt(agente),
             INSTRUCAO_DE_SAIDA.format(n=agente.max_mensagens_por_resposta),
+            *([INSTRUCAO_DE_EMOJI[agente.emojis]] if agente.emojis in INSTRUCAO_DE_EMOJI else []),
             INSTRUCAO_DE_MIDIA,
             *instrucoes_das_ferramentas,
             INSTRUCAO_DE_HANDOFF,

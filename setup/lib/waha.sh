@@ -550,14 +550,16 @@ fluxo_agente_waha() {
   pergunta nome "Nome do agente"
   escolhe_empresa ""
   escolhe_ferramentas ferramentas ""
+  pergunta_emoji
   pergunta_retomada
   escolhe_contatos_permitidos
   prepara_aparelho "$nome" "$EMPRESA_NOME"
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" \
-      --argjson permitidos "$CONTATOS_PERMITIDOS" \
-      '{nome: $nome, canal: "waha", ferramentas: $f, retomada_automatica_horas: $horas, contatos_permitidos: $permitidos}')
+      --argjson permitidos "$CONTATOS_PERMITIDOS" --arg emojis "$EMOJIS" \
+      '{nome: $nome, canal: "waha", ferramentas: $f, retomada_automatica_horas: $horas,
+        contatos_permitidos: $permitidos, emojis: $emojis}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando a sessão na WAHA…"
     if [ "$API_STATUS" = 201 ]; then break; fi
     falha "$(detalhe_erro "$API_RESPOSTA")"

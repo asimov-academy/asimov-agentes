@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Nível de emoji por agente (v0.17.0)
+
+- **Pedido do operador, depois do primeiro teste no WhatsApp oficial** (áudio entendido e digitando convincente): uma pergunta em todo canal sobre emoji, com nível, "tipo o seletor de effort". `Agente.emojis` com `nenhum`, `pouco`, `medio` e `muito`, perguntado na criação dos quatro canais (é jeito de escrever, não canal) e editável em Editar agente > Emoji.
+- **O nível vira uma instrução da plataforma**, ao lado da de saída, antes da data (que muda a cada minuto e não pode quebrar o cache do prompt fixo). Fora do prompt do agente: quem escolhe é o operador no menu, e o `persona.md` fica livre para o que é da empresa.
+- **Agente criado antes disto fica em `livre`** (migração `0013`, `server_default`), e para ele a plataforma não diz nada sobre emoji, como sempre fez. Trocar o padrão deles para `nenhum` mudaria o jeito de responder sem ninguém pedir. `livre` não é oferecido na tela: quem edita escolhe um dos quatro.
+- **`ESCOLHA_ATUAL` no `escolha`** (`ui.sh`): o cursor começa na opção de hoje, para a tela de editar não obrigar a contar de novo. Serve a qualquer escolha futura.
+- Atualizados spec/dados.md, spec/telas.md e a simulação de onboarding.
+
 ## 2026-09-18: Token guarda os ativos de quando nasceu (v0.16.3)
 
 - **O operador tinha a conta atribuída ao usuário do sistema e o setup dizia que o token não enxergava nenhuma.** A causa: token de usuário do sistema guarda os ativos de quando foi gerado, então atribuir a conta depois não vale para um token que já existe. A mensagem antiga mandava conferir o ativo, que estava certo, e não dizia o que fazer.

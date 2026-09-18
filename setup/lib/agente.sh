@@ -191,9 +191,11 @@ fluxo_agente_nativo() {
   escolhe_empresa ""
   configura_ritmo_novo
   escolhe_ferramentas ferramentas ""
+  pergunta_emoji
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson ajustes "$AJUSTES_AGENTE" --argjson f "$ferramentas" \
-      '{nome: $nome, canal: "nativo", ferramentas: $f} + $ajustes')
+      --arg emojis "$EMOJIS" \
+      '{nome: $nome, canal: "nativo", ferramentas: $f, emojis: $emojis} + $ajustes')
     api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
@@ -265,6 +267,37 @@ escolhe_ferramentas() {
   printf -v "$__var" '%s' "$__escolhidas"
 }
 
+# pergunta_emoji [ATUAL]: define EMOJIS. Vale em todo canal: é jeito de escrever, não canal.
+pergunta_emoji() {
+  local atual=${1:-} op padrao=1
+  case "$atual" in
+    pouco) padrao=2 ;;
+    medio) padrao=3 ;;
+    muito) padrao=4 ;;
+  esac
+  echo
+  dica "Vale para as respostas ao contato. Muda depois em Editar agente."
+  [ "$atual" = livre ] && dica "Hoje este agente não tem regra: o modelo decide sozinho."
+  echo
+  ESCOLHA_ATUAL=$padrao escolha op "Emoji nas respostas" \
+    "Nenhum  ${CINZA}nunca usa${NORMAL}" \
+    "Pouco  ${CINZA}no máximo um na resposta, quando acrescenta algo${NORMAL}" \
+    "Médio  ${CINZA}um por mensagem, quando ajuda o tom${NORMAL}" \
+    "Muito  ${CINZA}um ou dois por mensagem${NORMAL}"
+  case "$op" in
+    2) EMOJIS=pouco ;;
+    3) EMOJIS=medio ;;
+    4) EMOJIS=muito ;;
+    *) EMOJIS=nenhum ;;
+  esac
+}
+
+# emoji_do_agente JSON: como o nível aparece na ficha.
+emoji_do_agente() {
+  jq -r '(.emojis // "") as $n
+    | {"": "-", livre: "o modelo decide", nenhum: "nenhum", pouco: "pouco", medio: "médio", muito: "muito"}[$n] // $n' <<<"$1"
+}
+
 # escolhe_caixa_chatwoot: URL → conta → caixa → handoff. Define CHATWOOT_CONEXAO (JSON), CHATWOOT_CONTA_NOME,
 # AGENTE_CAIXA e HANDOFF_DESTINO.
 escolhe_caixa_chatwoot() {
@@ -296,13 +329,14 @@ fluxo_agente_chatwoot() {
   pergunta nome "Nome do agente"
   escolhe_empresa "$CHATWOOT_CONTA_NOME"
   escolhe_ferramentas ferramentas ""
+  pergunta_emoji
   pergunta_retomada 4 chatwoot
 
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson conexao "$CHATWOOT_CONEXAO" --argjson destino "$HANDOFF_DESTINO" \
-      --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" \
+      --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" --arg emojis "$EMOJIS" \
       '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao, ferramentas: $f,
-        retomada_automatica_horas: $horas}')
+        retomada_automatica_horas: $horas, emojis: $emojis}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando o bot no Chatwoot…"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome

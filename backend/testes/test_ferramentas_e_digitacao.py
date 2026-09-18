@@ -116,3 +116,41 @@ def test_cada_ferramenta_mora_no_proprio_arquivo_e_esta_no_registro() -> None:
         assert isinstance(ficha, Ferramenta) and ficha.nome == nome and CATALOGO[nome] is ficha
         assert ficha.rotulo and ficha.descricao and ficha.instrucao
         assert ficha.tools() or ficha.capabilities()
+
+
+async def test_nivel_de_emoji_vira_instrucao_e_livre_nao_diz_nada(http, canal, fila, sessao, redis, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """`livre` é o valor dos agentes criados antes desta escolha: para eles nada muda."""
+    instrucoes: list[str] = []
+
+    def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        instrucoes.append(info.instructions or "")
+        return resposta_falsa(info, ["Oi"])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+    monkeypatch.setattr(turno.asyncio, "sleep", lambda s: _registra([], s))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", emojis="muito")
+    caminho = f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}"
+
+    for mensagem_id, nivel in ((1, None), (2, "nenhum"), (3, "livre")):
+        if nivel is not None:
+            await http.patch(caminho, json={"emojis": nivel}, headers=ADMIN)
+        await envia_webhook(http, agente["token"], payload_chatwoot(mensagem_id=mensagem_id))
+        async with sessao() as s:
+            conversa = await s.scalar(select(Conversa))
+        token = await buffer.agenda_turno(redis, conversa.cliente_id, conversa.id, 1)
+        assert await turno.processar_turno({"redis": redis}, str(conversa.cliente_id), str(conversa.id), token) == "respondido"
+
+    assert "emoji com liberdade" in instrucoes[0]
+    assert "Não use emoji" in instrucoes[1]
+    assert "emoji" not in instrucoes[2].lower()
+
+
+async def test_agente_nasce_sem_emoji_e_nivel_invalido_e_recusado(http, canal) -> None:  # type: ignore[no-untyped-def]
+    """O agente nasce cru: sem escolha, sem emoji."""
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    assert agente["emojis"] == "nenhum"
+
+    caminho = f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}"
+    resp = await http.patch(caminho, json={"emojis": "as vezes"}, headers=ADMIN)
+
+    assert resp.status_code == 422

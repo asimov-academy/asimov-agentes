@@ -310,9 +310,13 @@ traduz_sequencia() {
 
 # escolha VAR "texto" opção1 opção2 ...: devolve o número escolhido.
 # Esc escolhe a opção ESC_ESCOLHE quando definida (ex.: Voltar, Sair); senão volta à tela anterior.
+# ESCOLHA_ATUAL começa o cursor numa opção, para a tela de editar já vir no valor de hoje.
 escolha() {
   local __var=$1 __texto=$2 __atual=1 __tecla __i __item
   shift 2
+  if [ -n "${ESCOLHA_ATUAL:-}" ] && [ "$ESCOLHA_ATUAL" -ge 1 ] && [ "$ESCOLHA_ATUAL" -le "$#" ]; then
+    __atual=$ESCOLHA_ATUAL
+  fi
   if ! tem_terminal; then
     escolha_digitada "$__var" "$__texto" "$@"
     return 0

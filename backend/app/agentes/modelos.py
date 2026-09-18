@@ -43,6 +43,10 @@ class Agente(ComId, ComCriacao, Base):
     )
     """Nomes do catálogo de `ia/ferramentas/registro.py` ligados neste agente."""
 
+    emojis: Mapped[str] = mapped_column(String(10), default="nenhum", server_default="livre")
+    """Quanto o agente usa emoji: `nenhum`, `pouco`, `medio` ou `muito`. `livre` é o que os agentes
+    criados antes desta escolha mantêm, e para eles a plataforma não diz nada sobre emoji."""
+
     contatos_permitidos: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
     """Telefones que o agente atende, só dígitos. Lista vazia é o normal: atende quem mandar mensagem.
     Serve para testar um número novo sem responder a qualquer pessoa que escreva para ele."""

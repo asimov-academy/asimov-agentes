@@ -257,6 +257,7 @@ fluxo_agente_whatsapp() {
   pergunta nome "Nome do agente"
   escolhe_empresa ""
   escolhe_ferramentas ferramentas ""
+  pergunta_emoji
   pergunta_retomada 4 whatsapp
   escolhe_contatos_permitidos
   escolhe_destino_whatsapp "$(jq -c '.templates_todos' <<<"$WHATSAPP_ACHADO")" || return 0
@@ -264,9 +265,9 @@ fluxo_agente_whatsapp() {
   while true; do
     corpo=$(jq -n --arg nome "$nome" --argjson conexao "$WHATSAPP_CONEXAO" --argjson f "$ferramentas" \
       --argjson destino "$HANDOFF_DESTINO" --argjson horas "$RETOMADA_HORAS" \
-      --argjson permitidos "$CONTATOS_PERMITIDOS" \
+      --argjson permitidos "$CONTATOS_PERMITIDOS" --arg emojis "$EMOJIS" \
       '{nome: $nome, canal: "whatsapp", conexao: $conexao, ferramentas: $f, handoff_destino: $destino,
-        retomada_automatica_horas: $horas, contatos_permitidos: $permitidos}')
+        retomada_automatica_horas: $horas, contatos_permitidos: $permitidos, emojis: $emojis}')
     api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Apontando o webhook na Meta…"
     if [ "$API_STATUS" = 201 ]; then break; fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
