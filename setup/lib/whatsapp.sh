@@ -134,10 +134,15 @@ escolhe_conta_whatsapp() {
   if [ "$total" -eq 0 ]; then
     echo
     aviso "Esse token não enxerga nenhuma conta de WhatsApp Business."
-    dica "Confira o passo 7 do docs/whatsapp-oficial.md: o usuário do sistema precisa ter a conta"
-    dica "como ativo, e o token precisa das permissões whatsapp_business_management e messaging."
-    dica "Se preferir, informe o ID da conta à mão: ele fica no Gerenciador de Negócios, em"
-    dica "Configurações > Contas > Contas do WhatsApp, ao lado do nome da conta."
+    dica "A causa mais comum: o token foi gerado antes de a conta ser atribuída ao usuário do"
+    dica "sistema. O token guarda os ativos de quando nasceu, então atribuir depois não vale para"
+    dica "ele. Gere o token de novo (Usuários do sistema > Gerar token) e rode isto outra vez."
+    dica "Também acontece quando o token não tem whatsapp_business_management, ou quando o usuário"
+    dica "do sistema não tem a conta como ativo (passo 7 do docs/whatsapp-oficial.md)."
+    echo
+    dica "Se o token estiver certo e você só quiser seguir, informe o ID da conta à mão: ele fica no"
+    dica "Gerenciador de Negócios, em Configurações > Contas > Contas do WhatsApp, em Identificação,"
+    dica "na conta que tem o número do agente."
     echo
     confirma "Informar o ID da conta à mão?" || return 1
     pergunta conta "ID da conta de WhatsApp Business" "$(estado_get whatsapp_waba)"

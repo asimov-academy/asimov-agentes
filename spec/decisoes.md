@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Token guarda os ativos de quando nasceu (v0.16.3)
+
+- **O operador tinha a conta atribuída ao usuário do sistema e o setup dizia que o token não enxergava nenhuma.** A causa: token de usuário do sistema guarda os ativos de quando foi gerado, então atribuir a conta depois não vale para um token que já existe. A mensagem antiga mandava conferir o ativo, que estava certo, e não dizia o que fazer.
+- **A mensagem passou a começar pela causa provável e pela saída**: gerar o token de novo. Só depois fala em permissão e em ativo, e deixa claro que informar o ID à mão resolve a tela mas não o token: se ele não alcança a conta, a Meta recusa as chamadas seguintes por permissão.
+- Atualizados `docs/whatsapp-oficial.md` (seção de onde fica o ID e tabela de erros) e o texto do setup.
+
 ## 2026-09-18: O ícone também vem por URL, e `asimov diagnostico` (v0.16.2)
 
 - **O 404 da página, na prática, era o operador estar em `/root`**: `source deploy/compose.sh` não existe fora da pasta do projeto, então o `dc restart caddy` nunca rodou. Toda dica de comando do setup passou a vir com `cd $RAIZ_PROJETO` na frente.

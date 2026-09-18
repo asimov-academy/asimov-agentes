@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.16.2` em `asimov-academy/asimov-agentes` (público): o ícone do app também vem por URL (`/icone-app.png`, para baixar no navegador) e entrou `asimov diagnostico`, que diz a versão instalada e o código HTTP de cada endereço que precisa responder.
+- `v0.16.3` em `asimov-academy/asimov-agentes` (público): quando o token não enxerga nenhuma conta de WhatsApp Business, a mensagem passa a dizer a causa provável (token gerado antes de a conta ser atribuída ao usuário do sistema) e a saída (gerar o token de novo).
+- `v0.16.2`: o ícone do app também vem por URL (`/icone-app.png`, para baixar no navegador) e entrou `asimov diagnostico`, que diz a versão instalada e o código HTTP de cada endereço que precisa responder.
 - `v0.16.1`: uma política de privacidade por agente (`/privacidade/<empresa>/<agente>`, mostrada pronta no setup), e o Caddy passou a recarregar de verdade depois de atualizar, que era por que a URL respondia 404.
 - `v0.16.0`: a instalação serve a política de privacidade que a Meta exige para publicar o app (`https://bot.<dominio>/privacidade`, e por empresa com o slug), e o projeto traz um ícone quadrado pronto para o app. Erro de app trocado no token virou mensagem que diz o que fazer.
 - `v0.15.2` (com `docs/whatsapp-oficial.md` corrigido depois: o token do agente precisa de duas permissões, `whatsapp_business_messaging` e `whatsapp_business_management`; `business_management` não aparece em app do caso de uso do WhatsApp e não é necessária): o setup não pede mais o ID da conta de WhatsApp Business: com app, token e chave secreta ele pergunta à Meta quais contas o token alcança e lista para escolher. O ID era o dado mais escondido do painel novo.
