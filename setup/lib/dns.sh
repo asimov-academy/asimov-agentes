@@ -59,7 +59,9 @@ PY
 
 instrucoes_dns() {
   local ip=$1 dominio=$2
-  info "Crie este registro no painel do domínio $(destaque "$dominio"):"
+  aviso "Precisa de um registro DNS: $(destaque "bot.$dominio") apontando para o IP $(destaque "$ip")."
+  echo
+  info "No painel do domínio $(destaque "$dominio"), crie:"
   echo
   printf '    %sTipo%s %sA%s   %sNome%s %sbot%s   %sValor%s %s%s%s   %sTTL%s %s300%s\n' \
     "$CINZA" "$NORMAL" "$NEGRITO" "$NORMAL" "$CINZA" "$NORMAL" "$NEGRITO" "$NORMAL" \
