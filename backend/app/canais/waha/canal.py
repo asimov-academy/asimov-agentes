@@ -461,9 +461,9 @@ class Waha:
         aviso = (
             f"Assumi a conversa com {contato or numero_legivel(conversa_externa)} e o agente parou de responder.\n\n"
             f"{nota}\n\n"
-            f"Quando terminar, devolva ao agente de um destes jeitos:\n"
-            f"1) reaja com {JOINHA} em qualquer mensagem da conversa com o contato;\n"
-            f"2) responda /retomar aqui (com mais de uma conversa em atendimento: /retomar {codigo})."
+            f"Quando terminar, responda /retomar aqui "
+            f"(com mais de uma conversa em atendimento: /retomar {codigo}).\n"
+            f"Quem estiver com o aparelho do agente também pode reagir com {JOINHA} na conversa."
         )
         try:
             await api.envia_texto(credenciais["sessao"], chat, aviso)

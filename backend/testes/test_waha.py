@@ -620,9 +620,9 @@ async def test_lid_sem_numero_resolvido_vira_falha_com_o_identificador(http, fil
 
 
 async def test_numero_com_e_sem_o_nono_digito_e_o_mesmo(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
-    agente = await cria_waha(http, contatos_permitidos=["555186389892"])
+    agente = await cria_waha(http, contatos_permitidos=["555133332222"])
 
-    await manda(http, agente, waha, payload_waha("oi", de="5551986389892@c.us"))
+    await manda(http, agente, waha, payload_waha("oi", de="5551933332222@c.us"))
 
     assert len(fila.jobs) == 1
 
@@ -685,14 +685,14 @@ async def test_ronda_avisa_uma_vez_por_hora(http, fila, waha, redis, sessao, mon
 
 async def test_aviso_de_handoff_vai_para_o_id_que_o_whatsapp_reconhece(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
     """O mesmo celular vale com e sem o nono dígito: guardar o id errado não chega em ninguém."""
-    agente = await cria_waha(http, handoff_destino={"tipo": "numero", "telefone": "5551986392419"})
-    waha.recusados = {"5551986392419@c.us"}
-    waha.numeros = {"5551986392419": "555186392419@c.us"}
+    agente = await cria_waha(http, handoff_destino={"tipo": "numero", "telefone": "5551955554444"})
+    waha.recusados = {"5551955554444@c.us"}
+    waha.numeros = {"5551955554444": "555155554444@c.us"}
 
     await transfere(http, fila, redis, waha, agente)
 
     destinos = [chat for chat, _ in waha.enviadas]
-    assert "555186392419@c.us" in destinos, "o aviso precisa chegar no id que o WhatsApp reconhece"
+    assert "555155554444@c.us" in destinos, "o aviso precisa chegar no id que o WhatsApp reconhece"
     async with sessao() as s:
         falha = (await s.scalars(select(Falha).where(Falha.tipo == "handoff_incompleto"))).one()
     assert "troque o destino do handoff" in str(falha.detalhe["problemas"])
@@ -701,11 +701,11 @@ async def test_aviso_de_handoff_vai_para_o_id_que_o_whatsapp_reconhece(http, fil
 async def test_numero_conferido_guarda_o_id_devolvido_pelo_whatsapp(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
     """O setup confere o número antes de gravar; aqui vale o que a API aceita e guarda."""
     agente = await cria_waha(
-        http, handoff_destino={"tipo": "numero", "telefone": "5551986392419", "chat_id": "23423462304912@lid"}
+        http, handoff_destino={"tipo": "numero", "telefone": "5551955554444", "chat_id": "23423462304912@lid"}
     )
 
     assert agente["handoff_destino"]["chat_id"] == "23423462304912@lid"
-    assert agente["handoff_destino"]["telefone"] == "5551986392419"
+    assert agente["handoff_destino"]["telefone"] == "5551955554444"
 
 
 def test_endereco_do_arquivo_e_sempre_o_da_waha() -> None:
@@ -785,14 +785,14 @@ async def test_aviso_de_handoff_chama_o_contato_pelo_nome_e_telefone(http, fila,
         http,
         agente,
         waha,
-        payload_waha("quero falar com uma pessoa", de="1151135133847@lid", telefone_oculto="5551999998888"),
+        payload_waha("quero falar com uma pessoa", de="1100000000000@lid", telefone_oculto="5551999998888"),
     )
     assert await roda_turno(fila, redis) == "transferido"
 
     avisos = [texto for chat, texto in waha.enviadas if chat == CHAT_DO_DESTINO]
     assert avisos, "o destino precisa ser avisado"
     assert "Maria (+55 51 99999-8888)" in avisos[0]
-    assert "1151135133847" not in avisos[0], "o id oculto não é telefone de ninguém"
+    assert "1100000000000" not in avisos[0], "o id oculto não é telefone de ninguém"
 
 
 async def test_retomar_escrito_do_aparelho_do_agente_no_chat_do_handoff(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]

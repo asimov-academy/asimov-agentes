@@ -16,6 +16,7 @@ navegador em vez de tirar o arquivo da VPS com `scp`.
 from datetime import date
 from html import escape
 
+import structlog
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +26,8 @@ from app.agentes import repo as agentes_repo
 from app.clientes import repo as clientes_repo
 from app.plataforma.banco import sessao
 from app.plataforma.config import config
+
+log = structlog.get_logger()
 
 router = APIRouter()
 
@@ -48,11 +51,12 @@ def pagina(empresa: str, agente: str = "") -> str:
     cfg = config()
     arquivo = cfg.diretorio_modelos / "privacidade.html"
     if not arquivo.is_file():
-        # Acontece quando a atualização não trouxe `modelos/`: melhor dizer o que falta do que
-        # devolver um erro interno sem explicação.
+        # Acontece quando a atualização não trouxe `modelos/`. A rota é pública e sem sessão, então
+        # o caminho dentro do contêiner fica no log, nunca na resposta.
+        log.warning("arquivo_publico_ausente", arquivo=str(arquivo))
         raise HTTPException(
             status_code=503,
-            detail=f"{arquivo} não encontrado: atualize a instalação (asimov atualizar)",
+            detail="a política de privacidade ainda não está publicada nesta instalação",
         )
     contato = (
         f"Escreva para {cfg.email_ssl}."
@@ -103,8 +107,6 @@ async def icone_do_app() -> FileResponse:
     """Ícone quadrado para o app da Meta. Trocar `modelos/icone-app.png` troca o que sai aqui."""
     arquivo = config().diretorio_modelos / "icone-app.png"
     if not arquivo.is_file():
-        raise HTTPException(
-            status_code=503,
-            detail=f"{arquivo} não encontrado: atualize a instalação (asimov atualizar)",
-        )
+        log.warning("arquivo_publico_ausente", arquivo=str(arquivo))
+        raise HTTPException(status_code=503, detail="o ícone ainda não está publicado nesta instalação")
     return FileResponse(arquivo, media_type="image/png", filename="icone-app.png")

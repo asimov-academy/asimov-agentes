@@ -242,7 +242,7 @@ aviso_nao_oficial() {
   dica "A Meta não homologa nem dá suporte. O número pode ser bloqueado a qualquer momento, sem aviso."
   dica "Use um chip só para o agente, nunca o número principal da empresa."
   dica "As regras do WhatsApp continuam valendo: nada de disparo em massa nem mensagem para quem não falou com você."
-  dica "O WhatsApp oficial (Cloud API da Meta), sem esse risco e com custo por conversa, entra numa próxima versão."
+  dica "O WhatsApp oficial, na opção anterior, não tem esse risco e cobra por mensagem."
   echo
   confirma "Entendi o risco. Continuar?"
 }

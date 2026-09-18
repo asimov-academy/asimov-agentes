@@ -39,9 +39,9 @@ O setup pergunta, nesta ordem:
 1. Se os agentes são só da sua empresa ou para empresas clientes
 2. Domínio e e-mail para o certificado SSL
 3. Claude Code ou Codex
-4. Provedor e modelo para resposta, fallback, visão e transcrição, com as chaves de API
-5. O registro DNS `bot.<seu-domínio>` (ele mostra o IP e espera propagar)
-6. Canal do primeiro agente (Chatwoot, WhatsApp oficial, WhatsApp pela WAHA ou nativo). No Chatwoot: URL e token de administrador (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente. No WhatsApp oficial: os dados do app da Meta, o número da conta e o template do aviso de handoff ([como preparar](docs/whatsapp-oficial.md)). Na WAHA: nome, ferramentas, o QR code para parear o número e quem recebe o handoff
+4. O registro DNS `bot.<seu-domínio>` (ele mostra o IP e espera propagar)
+5. Se quer o painel no navegador, em `app.<seu-domínio>` (pede um registro DNS novo e mostra o código do primeiro acesso). Com o painel ligado, o primeiro agente pode nascer por lá
+6. Canal do primeiro agente (Chatwoot, WhatsApp oficial, WhatsApp pela WAHA ou nativo). Todo canal pergunta a IA que responde: provedor, modelo e, na primeira vez daquele provedor, a chave de API, testada na hora e guardada cifrada no banco. No Chatwoot: URL e token de administrador (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente. No WhatsApp oficial: os dados do app da Meta, o número da conta e o template do aviso de handoff ([como preparar](docs/whatsapp-oficial.md)). Na WAHA: nome, ferramentas, o QR code para parear o número e quem recebe o handoff
 
 Se algo falhar, ele mostra o motivo. Rode o mesmo comando de novo e ele continua de onde parou.
 
@@ -73,13 +73,13 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde. Com um a
 | Tela | O que faz |
 |---|---|
 | Visão geral | Se está tudo de pé, o que passou do prazo, turnos, custo e quanto o agente resolveu sozinho, comparado com o período anterior |
-| Agentes | Lista e o popup do agente: criar em sete passos, e depois perfil, comunicação, trabalho (o prompt), ferramentas, modelos e uma conversa de teste |
+| Agentes | Lista e o popup do agente: criar em oito passos, e depois perfil, comunicação, trabalho (o prompt), ferramentas, configurações e uma conversa de teste |
 | Canais | Se cada canal respondeu agora, com o QR code do WhatsApp e reiniciar a sessão |
 | Chat | As conversas, o histórico, quem falou, o custo de cada turno e devolver ao agente uma conversa que está com uma pessoa |
 | Contatos | Quem já falou com algum agente, por nome ou telefone |
 
-Tudo que se faz no painel também se faz no terminal, e o contrário: a operação nasce na API e os dois
-consomem a mesma rota. O painel nunca fala com `/admin`, e `app.<domínio>/admin` e `/webhook` respondem 404.
+A operação nasce na API, e painel e terminal chamam a mesma rota. Navegar pelas conversas e pelos
+contatos, por enquanto, só no painel. O painel nunca fala com `/admin`, e `app.<domínio>/admin` e `/webhook` respondem 404.
 
 **Evoluir com vibecoding:**
 
