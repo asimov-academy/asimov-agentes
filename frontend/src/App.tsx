@@ -10,7 +10,6 @@ import {
 } from "./api/cliente";
 import { Aviso } from "./design/Aviso";
 import { Carregando } from "./design/Carregando";
-import { Icone } from "./design/Icone";
 import { Casca, type Situacao } from "./telas/Casca";
 import { Copiloto } from "./telas/Copiloto";
 import { Agentes } from "./telas/Agentes";
@@ -19,7 +18,7 @@ import { Chat } from "./telas/Chat";
 import { Configuracoes } from "./telas/Configuracoes";
 import { Contatos } from "./telas/Contatos";
 import { Funil } from "./telas/Funil";
-import { EmBreve, NaoEncontrada } from "./telas/EmBreve";
+import { NaoEncontrada } from "./telas/NaoEncontrada";
 import { VisaoGeral } from "./telas/VisaoGeral";
 
 export function App() {
@@ -61,7 +60,14 @@ export function App() {
 
   return (
     <>
-      <Casca eu={eu} situacao={situacao}>
+      <Casca
+        eu={eu}
+        situacao={situacao}
+        copilotoAberto={copiloto}
+        aoAbrirCopiloto={eu ? () => setCopiloto(true) : undefined}
+        // O copiloto acompanha todas as telas, então mora aqui e não dentro de uma delas.
+        copiloto={copiloto && eu ? <Copiloto aoFechar={() => setCopiloto(false)} /> : undefined}
+      >
         {erro ? (
           <Aviso tom="erro" titulo="não deu para carregar o painel">
             {erro}
@@ -155,10 +161,6 @@ export function App() {
               }
             />
             <Route
-              path="/conhecimento"
-              element={<EmBreve titulo="Conhecimento" />}
-            />
-            <Route
               path="/configuracoes"
               element={<Configuracoes eu={eu} aoMudarConta={releEu} />}
             />
@@ -167,18 +169,6 @@ export function App() {
         )}
       </Casca>
 
-      {/* O copiloto acompanha todas as telas, então mora aqui e não dentro de uma delas. O botão
-          fica fora do popup para o operador chamá-lo de onde estiver. */}
-      {eu && !copiloto && (
-        <button
-          onClick={() => setCopiloto(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full border border-ciano/50 bg-panel px-4 py-3 text-sm font-semibold text-ciano shadow-alto transition-colors hover:bg-ciano hover:text-void"
-        >
-          <Icone nome="comm-chat" tamanho={16} />
-          Copiloto
-        </button>
-      )}
-      {copiloto && <Copiloto aoFechar={() => setCopiloto(false)} />}
     </>
   );
 }

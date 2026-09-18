@@ -7,7 +7,8 @@ import { FormDaChave, NOME_DO_PROVEDOR as NOMES } from "./FormDaChave";
 /** Provedor, chave e modelo de uma função do agente.
  *
  *  A IA é escolha de cada agente, não da instalação. A chave do provedor é pedida uma vez só: o
- *  servidor testa, guarda cifrada e nunca devolve. Daqui em diante o front só sabe que ela existe.
+ *  servidor testa, guarda cifrada e nunca devolve. Daqui em diante o front só sabe que ela existe,
+ *  e trocá-la também acontece aqui, que é o único lugar do painel onde se fala de provedor.
  *
  *  Serve o onboarding e a ficha: a aba Configurações pedia o modelo em texto cru, no formato
  *  `provedor:modelo`, enquanto este escolhedor já existia ao lado (auditoria de copy de 2026-09-18).
@@ -26,6 +27,9 @@ export function EscolheIA({
   const [provedor, setProvedor] = useState(valor.split(":")[0] ?? "");
   const [lista, setLista] = useState<string[] | null>(null);
   const [erro, setErro] = useState("");
+  // A troca de chave morava em Configurações, numa lista de provedores da instalação. Voltou para
+  // cá, onde o modelo é escolhido: é aqui que o operador descobre que a chave venceu.
+  const [trocando, setTrocando] = useState(false);
 
   useEffect(() => {
     api.modelos().then(setCatalogo).catch((problema) => setErro(problema.message));
@@ -68,9 +72,23 @@ export function EscolheIA({
         ))}
       </div>
 
-      {provedor && !temChave && (
+      {provedor && (!temChave || trocando) && (
         <div className="mt-6">
-          <FormDaChave provedor={provedor} aoGuardar={() => api.modelos().then(setCatalogo)} />
+          <FormDaChave
+            provedor={provedor}
+            aoGuardar={() => {
+              setTrocando(false);
+              api.modelos().then(setCatalogo);
+            }}
+          />
+          {temChave && (
+            <button
+              onClick={() => setTrocando(false)}
+              className="mt-2 text-sm text-muted underline-offset-2 hover:text-texto hover:underline"
+            >
+              Deixar a chave que já está guardada
+            </button>
+          )}
         </div>
       )}
 
@@ -93,6 +111,16 @@ export function EscolheIA({
                     {m.slice(provedor.length + 1)}
                   </button>
                 ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                {!trocando && (
+                  <button
+                    onClick={() => setTrocando(true)}
+                    className="text-sm text-muted underline-offset-2 hover:text-texto hover:underline"
+                  >
+                    Trocar a chave da {NOMES[provedor] ?? provedor}
+                  </button>
+                )}
               </div>
               <div className="mt-4">
                 <Campo

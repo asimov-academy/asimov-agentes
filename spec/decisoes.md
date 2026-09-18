@@ -2,6 +2,27 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O painel para de prometer o que não é dele
+
+Três cortes no painel, todos vindos de o operador olhar a tela e perguntar o que aquilo faz ali.
+
+**Conhecimento sai do menu.** Era um item apagado com selo de "em breve" e prometia uma base da
+instalação. A base é de cada agente e mora na aba Treinamento da ficha dele. A tela `EmBreve` saiu
+junto; o arquivo virou `NaoEncontrada.tsx`, que era a outra metade dele.
+
+**Configurações deixa de ser o painel de controle da instalação.** Saíram as chaves de IA (a IA é de
+cada agente: a chave agora é pedida e trocada no `EscolheIA`, onde o modelo é escolhido) e o cartão
+de Instalação (endereço e contagem não se configuram; são fato, e fato é Visão geral). Ficaram a
+conta, o espaço de trabalho, os dados do negócio e um cartão novo, **Assistente de código**, que diz
+qual CLI está vinculado e em que conta. Esse sim é escolha da instalação, e é o que move o copiloto.
+
+**O copiloto vira coluna da direita.** Era um botão redondo flutuante que abria o popup grande sobre
+tudo. Pedir "deixe a Bella mais objetiva" sem poder olhar a Bella é pedir de memória. Agora ele abre
+ao lado do conteúdo, com alargar e estreitar, e o botão mora no rodapé do menu. No celular ele toma a
+tela, porque lá não existe "ao lado".
+
+Atualizados: `spec/frontend.md` (menu, 5.0 Configurações e 5.8 Copiloto).
+
 ## 2026-09-18: O passo Jeito depois de o operador usar
 
 Três correções vindas de olhar o passo 5 da criação numa instalação de verdade.

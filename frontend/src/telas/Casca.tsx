@@ -9,6 +9,9 @@ import type { ICONES } from "../design/icones";
  *  Os seis itens eram uma lista corrida, e o operador tinha de ler todos para achar o que queria.
  *  Agora "Operação" é o que se acompanha todo dia e "Atendimento" é onde se lê conversa. O grupo
  *  some quando o menu está recolhido, que é quando o ícone já é a única pista.
+ *
+ *  **Conhecimento não é item de menu.** A base é de cada agente, e mora na aba Treinamento da ficha
+ *  dele: uma tela geral de conhecimento prometia uma base da instalação, que não existe.
  */
 type Item = { para: string; texto: string; icone: keyof typeof ICONES; fim?: boolean; embreve?: boolean };
 
@@ -27,7 +30,6 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     itens: [
       { para: "/chat", texto: "Conversas", icone: "comm-chat" },
       { para: "/contatos", texto: "Contatos", icone: "nav-user" },
-      { para: "/conhecimento", texto: "Conhecimento", icone: "cont-doc", embreve: true },
     ],
   },
 ];
@@ -44,10 +46,17 @@ export function Casca({
   eu,
   situacao,
   children,
+  copiloto,
+  copilotoAberto,
+  aoAbrirCopiloto,
 }: {
   eu: Eu | null;
   situacao: Situacao | null;
   children: ReactNode;
+  /** A coluna da direita, quando aberta. Mora aqui porque divide a largura com o conteúdo. */
+  copiloto?: ReactNode;
+  copilotoAberto?: boolean;
+  aoAbrirCopiloto?: () => void;
 }) {
   const [recolhido, setRecolhido] = useState(false);
   const [gaveta, setGaveta] = useState(false);
@@ -191,8 +200,22 @@ export function Casca({
         </nav>
 
         {/* A área da conta: quem está dentro e para onde ir mexer na instalação. A situação subiu
-            para a marca, no topo. */}
+            para a marca, no topo. O copiloto entra logo acima dela: ele era um botão flutuante no
+            canto, que tapava conteúdo em toda tela para uma coisa que se usa de vez em quando. */}
         <div className="border-t border-borda p-3">
+          {aoAbrirCopiloto && !copilotoAberto && (
+            <button
+              onClick={aoAbrirCopiloto}
+              title={recolhido ? "Copiloto" : undefined}
+              aria-label={recolhido ? "Copiloto" : undefined}
+              className={`mb-3 flex w-full items-center gap-3 rounded-md border border-ciano/40 px-3 py-2 text-sm text-ciano transition-colors hover:bg-ciano/10 ${
+                recolhido ? "justify-center px-0" : ""
+              }`}
+            >
+              <Icone nome="comm-chat" tamanho={18} />
+              {!recolhido && <span className="truncate">Copiloto</span>}
+            </button>
+          )}
           <NavLink
             to="/configuracoes"
             title={recolhido ? "Perfil e configurações" : undefined}
@@ -243,6 +266,8 @@ export function Casca({
       <main className="min-w-0 flex-1 overflow-y-auto p-4 pt-16 md:p-10">
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
+
+      {copiloto}
     </div>
   );
 }
