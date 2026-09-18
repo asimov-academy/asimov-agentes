@@ -13,7 +13,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agentes import repo as agentes_repo
@@ -41,13 +41,26 @@ async def eu(
     operador = await repo.operador(s)
     if operador is None:
         raise HTTPException(status_code=401, detail="entre no painel")
+    espaco = await repo.espaco(s)
+    await s.commit()
     cfg = config()
     return {
         "operador": {
+            "nome": operador.nome,
+            "email": operador.email,
             "criado_em": operador.criado_em.isoformat(),
             "ultimo_acesso_em": operador.ultimo_acesso_em.isoformat()
             if operador.ultimo_acesso_em
             else None,
+        },
+        "espaco": {
+            "nome": espaco.nome,
+            "sigla": espaco.sigla,
+            "negocio_nome": espaco.negocio_nome,
+            "negocio_documento": espaco.negocio_documento,
+            "negocio_email": espaco.negocio_email,
+            "negocio_telefone": espaco.negocio_telefone,
+            "negocio_site": espaco.negocio_site,
         },
         "instalacao": {
             "subdominio_bot": cfg.subdominio_bot,
@@ -187,3 +200,43 @@ async def visao_geral(
     if cliente_id is not None and await clientes_repo.obter(s, cliente_id) is None:
         raise HTTPException(status_code=404, detail="empresa não encontrada")
     return VisaoGeral.model_validate(await servico.visao_geral(s, dias, cliente_id))
+
+
+# Espaço de trabalho e perfil
+#
+# Os dois são da instalação, não de uma empresa atendida: por isso ficam aqui e não em `clientes/`.
+# Uma linha cada, como o operador.
+
+
+class PerfilDoOperador(BaseModel):
+    nome: str = Field(default="", max_length=120)
+    email: str = Field(default="", max_length=200)
+
+
+class EspacoDeTrabalho(BaseModel):
+    nome: str = Field(default="", max_length=120)
+    sigla: str = Field(default="", max_length=2)
+    negocio_nome: str = Field(default="", max_length=200)
+    negocio_documento: str = Field(default="", max_length=40)
+    negocio_email: str = Field(default="", max_length=200)
+    negocio_telefone: str = Field(default="", max_length=40)
+    negocio_site: str = Field(default="", max_length=300)
+
+
+@router.put("/perfil", status_code=204)
+async def grava_perfil(dados: PerfilDoOperador, s: AsyncSession = Depends(sessao)) -> None:
+    """Quem opera. Não serve para entrar: a senha continua a única credencial."""
+    operador = await repo.operador(s)
+    if operador is None:
+        raise HTTPException(status_code=401, detail="entre no painel")
+    operador.nome = dados.nome.strip()
+    operador.email = dados.email.strip()
+    await s.commit()
+
+
+@router.put("/espaco", status_code=204)
+async def grava_espaco(dados: EspacoDeTrabalho, s: AsyncSession = Depends(sessao)) -> None:
+    espaco = await repo.espaco(s)
+    for campo, valor in dados.model_dump().items():
+        setattr(espaco, campo, str(valor).strip())
+    await s.commit()

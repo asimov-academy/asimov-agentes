@@ -234,26 +234,29 @@ def resumo_da_falha(detalhe: dict[str, Any] | None) -> str:
     return " ".join(str(bruto).split())[:200]
 
 
+def _plural(quantos: int, um: str, varios: str) -> str:
+    return f"{quantos} {um if quantos == 1 else varios}"
+
+
 def _situacao(falhas: list[dict[str, Any]], handoffs: list[dict[str, Any]]) -> dict[str, str]:
-    """Verde, amarelo ou vermelho para a barra do topo.
+    """Verde, amarelo ou vermelho, no mesmo formato nos quatro estados.
 
     O `asimov diagnostico` pergunta o código HTTP de cada endereço, coisa que só o terminal da VPS
     consegue fazer por dentro. Aqui a mesma pergunta é respondida pelo que a API sabe: canal fora
-    do ar é vermelho, outra falha recente ou handoff vencido é amarelo. Registrado em
+    do ar é vermelho, outra falha recente ou conversa parada além do prazo é amarelo. Registrado em
     spec/decisoes.md.
+
+    O texto diz o que foi contado, sempre, em vez de "tudo no ar": no verde ele mostra os dois
+    zeros, e assim o operador sabe o que o ponto verde está afirmando. "Handoff" saiu junto, que é
+    palavra do código e não de tela.
     """
     vencidos = [h for h in handoffs if h["vencido"]]
     fora_do_ar = [f for f in falhas if f["tipo"] == "canal_fora_do_ar"]
     if fora_do_ar:
         return {"cor": "perigo", "texto": "canal fora do ar"}
-    # Texto curto: ele mora no rodapé do menu lateral, que tem uns 200px de largura.
-    if falhas and vencidos:
-        return {"cor": "atencao", "texto": f"{len(falhas)} falhas · {len(vencidos)} vencidos"}
-    if falhas:
-        return {"cor": "atencao", "texto": f"{len(falhas)} falhas"}
-    if vencidos:
-        return {"cor": "atencao", "texto": f"{len(vencidos)} handoffs vencidos"}
-    return {"cor": "ok", "texto": "tudo no ar"}
+    # Texto curto: ele mora no menu lateral, que tem uns 200px de largura.
+    texto = f"{_plural(len(falhas), 'falha', 'falhas')} · {_plural(len(vencidos), 'parada', 'paradas')}"
+    return {"cor": "atencao" if falhas or vencidos else "ok", "texto": texto}
 
 
 def _serie_cheia(

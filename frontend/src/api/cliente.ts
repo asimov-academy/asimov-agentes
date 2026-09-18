@@ -109,6 +109,12 @@ export const api = {
       body: JSON.stringify({ texto }),
     }),
 
+  gravaEspaco: (dados: EspacoDeTrabalho) =>
+    chama<void>("/espaco", { method: "PUT", body: JSON.stringify(dados) }),
+
+  gravaPerfilDoOperador: (dados: PerfilDoOperador) =>
+    chama<void>("/perfil", { method: "PUT", body: JSON.stringify(dados) }),
+
   ferramentas: () => chama<Ferramenta[]>("/ferramentas"),
   modelos: () => chama<Modelos>("/modelos"),
   modelosDoProvedor: (provedor: string, funcao: string) =>
@@ -167,7 +173,8 @@ export const api = {
 };
 
 export type Eu = {
-  operador: { criado_em: string; ultimo_acesso_em: string | null };
+  operador: { nome: string; email: string; criado_em: string; ultimo_acesso_em: string | null };
+  espaco: EspacoDeTrabalho;
   instalacao: { subdominio_bot: string; subdominio_app: string };
   empresas: number;
   agentes: number;
@@ -325,6 +332,20 @@ export type Modelos = {
 };
 
 export type CanalDisponivel = { nome: string; externo: boolean };
+
+/** O espaço de trabalho: como esta instalação se chama e de quem ela é. Uma linha só, como o
+ *  operador, e não se confunde com as empresas atendidas, que moram em `Empresa`. */
+export type EspacoDeTrabalho = {
+  nome: string;
+  sigla: string;
+  negocio_nome: string;
+  negocio_documento: string;
+  negocio_email: string;
+  negocio_telefone: string;
+  negocio_site: string;
+};
+
+export type PerfilDoOperador = { nome: string; email: string };
 
 export type PerfilDoAgente = {
   funcao?: "suporte" | "vendas" | "atendimento" | null;

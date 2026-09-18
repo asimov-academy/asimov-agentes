@@ -151,3 +151,55 @@ async def test_o_csrf_da_resposta_e_o_da_sessao_de_quem_pediu(painel: httpx.Asyn
     cookie = painel.cookies["asimov_painel"]
     dados = (await painel.get("/painel/api/eu")).json()
     assert dados["csrf"] == servico.token_csrf(cookie)
+
+
+# Espaço de trabalho e perfil do operador
+
+
+async def com_escrita(painel: httpx.AsyncClient) -> httpx.AsyncClient:
+    """Carrega o token de escrita, como o front faz na primeira chamada."""
+    painel.headers["X-Painel-CSRF"] = (await painel.get("/painel/api/eu")).json()["csrf"]
+    return painel
+
+
+async def test_espaco_nasce_vazio_e_o_eu_o_devolve(dentro: httpx.AsyncClient):
+    dados = (await dentro.get("/painel/api/eu")).json()
+    assert dados["espaco"] == {
+        "nome": "",
+        "sigla": "",
+        "negocio_nome": "",
+        "negocio_documento": "",
+        "negocio_email": "",
+        "negocio_telefone": "",
+        "negocio_site": "",
+    }
+    assert dados["operador"]["nome"] == ""
+
+
+async def test_grava_o_espaco_e_o_perfil_e_le_de_volta(dentro: httpx.AsyncClient):
+    dentro = await com_escrita(dentro)
+    espaco = await dentro.put(
+        "/painel/api/espaco",
+        json={"nome": "Estúdio Exemplo", "sigla": "EX", "negocio_nome": "Estúdio Exemplo ME"},
+    )
+    assert espaco.status_code == 204, espaco.text
+    perfil = await dentro.put("/painel/api/perfil", json={"nome": "Alex", "email": "alex@exemplo.com.br"})
+    assert perfil.status_code == 204, perfil.text
+
+    dados = (await dentro.get("/painel/api/eu")).json()
+    assert dados["espaco"]["nome"] == "Estúdio Exemplo"
+    assert dados["espaco"]["sigla"] == "EX"
+    assert dados["espaco"]["negocio_nome"] == "Estúdio Exemplo ME"
+    assert dados["operador"]["nome"] == "Alex"
+    assert dados["operador"]["email"] == "alex@exemplo.com.br"
+
+
+async def test_espaco_e_perfil_exigem_sessao(painel: httpx.AsyncClient):
+    assert (await painel.put("/painel/api/espaco", json={"nome": "x"})).status_code == 401
+    assert (await painel.put("/painel/api/perfil", json={"nome": "x"})).status_code == 401
+
+
+async def test_sigla_longa_demais_e_recusada(dentro: httpx.AsyncClient):
+    dentro = await com_escrita(dentro)
+    resposta = await dentro.put("/painel/api/espaco", json={"sigla": "ABCD"})
+    assert resposta.status_code == 422

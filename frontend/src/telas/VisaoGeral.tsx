@@ -10,6 +10,7 @@ import {
 } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
+import { Cabecalho } from "../design/Cabecalho";
 import { Cartao } from "../design/Cartao";
 import { Carregando } from "../design/Carregando";
 import { Grafico, type Ponto } from "../design/Grafico";
@@ -112,7 +113,7 @@ function veredito(dados: Dados, dias: Periodo): string {
   return "Tudo no ar";
 }
 
-const REGUA = { ok: "border-l-ok", atencao: "border-l-atencao", perigo: "border-l-perigo" };
+const PONTO = { ok: "bg-ok", atencao: "bg-atencao", perigo: "bg-perigo" };
 
 export function VisaoGeral({
   empresas,
@@ -165,16 +166,26 @@ export function VisaoGeral({
 
   return (
     <>
-      {/* O veredito. A régua de estado à esquerda é o dispositivo do design system para tom, em
-          escala de título: a frase inteira fica numa cor só, e a cor mora na régua. */}
-      <header
-        className={`border-l-4 pl-5 ${dados ? REGUA[dados.situacao.cor] : "border-l-dim"}`}
-      >
-        <h1 className="max-w-[34ch] text-2xl font-semibold leading-tight tracking-tight text-texto md:text-3xl">
-          {erro ? "O painel não conseguiu somar o período" : esperando ? "Somando o período" : veredito(dados, dias)}
-        </h1>
-
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+      {/* Mesmo cabeçalho das outras seções. O veredito era um título de duas linhas com régua
+          colorida à esquerda, e esta era a única tela que não começava pelo nome dela. Agora ele é
+          a linha de contexto, com o ponto da cor do estado, como no menu. */}
+      <Cabecalho
+        titulo="Visão geral"
+        contexto={
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 shrink-0 rounded-full ${dados ? PONTO[dados.situacao.cor] : "bg-dim"}`}
+            />
+            {erro
+              ? "O painel não conseguiu somar o período"
+              : esperando
+                ? "Somando o período"
+                : veredito(dados, dias)}
+          </span>
+        }
+        acoes={
+          <>
           <div className="flex rounded-md border border-borda p-0.5" role="group" aria-label="Período">
             {PERIODOS.map((p) => (
               <button
@@ -205,8 +216,9 @@ export function VisaoGeral({
               ))}
             </select>
           )}
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {erro ? (
         <div className="mt-10">

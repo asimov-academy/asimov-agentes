@@ -83,4 +83,4 @@ async def exige_csrf(request: Request) -> None:
     if not mesma_origem(request):
         raise HTTPException(status_code=403, detail="pedido de outra origem")
     if not servico.csrf_confere(token_da_sessao(request), request.headers.get(CABECALHO_CSRF, "")):
-        raise HTTPException(status_code=403, detail="token de escrita ausente ou inválido")
+        raise HTTPException(status_code=403, detail="sua sessão expirou; entre no painel de novo")

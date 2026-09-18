@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import { api, ENTRAR, guardaCsrf, SemSessao, type Empresa, type Eu } from "./api/cliente";
 import { Aviso } from "./design/Aviso";
@@ -18,6 +18,10 @@ export function App() {
   const [empresa, setEmpresa] = useState("");
   const [situacao, setSituacao] = useState<Situacao | null>(null);
   const [erro, setErro] = useState<string>("");
+
+  const releEu = useCallback(() => {
+    api.eu().then(setEu).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     let vivo = true;
@@ -96,7 +100,7 @@ export function App() {
             element={<Contatos empresas={empresas} empresa={empresa} aoTrocarEmpresa={setEmpresa} />}
           />
           <Route path="/conhecimento" element={<EmBreve titulo="Conhecimento" />} />
-          <Route path="/configuracoes" element={<Configuracoes eu={eu} />} />
+          <Route path="/configuracoes" element={<Configuracoes eu={eu} aoMudarConta={releEu} />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Routes>
       )}

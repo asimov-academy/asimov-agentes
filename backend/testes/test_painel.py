@@ -375,3 +375,23 @@ async def test_o_banco_recusa_a_segunda_conta(sessao):
         async with sessao() as s:
             s.add(UsuarioPainel(senha=servico.cifra_senha("outra-senha-comprida")))
             await s.commit()
+
+
+async def test_situacao_diz_o_que_contou_nos_quatro_estados():
+    """O texto do ponto de situação tem um formato só, e nunca a palavra handoff.
+
+    Ele dizia "tudo no ar" no verde e "N handoffs vencidos" no amarelo: dois formatos, e um deles
+    com palavra do código. Agora ele sempre diz o que foi contado, e o verde mostra os dois zeros.
+    """
+    from app.painel.servico import _situacao
+
+    vencido = {"vencido": True}
+    falha = {"tipo": "envio_falhou"}
+
+    assert _situacao([], []) == {"cor": "ok", "texto": "0 falhas · 0 paradas"}
+    assert _situacao([falha], []) == {"cor": "atencao", "texto": "1 falha · 0 paradas"}
+    assert _situacao([], [vencido, vencido]) == {"cor": "atencao", "texto": "0 falhas · 2 paradas"}
+    assert _situacao([{"tipo": "canal_fora_do_ar"}], []) == {"cor": "perigo", "texto": "canal fora do ar"}
+
+    for falhas, handoffs in (([], []), ([falha], [vencido])):
+        assert "handoff" not in _situacao(falhas, handoffs)["texto"]

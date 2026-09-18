@@ -1,19 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, ErroDaApi, SemSessao, type Empresa, type LinhaDeCanal } from "../api/cliente";
+import { useNavigate } from "react-router-dom";
+import {
+  api,
+  ErroDaApi,
+  SemSessao,
+  type CanalDisponivel,
+  type Empresa,
+  type LinhaDeCanal,
+} from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
 import { Carregando } from "../design/Carregando";
+import { Icone } from "../design/Icone";
 import { Marca } from "../design/Marca";
 import { Modal } from "../design/Modal";
 import { Vazio } from "../design/Vazio";
 import { CANAIS, ROTULO_DO_CANAL } from "./agente/canais";
 
-/** A tela de Canais: uma linha por agente com a resposta do canal agora.
+/** A tela de Canais, em duas partes.
  *
- *  Cada canal é perguntado em separado, e o que não responder vira linha vermelha em vez de
- *  derrubar a tela. Criar canal continua no terminal nesta versão; aqui dá para conferir,
- *  reconectar o WhatsApp e ler o QR code de novo.
+ *  **As integrações**: o que esta instalação sabe conectar, o que cada uma exige antes de começar e
+ *  quantos agentes já atendem por ela. Faltava: a tela só mostrava quem já tinha canal, e quem
+ *  abria sem nenhum agente não descobria por aqui o que dava para conectar.
+ *
+ *  **Quem está atendendo**: uma linha por agente com a resposta do canal agora. Cada canal é
+ *  perguntado em separado, e o que não responder vira linha vermelha em vez de derrubar a tela.
  */
 
 /** A cor da situação vira uma barra por dentro do cartão, nunca a borda de um lado: borda mais
@@ -35,6 +47,7 @@ export function Canais({
   aoTrocarEmpresa: (id: string) => void;
 }) {
   const [linhas, setLinhas] = useState<LinhaDeCanal[] | null>(null);
+  const [disponiveis, setDisponiveis] = useState<CanalDisponivel[]>([]);
   const [erro, setErro] = useState("");
   const [qr, setQr] = useState<{ agente: string; texto: string | null } | null>(null);
   const [ocupado, setOcupado] = useState("");
@@ -51,6 +64,13 @@ export function Canais({
   }, [empresa]);
 
   useEffect(busca, [busca]);
+
+  // O catálogo não depende da empresa escolhida: é o que a instalação sabe conectar.
+  useEffect(() => {
+    api.canais().then(setDisponiveis).catch(() => setDisponiveis([]));
+  }, []);
+
+  const navega = useNavigate();
 
   async function reinicia(linha: LinhaDeCanal) {
     setOcupado(linha.agente_id);
@@ -104,8 +124,53 @@ export function Canais({
         }
       />
 
+      {disponiveis.length > 0 && (
+        <section className="mt-8">
+          <h2 className="rotulo">Integrações desta instalação</h2>
+          <ul className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {disponiveis.map((c) => {
+              const texto = CANAIS[c.nome];
+              const quantos = (linhas ?? []).filter((l) => l.canal === c.nome).length;
+              return (
+                <li
+                  key={c.nome}
+                  className="flex flex-col gap-2 rounded-lg border border-borda bg-surface p-4"
+                >
+                  <span className="flex items-start gap-2.5">
+                    {texto && <Marca nome={texto.marca} tamanho={18} className="mt-0.5 text-muted" />}
+                    <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-texto">
+                      {ROTULO_DO_CANAL(c.nome)}
+                    </span>
+                  </span>
+
+                  <p className="text-sm leading-snug text-muted">{texto?.serve}</p>
+                  <p className="text-xs leading-snug text-dim">Precisa de {texto?.exige ?? "nada"}.</p>
+                  {texto?.atencao && (
+                    <p className="flex items-start gap-1.5 text-xs leading-snug text-atencao">
+                      <Icone nome="stat-warning" tamanho={14} className="mt-px" />
+                      {texto.atencao}
+                    </p>
+                  )}
+
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+                    <span className="text-xs text-dim">
+                      {quantos === 0 ? "nenhum agente" : quantos === 1 ? "1 agente" : `${quantos} agentes`}
+                    </span>
+                    <Botao pequeno icone="act-add" onClick={() => navega("/agentes/novo")}>
+                      Criar agente
+                    </Botao>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <h2 className="rotulo mt-10">Quem está atendendo</h2>
+
       {erro ? (
-        <div className="mt-10">
+        <div className="mt-3">
           <Aviso tom="erro" titulo="não deu para carregar os canais">
             <p>{erro}</p>
             <div className="mt-4">
@@ -120,13 +185,13 @@ export function Canais({
           <Carregando tipo="pulso" o_que="perguntando a cada canal" />
         </div>
       ) : linhas.length === 0 ? (
-        <div className="mt-16">
-          <Vazio titulo="nenhum agente ainda" icone="cont-link">
-            Crie um agente para ter o que conferir aqui.
+        <div className="mt-10">
+          <Vazio titulo="nenhum agente atendendo ainda" icone="cont-link">
+            Escolha uma integração acima para criar o primeiro.
           </Vazio>
         </div>
       ) : (
-        <ul className="mt-10 flex flex-col gap-3">
+        <ul className="mt-3 flex flex-col gap-3">
           {linhas.map((l) => {
             const marca = CANAIS[l.canal]?.marca;
             return (

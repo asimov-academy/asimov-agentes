@@ -41,6 +41,26 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Espaço de trabalho, perfil do operador e dados do negócio (v0.22.0)
+
+O painel não guardava nada sobre quem opera nem sobre a instalação: o menu dizia ASIMOV para todo
+mundo, e Configurações só mostrava o que vinha do `.env`. Entrou a tabela `espaco_trabalho` (uma
+linha, como o operador) com nome, sigla e os dados do negócio, mais `nome` e `email` em
+`usuario_painel`. Migração `0018`, aditiva e com padrão vazio: quem não preencher nada continua
+vendo o painel como antes.
+
+O nome e a sigla trocam o que o menu mostra, que é o ponto: quem atende várias empresas reconhece
+de qual instalação é a aba aberta. Os dados do negócio são de quem opera, nunca das empresas
+atendidas, que moram em `clientes/`.
+
+Junto: o texto do ponto de situação passou a ter um formato só nos quatro estados ("0 falhas ·
+0 paradas" no verde, em vez de "tudo no ar"), dizendo o que foi contado, e a palavra "handoff" saiu
+dele. A Visão geral passou a usar o mesmo `Cabecalho` das outras telas, com o veredito virando a
+linha de contexto e o ponto da cor do estado. A tela de Canais ganhou o catálogo das integrações,
+que faltava: ela só mostrava quem já tinha canal.
+
+spec/frontend.md, seções 4 e 5.
+
 ## 2026-09-18: Nada de caixa nativa do navegador no painel (v0.21.5)
 
 O X do popup do agente não fechava. Ele chamava `window.confirm` antes de sair, e onde o navegador
