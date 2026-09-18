@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O áudio leva o idioma (v0.14.1)
+
+- **Achado na validação**: um "Boa noite" voltou transcrito como "Боооооооую ночь." O transcritor adivinha o idioma pelo som, e áudio curto ou com ruído cai em outra língua; o mesmo contato mandou outro áudio que saiu certo.
+- **`IDIOMA_AUDIO` (padrão `pt`)** vai junto na transcrição: `language` na OpenAI e na Groq, e uma frase no prompt quando quem transcreve é o Gemini. Vazio volta a deixar o transcritor adivinhar, para quem atende em vários idiomas.
+- É configuração da instalação, não do agente: quem precisar de agentes em idiomas diferentes na mesma VPS vai pedir, e aí vira campo do agente.
+
 ## 2026-09-18: O código do handoff virou opcional (v0.14.0)
 
 - **Pergunta do operador**: "precisa do código?". Na maior parte das vezes não: na conversa do contato ela já está identificada, e no chat de quem recebeu o aviso o código só resolve quando há mais de uma conversa em atendimento.

@@ -53,6 +53,9 @@ class Config(BaseSettings):
 
     # O arquivo é insumo: depois de virar texto, ninguém mais o lê. A limpeza é diária, então na
     # prática ele dura de um a dois dias, o que basta para conferir um atendimento estranho.
+    # Idioma dos áudios que chegam. Sem isso o transcritor adivinha pelo som e erra em áudio curto
+    # ou com ruído: "Boa noite" voltou como russo no teste da v0.14.0. Vazio deixa ele adivinhar.
+    idioma_audio: str = "pt"
     midia_horas_no_disco: int = 24
     midia_limite_bytes: int = 20 * 1024 * 1024
     midia_limite_audio_segundos: int = 5 * 60

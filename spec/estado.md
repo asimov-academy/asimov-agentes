@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.14.0` em `asimov-academy/asimov-agentes` (público): `/retomar` sem código devolve a conversa em que foi escrito, ou a única em atendimento; com várias, o destino recebe a lista para escolher.
+- `v0.14.1` em `asimov-academy/asimov-agentes` (público): a transcrição leva o idioma configurado (`IDIOMA_AUDIO`, padrão `pt`), depois de um "Boa noite" voltar em russo.
+- `v0.14.0`: `/retomar` sem código devolve a conversa em que foi escrito, ou a única em atendimento; com várias, o destino recebe a lista para escolher.
 - `v0.13.5`: `/retomar <código>` escrito do número do agente vale em qualquer conversa, inclusive na do contato.
 - `v0.13.4`: `/retomar` vale também escrito do aparelho do agente no chat do handoff, e nenhuma resposta do webhook sai mais sem log.
 - `v0.13.3`: o log do webhook passa a dizer de qual conversa é cada mensagem aceita ou ignorada.
