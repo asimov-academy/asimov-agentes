@@ -292,10 +292,18 @@ Dois caminhos:
 - [WhatsApp Manager](https://business.facebook.com/wa/manage/): na página de contas, embaixo do
   nome da conta.
 
-Se o setup disser que o token não enxerga nenhuma conta, o problema não é achar o ID: é o token. No
-[passo 7](#7-usuário-do-sistema-e-token-permanente), confira que o usuário do sistema tem a conta de
-WhatsApp Business como ativo e que o token saiu com `whatsapp_business_management` e
-`whatsapp_business_messaging`.
+Se o setup disser que o token não enxerga nenhuma conta, o problema não é achar o ID: é o token.
+
+**A causa mais comum: o token foi gerado antes de a conta ser atribuída ao usuário do sistema.** O
+token guarda os ativos de quando nasceu, então atribuir a conta depois não vale para ele. Volte em
+Usuários do sistema, confira que a conta está nos ativos e **gere o token de novo**. O antigo pode
+ser revogado.
+
+Fora disso, confira no [passo 7](#7-usuário-do-sistema-e-token-permanente) que o token saiu com
+`whatsapp_business_management` e `whatsapp_business_messaging`.
+
+Informar o ID à mão resolve a tela, mas não resolve o token: se ele não alcança a conta, a Meta vai
+recusar as chamadas seguintes com erro de permissão.
 
 ## Conferir se funcionou
 
@@ -327,7 +335,7 @@ dizer que a mensagem chegou.
 | Não consigo adicionar o número | ele está em uso no app do WhatsApp | apague a conta do WhatsApp naquele número e tente de novo |
 | Não acho "Produtos" no painel | virou **Casos de uso** em 2026 | Casos de uso > Personalizar |
 | Não acho o ID da conta de WhatsApp Business | o painel não mostra isso no fluxo guiado | não precisa: o setup descobre. Se quiser conferir, veja [onde fica](#onde-fica-o-id-da-conta-de-whatsapp-business) |
-| O setup diz que o token não enxerga nenhuma conta | usuário do sistema sem a conta como ativo, ou token sem as permissões de WhatsApp | passo 7 |
+| O setup diz que o token não enxerga nenhuma conta | o token foi gerado antes de a conta ser atribuída ao usuário do sistema | gere o token de novo, no passo 7 |
 
 ## Caminho rápido: número de teste
 
