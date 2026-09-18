@@ -233,10 +233,11 @@ configura_ritmo_novo() {
   local op buffer velocidade maximo
   echo
   dica "Muda depois em Editar agente."
-  dica "Rápido: responde 2 s depois da última mensagem, 1 s de digitando por mensagem."
-  dica "Como no WhatsApp: espera 8 s e digita no ritmo de uma pessoa (até 20 s por mensagem)."
   echo
-  escolha op "Ritmo das respostas" "Rápido, para testar" "Como no WhatsApp" "Escolher os tempos"
+  escolha op "Ritmo das respostas" \
+    "Rápido, para testar  ${CINZA}responde 2 s depois da última mensagem${NORMAL}" \
+    "Como no WhatsApp  ${CINZA}espera 8 s e digita no ritmo de uma pessoa${NORMAL}" \
+    "Escolher os tempos"
   case "$op" in
     1) buffer=2 velocidade=30 maximo=1 ;;
     2) buffer=8 velocidade=6 maximo=20 ;;

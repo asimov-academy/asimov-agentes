@@ -79,17 +79,9 @@ export function Modal({
         aria-modal="true"
         aria-label={titulo}
         tabIndex={-1}
-        className={`relative my-auto w-full ${largura} border border-borda bg-surface shadow-ativo focus:outline-none`}
+        className={`relative my-auto w-full ${largura} rounded-xl border border-borda bg-surface shadow-alto focus:outline-none`}
       >
-        {/* Os dois cantos marcados, a assinatura do design system. */}
-        <svg viewBox="0 0 12 12" className="pointer-events-none absolute -left-px -top-px h-3 w-3 text-ciano">
-          <path d="M0 12V0H12" stroke="currentColor" fill="none" strokeWidth={2} />
-        </svg>
-        <svg viewBox="0 0 12 12" className="pointer-events-none absolute -bottom-px -right-px h-3 w-3 text-ciano">
-          <path d="M12 0V12H0" stroke="currentColor" fill="none" strokeWidth={2} />
-        </svg>
-
-        <header className="flex items-start justify-between gap-6 border-b border-borda p-6 md:p-8">
+        <header className="flex items-start justify-between gap-6 border-b border-borda p-6 md:px-8 md:py-6">
           <div className="min-w-0">
             <h2 className="text-2xl font-semibold tracking-tight text-texto">{titulo}</h2>
             {subtitulo && <p className="mt-1 text-sm text-muted">{subtitulo}</p>}
@@ -97,7 +89,7 @@ export function Modal({
           <button
             onClick={aoFechar}
             aria-label="Fechar"
-            className="shrink-0 border border-borda p-2 text-muted transition-colors hover:border-texto/40 hover:text-texto"
+            className="shrink-0 rounded-md border border-borda p-2 text-muted transition-colors hover:border-texto/40 hover:text-texto"
           >
             <Icone nome="sys-close" tamanho={16} />
           </button>

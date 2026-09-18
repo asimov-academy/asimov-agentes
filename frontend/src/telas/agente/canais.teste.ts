@@ -23,4 +23,16 @@ describe("texto dos canais", () => {
     expect(CANAIS.waha.rotulo).not.toContain("waha");
     expect(CANAIS.nativo.rotulo).not.toContain("nativo");
   });
+
+  /** O terminal exige confirmar o risco da API não oficial e conta a cobrança da Meta. O painel
+   *  escondia as duas coisas, e é por ele que a maioria escolhe o canal. */
+  it("os dois canais com pegadinha avisam antes da escolha", () => {
+    expect(CANAIS.waha.atencao).toMatch(/bloquear/i);
+    expect(CANAIS.whatsapp.atencao).toMatch(/cobra/i);
+    expect(CANAIS.chatwoot.atencao).toBeUndefined();
+  });
+
+  it("todo canal tem a marca para o operador reconhecer de relance", () => {
+    for (const nome of DE_HOJE) expect(CANAIS[nome].marca, nome).toBeTruthy();
+  });
 });

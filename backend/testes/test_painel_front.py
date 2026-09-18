@@ -76,13 +76,18 @@ async def test_caminho_para_fora_da_pasta_nao_le_arquivo_da_vps(dentro: httpx.As
 
 
 async def test_sem_o_build_o_painel_diz_o_que_fazer(dentro: httpx.AsyncClient, tmp_path, monkeypatch):
-    """Imagem subida sem o front construído não pode responder uma página em branco."""
+    """Imagem subida sem o front construído não pode responder uma página em branco.
+
+    E o que fazer precisa ser algo que o operador consiga: ele não tem npm nem a pasta `frontend/`
+    na VPS (auditoria de copy de 2026-09-18).
+    """
     from app.painel import rotas
 
     monkeypatch.setattr(rotas, "_pasta_do_front", lambda: tmp_path)
     resposta = await dentro.get("/painel/app")
     assert resposta.status_code == 503
-    assert "npm run build" in resposta.text
+    assert "asimov atualizar" in resposta.text
+    assert "npm" not in resposta.text
 
 
 # GET /painel/api/eu

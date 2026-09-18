@@ -198,10 +198,8 @@ fluxo_diagnostico() {
   if [ "$(estado_get versao)" != "$VERSAO" ]; then
     aviso "A versão instalada não é a do código. Rode: asimov atualizar"
   fi
-  dica "Caminho público que responde 404 com o arquivo certo no disco é o servidor web com a"
-  dica "configuração antiga em memória. Recarregue com:"
+  dica "404 com o arquivo no lugar é o servidor web com a configuração antiga em memória."
   dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc restart caddy"
-  dica "Log da API:"
   dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc logs -n 50 api"
 }
 

@@ -80,11 +80,11 @@ function paradaHa(iso: string): string {
 /** A falha dita como o operador entende. O tipo cru continua embaixo, menor: é por ele que se
  *  procura no log, mas não é ele que explica o que aconteceu. */
 const FALHA: Record<string, string> = {
-  turno_modelo_falhou: "O modelo não respondeu",
+  turno_modelo_falhou: "O modelo de IA não respondeu",
   envio_falhou: "A mensagem não saiu",
   handoff_falhou: "Não deu para passar a conversa",
-  webhook_json_invalido: "Chegou um webhook que não deu para ler",
-  webhook_token_desconhecido: "Webhook de um agente que não existe mais",
+  webhook_json_invalido: "Chegou uma mensagem que não deu para ler",
+  webhook_token_desconhecido: "Mensagem para um agente que não existe mais",
   canal_fora_do_ar: "O canal saiu do ar",
 };
 
@@ -175,13 +175,13 @@ export function VisaoGeral({
         </h1>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <div className="flex border border-borda" role="group" aria-label="Período">
+          <div className="flex rounded-md border border-borda p-0.5" role="group" aria-label="Período">
             {PERIODOS.map((p) => (
               <button
                 key={p}
                 onClick={() => setDias(p)}
                 aria-pressed={p === dias}
-                className={`px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] transition-colors ${
+                className={`rounded px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   p === dias ? "bg-texto text-void" : "text-muted hover:text-texto"
                 }`}
               >
@@ -195,7 +195,7 @@ export function VisaoGeral({
               value={empresa}
               aria-label="Empresa"
               onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
+              className="rounded-md border border-borda bg-surface px-3 py-2 text-xs text-muted transition-colors hover:text-texto focus:border-ciano"
             >
               <option value="">Todas as empresas</option>
               {empresas.map((e) => (
@@ -244,7 +244,7 @@ export function VisaoGeral({
             <div className="grid gap-8 border-t border-borda pt-8 sm:grid-cols-3">
               <Destaque
                 valor={numero(dados.totais.turnos)}
-                explicacao="turnos respondidos"
+                explicacao="respostas dadas"
                 variacao={dados.variacao.turnos}
                 dias={dias}
               />
@@ -256,29 +256,29 @@ export function VisaoGeral({
                 subirEBom={false}
                 rodape={
                   dados.totais.custo_parcial
-                    ? "um modelo não informou o preço, então o real é maior"
+                    ? "um modelo não informou o preço: o valor verdadeiro é maior"
                     : undefined
                 }
               />
               <Destaque
-                valor={dados.resolucao.porcento === null ? "sem conversas" : `${dados.resolucao.porcento}%`}
+                valor={dados.resolucao.porcento === null ? "0%" : `${dados.resolucao.porcento}%`}
                 explicacao={
                   dados.resolucao.porcento === null
                     ? "nenhuma conversa começou neste período"
-                    : `das ${numero(dados.resolucao.conversas)} conversas, fechadas sem chamar ninguém`
+                    : `das ${numero(dados.resolucao.conversas)} conversas terminaram sem chamar uma pessoa`
                 }
               />
             </div>
 
             {dados.totais.turnos === 0 ? (
               <div className="mt-8">
-                <Vazio titulo="nenhum turno ainda" icone="comm-chat">
+                <Vazio titulo="nenhuma resposta ainda" icone="comm-chat">
                   A curva aparece na primeira resposta de um agente.
                 </Vazio>
               </div>
             ) : (
               <div className="mt-8">
-                <Grafico tipo="area" pontos={serie} rotuloDoValor={(p) => `${p.valor} turnos`} />
+                <Grafico tipo="area" pontos={serie} rotuloDoValor={(p) => `${p.valor} respostas`} />
               </div>
             )}
           </section>
@@ -289,7 +289,7 @@ export function VisaoGeral({
             <Cartao titulo="Quem respondeu">
               {dados.agentes.length === 0 ? (
                 <Vazio titulo="nenhum agente respondeu" icone="nav-team">
-                  Cada agente aparece aqui com os turnos e o custo dele.
+                  Crie um agente e ele aparece aqui, com as respostas e o custo.
                 </Vazio>
               ) : (
                 <div className="flex flex-col gap-4">
@@ -300,7 +300,7 @@ export function VisaoGeral({
                       escrita="nome"
                       valor={a.turnos}
                       de={maisTurnos}
-                      escrito={`${numero(a.turnos)} turnos, ${dinheiro(a.custo)}`}
+                      escrito={`${numero(a.turnos)} respostas, ${dinheiro(a.custo)}`}
                     />
                   ))}
                 </div>
@@ -310,7 +310,7 @@ export function VisaoGeral({
             <Cartao titulo="Onde travou">
               {dados.falhas.length === 0 ? (
                 <Vazio titulo="nada travou" icone="stat-success">
-                  Falha de modelo, de envio e de webhook aparecem aqui assim que acontecem.
+                  Falha de IA, de envio e de mensagem recebida aparece aqui assim que acontece.
                 </Vazio>
               ) : (
                 <ul className="flex flex-col divide-y divide-borda">
@@ -318,7 +318,7 @@ export function VisaoGeral({
                     <li key={i} className="flex flex-col gap-1 py-3 first:pt-0">
                       <div className="flex items-baseline justify-between gap-4">
                         <span className="text-sm text-texto">{FALHA[f.tipo] ?? f.tipo}</span>
-                        <span className="shrink-0 font-mono text-[0.65rem] text-dim">
+                        <span className="shrink-0 text-[0.6875rem] text-dim">
                           {dataEHora(f.criado_em)}
                         </span>
                       </div>
@@ -326,9 +326,9 @@ export function VisaoGeral({
                         {f.agente ? `${f.agente}, em ${f.cliente}` : "sem agente identificado"}
                       </p>
                       {f.resumo && (
-                        <p className="break-words font-mono text-xs text-dim">{f.resumo}</p>
+                        <p className="break-words text-sm text-muted">{f.resumo}</p>
                       )}
-                      <p className="font-mono text-[0.65rem] text-dim">{f.tipo}</p>
+                      <p className="tecnico text-[0.6875rem] text-dim">{f.tipo}</p>
                     </li>
                   ))}
                 </ul>
@@ -370,7 +370,7 @@ export function VisaoGeral({
           </div>
 
           <p className="mt-12 text-sm text-dim">
-            Os mesmos números que <span className="font-mono text-muted">asimov consumo</span>{" "}
+            Os mesmos números que <span className="tecnico text-muted">asimov consumo</span>{" "}
             mostra no terminal.
           </p>
         </>
@@ -401,8 +401,11 @@ function Espera({ handoff, mostrarEmpresa }: { handoff: HandoffAberto; mostrarEm
         <span className={`text-sm ${handoff.vencido ? "text-perigo" : "text-muted"}`}>
           parada {paradaHa(handoff.iniciado_em)}
         </span>
-        {/* O código escrito como o comando que devolve a conversa ao agente: se explica sozinho. */}
-        <span className="font-mono text-xs text-dim">/retomar {handoff.codigo}</span>
+        {/* O código do jeito que se escreve no canal, com o que ele faz ao lado: sozinho, ele
+            não diz onde digitar. Em Conversas existe o botão que faz o mesmo. */}
+        <span className="text-sm text-dim">
+          devolve ao agente com <span className="tecnico text-muted">/retomar {handoff.codigo}</span>
+        </span>
       </div>
     </li>
   );

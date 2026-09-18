@@ -1,3 +1,5 @@
+import { Icone } from "./Icone";
+
 /** O stepper do design system (seção 5, "04 // WAYFINDING"), na vertical.
  *
  *  O original é horizontal, com o círculo de 32px, o traço entre eles, o certo no passo pronto, o
@@ -33,9 +35,7 @@ export function Passos({
                 }`}
               >
                 {pronto ? (
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3}>
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  <Icone nome="act-check" tamanho={14} />
                 ) : agora ? (
                   <span className="h-2 w-2 animate-pulse rounded-full bg-texto" />
                 ) : (

@@ -28,14 +28,20 @@
 }
 
 @layer components {
-  /* `.comp-label` do design system: mono, 0.65rem, `dim`, maiúsculo, espaçado em 0.1em. */
+  /* O rótulo da estrutura. Era mono no design system; passou a Inter junto com o resto da
+   * interface, e a mono ficou só para dado técnico (número, modelo, endereço, código). */
   .rotulo {
-    @apply font-mono text-[0.65rem] uppercase tracking-[0.1em] text-dim;
+    @apply text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-dim;
   }
 
-  /* `.section-title`: o título de seção em ciano, com a régua embaixo. */
+  /* Título de seção: Inter, com a régua embaixo. */
   .titulo-secao {
-    @apply mb-8 block border-b border-borda pb-4 font-mono text-xs uppercase tracking-[0.2em] text-ciano;
+    @apply mb-8 block border-b border-borda pb-4 text-xs font-semibold uppercase tracking-[0.12em] text-ciano;
+  }
+
+  /* Dado técnico: o único lugar onde a mono continua. Modelo, endereço, código, identificador. */
+  .tecnico {
+    @apply font-mono text-xs;
   }
 }
 

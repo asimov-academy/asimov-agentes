@@ -227,9 +227,8 @@ tela_painel_oferta() {
   local ip
   ip=$(ip_publico)
   secao "Painel no navegador"
-  info "A plataforma está no ar. Dá para administrar tudo pelo navegador, no computador e no"
-  info "celular: agentes, canais, conversas e consumo, sem abrir SSH."
-  dica "Criar e configurar agente vira um passo a passo com prévia de como ele vai responder."
+  info "A plataforma está no ar. O painel administra agentes, canais, conversas e consumo pelo"
+  info "navegador, no computador e no celular, com passo a passo para criar agente."
   echo
   aviso "Precisa de um registro DNS novo: $(destaque "app.$(env_get DOMINIO_BASE)") apontando para o IP $(destaque "${ip:-desta VPS}")."
   echo

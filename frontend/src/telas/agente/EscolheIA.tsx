@@ -7,7 +7,10 @@ import { FormDaChave, NOME_DO_PROVEDOR as NOMES } from "./FormDaChave";
 /** Provedor, chave e modelo de uma função do agente.
  *
  *  A IA é escolha de cada agente, não da instalação. A chave do provedor é pedida uma vez só: o
- *  backend testa, guarda cifrada e nunca devolve. Daqui em diante o front só sabe que ela existe.
+ *  servidor testa, guarda cifrada e nunca devolve. Daqui em diante o front só sabe que ela existe.
+ *
+ *  Serve o onboarding e a ficha: a aba Configurações pedia o modelo em texto cru, no formato
+ *  `provedor:modelo`, enquanto este escolhedor já existia ao lado (auditoria de copy de 2026-09-18).
  */
 export function EscolheIA({
   funcao,
@@ -39,7 +42,7 @@ export function EscolheIA({
       .catch(() => setLista([]));
   }, [provedor, temChave, funcao]);
 
-  if (erro && !catalogo) return <p className="font-mono text-xs text-perigo">{erro}</p>;
+  if (erro && !catalogo) return <p className="text-sm text-perigo">{erro}</p>;
   if (!catalogo) return <Carregando tipo="pontos" o_que="buscando os provedores" />;
 
   const provedores = funcao === "transcricao" ? catalogo.provedores_transcricao : catalogo.provedores;
@@ -55,12 +58,12 @@ export function EscolheIA({
               if (valor.split(":")[0] !== p) aoMudar("");
             }}
             aria-pressed={provedor === p}
-            className={`border px-4 py-2 text-sm transition-colors ${
+            className={`rounded-md border px-4 py-2 text-sm transition-colors ${
               provedor === p ? "border-ciano bg-ciano/5 text-texto" : "border-borda text-muted hover:border-dim"
             }`}
           >
             {NOMES[p] ?? p}
-            {catalogo.com_chave.includes(p) && <span className="ml-2 font-mono text-xs text-ok">chave ok</span>}
+            {catalogo.com_chave.includes(p) && <span className="ml-2 text-xs text-ok">chave guardada</span>}
           </button>
         ))}
       </div>
@@ -83,7 +86,7 @@ export function EscolheIA({
                     key={m}
                     onClick={() => aoMudar(m)}
                     aria-pressed={valor === m}
-                    className={`border px-3 py-2 text-left font-mono text-sm transition-colors ${
+                    className={`rounded-md border px-3 py-2 text-left font-mono text-sm transition-colors ${
                       valor === m ? "border-ciano bg-ciano/5 text-texto" : "border-borda text-muted hover:border-dim"
                     }`}
                   >

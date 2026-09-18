@@ -48,9 +48,20 @@ nasce no front.
 
 ## 3. Design system
 
-Fonte: `designsystem/`, projeto "Enterprise SaaS UI". Escuro, cantos retos, borda de 1 px, rótulo em
-mono maiúsculo, acento ciano. Os valores entram no `tailwind.config.ts` como tokens e nunca são
-escritos soltos no componente.
+Fonte: `designsystem/`, projeto "Enterprise SaaS UI". Escuro, borda de 1 px, acento ciano. Os valores
+entram no `tailwind.config.ts` como tokens e nunca são escritos soltos no componente.
+
+**A v0.21.0 se afastou do original em três pontos, a pedido do operador** (ver `spec/decisoes.md`):
+canto arredondado no lugar do canto reto, Inter no lugar da mono na estrutura, e logo de marca nas
+integrações. O resto do sistema (escuro, borda de 1 px, acento ciano, hierarquia dos botões,
+sprite de ícones) continua valendo.
+
+**Raio.** Escala curta, e nada fica reto. **Canto arredondado nunca anda com borda mais grossa de um
+lado só**: no canto a borda grossa encontra a fina e o raio vira uma cunha. Acento de cor é uma barra
+por dentro, afastada dos cantos (`absolute inset-y-4 left-2.5 w-0.5 rounded-full`), ou fica num bloco
+de canto reto, como a régua do veredito da Visão geral. Escala: `rounded-sm` selo, `rounded-md` botão pequeno, item de
+menu e campo, `rounded` botão, `rounded-lg` cartão e estado vazio, `rounded-xl` popup,
+`rounded-full` ponto e cápsula.
 
 | Token | Valor | Uso |
 |---|---|---|
@@ -69,8 +80,15 @@ escritos soltos no componente.
 Todo texto fica acima dos 4,5:1 da WCAG AA sobre os três fundos: `text` em 15:1, `muted` em 7,5:1 e
 `dim` em 5,5:1. `dim` e `muted` nasceram em 1,9:1 e 2,4:1 e sumiam no preto.
 
-Tipografia: Inter para texto, JetBrains Mono para rótulo, número, token e situação. As duas vêm dos
-pacotes `@fontsource`, só no subconjunto latino, e entram no build: são servidas da VPS, nunca de CDN.
+**Tipografia.** Inter em toda a estrutura: título, rótulo, botão, item de menu, ajuda e texto de
+apoio. A JetBrains Mono ficou só para dado técnico, na classe `.tecnico`: número de métrica, nome de
+modelo (`openai:gpt-5.1`), endereço, código e identificador. As duas vêm dos pacotes `@fontsource`,
+só no subconjunto latino, e entram no build: são servidas da VPS, nunca de CDN.
+
+**Marcas das integrações.** O logo de cada serviço fica em `design/marcas.ts` e é desenhado pelo
+`design/Marca.tsx`: preenchido, na cor da marca (`whatsapp`, `chatwoot`, `meta` como tokens), e
+nunca traçado como o resto. Fica fora de `icones.ts` de propósito: ícone é do sistema e herda a cor
+do texto, marca é de outra empresa. Nenhuma biblioteca de fora, aqui também.
 
 Os componentes não são inspirados no design system: são a forma dele. O que cada um copia, com a
 seção de origem:
@@ -79,15 +97,16 @@ seção de origem:
 |---|---|---|
 | `Botao` sólido | Fundo `texto` (quase branco) sobre preto, negrito, maiúsculo, espaçado. É o mais forte da tela | 5, 01 |
 | `Botao` acento | Contorno `ciano/50`, texto ciano, preenche no hover. **O ciano cheio não é botão**: trocar isso apaga a hierarquia | 5, 01 |
-| `Botao` fantasma | Contorno `texto/20`, fundo transparente, com os dois cantos marcados em SVG. É a assinatura do sistema | 5, 01 |
-| `Campo` | **Só borda de baixo**, `dim` em repouso e `ciano` no foco, fundo `surface`, ícone à esquerda | 5, 02 |
-| `Interruptor` | Retângulo de 48x24 com botão **quadrado** de 16px, `dim` desligado e `ciano` ligado com fundo `ciano/10`. Nada de cápsula | 5, 02 |
+| `Botao` fantasma | Contorno `texto/20`, fundo transparente. Os cantos marcados saíram com o canto reto | 5, 01 |
+| `Campo` | Moldura inteira arredondada, `borda` em repouso e `ciano` no foco, fundo `surface`, ícone à esquerda. Era só borda de baixo | 5, 02 |
+| `Interruptor` | Cápsula de 48x24 com botão redondo de 16px, `ciano` ligado com fundo `ciano/10`. Era retângulo reto | 5, 02 |
 | `Cartao` | `.comp-card`: borda de 1px `borda`, fundo `surface`, 2rem de respiro, 1.5rem entre as partes, borda clareando no hover | 5 |
-| `Aviso` | Borda de 4px à esquerda na cor do tom, ícone do sprite, título curto maiúsculo, corpo em mono | 5, 05 |
+| `Aviso` | Barra fina por dentro, à esquerda, na cor do tom, ícone do sprite, título e corpo em Inter | 5, 05 |
 | `Medidor` | Anel de 2px com arco em ciano e brilho, número em mono no centro | 5, 05 |
 | `Vazio` | Tracejado `dim` que vira `ciano` no hover, ícone em círculo apagado | 5, 02 |
-| `.rotulo` | `.comp-label`: mono, 0.65rem, `dim`, maiúsculo, espaçado em 0.1em | 5 |
-| `.titulo-secao` | `.section-title`: mono, ciano, espaçado em 0.2em, com régua embaixo | 5 |
+| `.rotulo` | `.comp-label`, em Inter: 0.6875rem, `dim`, maiúsculo, semibold, espaçado em 0.08em | 5 |
+| `.titulo-secao` | `.section-title`, em Inter: ciano, maiúsculo, com régua embaixo | 5 |
+| `.tecnico` | Mono, 12px. O único lugar onde a JetBrains Mono continua | fora do sistema |
 
 **Ícones.** Os 50 do sprite da seção 1 (grade de 24px, traço de 2px) vivem em `design/icones.ts`,
 extraídos sem retoque, e saem pelo `<Icone nome="nav-dashboard" />`. Nenhum ícone de biblioteca de

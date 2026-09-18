@@ -5,11 +5,15 @@ Estudo da opção de, depois que a plataforma sobe, o operador escolher entre **
 configuração como o setup faz e depois vira uma dash de operação (conversas em andamento,
 ferramentas, consumo, handoff).
 
-Este documento começou como análise. A construção foi autorizada pelo operador em 2026-09-18 e a
-parte 8.1 já está no repositório, ainda sem publicar e sem rodar em VPS. `spec/` continua sem
-alteração: a lista do que mudaria está no fim, e nada disso vira versão antes de o operador validar.
+> **Estudo histórico. Não use como referência do que existe hoje.**
+>
+> Escrito contra a `v0.17.0`, quando o painel ainda não existia. A decisão final foi outra: o painel
+> foi construído como SPA em React, Vite e Tailwind, e não em Jinja2 com HTMX como este documento
+> recomenda. A seção que diz que a chave do provedor não pode sair do `.env` também deixou de valer:
+> desde a v0.20.0 ela fica cifrada no banco. O que existe hoje está em `spec/frontend.md` e
+> `spec/estado.md`; as decisões, em `spec/decisoes.md`.
 
-Escrito em 2026-09-18, contra a `v0.17.0`.
+Este documento começou como análise, escrito em 2026-09-18 contra a `v0.17.0`.
 
 ## 0. O que já está construído
 

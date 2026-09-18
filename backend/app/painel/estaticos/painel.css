@@ -113,14 +113,15 @@ code,
   flex: none;
   background: var(--ciano);
   color: var(--void);
-  font: 700 14px/1 var(--mono);
+  border-radius: 8px;
+  font: 700 14px/1 var(--sans);
 }
 
 .marca span {
   display: flex;
   flex-direction: column;
-  font: 400 14px/1.3 var(--mono);
-  letter-spacing: 0.15em;
+  font: 600 14px/1.3 var(--sans);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -131,35 +132,15 @@ code,
   text-transform: none;
 }
 
-/* Cartão: borda de 1 px, fundo `surface`, canto reto, com os dois cantos marcados do sistema. */
+/* Cartão: borda de 1 px, fundo `surface`, canto arredondado como o resto do painel (v0.21.0). */
 
 .carta {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--borda);
+  border-radius: 14px;
   padding: 32px;
-}
-
-.carta::before,
-.carta::after {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-color: var(--ciano);
-  border-style: solid;
-}
-
-.carta::before {
-  top: -1px;
-  left: -1px;
-  border-width: 2px 0 0 2px;
-}
-
-.carta::after {
-  right: -1px;
-  bottom: -1px;
-  border-width: 0 2px 2px 0;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
 }
 
 .carta h2 {
@@ -168,7 +149,7 @@ code,
   letter-spacing: -0.01em;
 }
 
-/* Campo: só a borda de baixo, `dim` parado e ciano no foco. Moldura inteira é de outro sistema. */
+/* Campo: moldura inteira arredondada, `borda` parado e ciano no foco. */
 
 .campo {
   margin-top: 24px;
@@ -177,8 +158,8 @@ code,
 .campo label {
   display: block;
   margin-bottom: 8px;
-  font: 400 0.65rem/1.4 var(--mono);
-  letter-spacing: 0.1em;
+  font: 600 0.6875rem/1.4 var(--sans);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
@@ -198,9 +179,8 @@ code,
   padding: 10px 12px;
   background: var(--surface);
   color: var(--texto);
-  border: 0;
-  border-bottom: 1px solid var(--dim);
-  border-radius: 0;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
   font: 400 15px/1.4 var(--sans);
   transition: border-color 0.15s;
 }
@@ -216,7 +196,8 @@ code,
 
 .campo input:focus {
   outline: 0;
-  border-bottom-color: var(--ciano);
+  border-color: var(--ciano);
+  box-shadow: 0 0 0 1px var(--ciano);
 }
 
 /* Botões, na hierarquia do design system: o sólido conclui, o fantasma anda pela tela. */
@@ -226,14 +207,13 @@ code,
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 12px 24px;
+  padding: 12px 22px;
   border: 1px solid rgba(229, 229, 229, 0.2);
-  border-radius: 0;
+  border-radius: 10px;
   background: transparent;
   color: var(--texto);
-  font: 700 13px/1 var(--sans);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  font: 600 14px/1 var(--sans);
+  letter-spacing: 0.02em;
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -267,28 +247,46 @@ code,
   padding: 12px 16px;
   background: var(--surface);
   border: 1px solid var(--borda);
-  border-left: 4px solid var(--muted);
+  border-radius: 10px;
   font-size: 14px;
+  /* A cor do tom entra numa barra por dentro: borda mais grossa de um lado só com canto
+     arredondado faz o canto virar uma cunha. */
+  position: relative;
+  padding-left: 20px;
+}
+
+.aviso::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 8px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--muted);
 }
 
 .aviso.erro {
-  border-left-color: var(--perigo);
   color: var(--texto);
 }
 
-.aviso.ok {
-  border-left-color: var(--ok);
+.aviso.erro::before {
+  background: var(--perigo);
 }
 
-.aviso.alerta {
-  border-left-color: var(--atencao);
+.aviso.ok::before {
+  background: var(--ok);
 }
 
-/* Rótulo: o `.comp-label`, mono, pequeno, maiúsculo e espaçado. */
+.aviso.alerta::before {
+  background: var(--atencao);
+}
+
+/* Rótulo: Inter, pequeno, maiúsculo e espaçado. Era mono até a v0.21.0. */
 
 .rotulo {
-  font: 400 0.65rem/1.5 var(--mono);
-  letter-spacing: 0.1em;
+  font: 600 0.6875rem/1.5 var(--sans);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
@@ -367,8 +365,8 @@ th {
   text-align: left;
   padding: 10px 12px;
   border-bottom: 1px solid var(--borda);
-  font: 400 0.65rem/1.5 var(--mono);
-  letter-spacing: 0.1em;
+  font: 600 0.6875rem/1.5 var(--sans);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }

@@ -238,10 +238,8 @@ fluxo_waha() {
 # Devolve 1 se ele desistir. Aparece na criação e ao ligar um agente já existente no WhatsApp.
 aviso_nao_oficial() {
   echo
-  aviso "A WAHA é uma API $(destaque "não oficial"): ela conversa com o WhatsApp como se fosse o aplicativo do celular."
-  dica "A Meta não homologa nem dá suporte. O número pode ser bloqueado a qualquer momento, sem aviso."
-  dica "Use um chip só para o agente, nunca o número principal da empresa."
-  dica "As regras do WhatsApp continuam valendo: nada de disparo em massa nem mensagem para quem não falou com você."
+  aviso "API $(destaque "não oficial"): a Meta não homologa e pode bloquear o número a qualquer momento, sem aviso."
+  dica "Use um chip só do agente, nunca o número principal da empresa, e nada de disparo em massa."
   dica "O WhatsApp oficial, na opção anterior, não tem esse risco e cobra por mensagem."
   echo
   confirma "Entendi o risco. Continuar?"
@@ -484,17 +482,11 @@ pergunta_retomada() {
   local horas padrao=${1:-4} canal=${2:-waha}
   echo
   if [ "$canal" = chatwoot ]; then
-    dica "Quando um atendente responde no Chatwoot, a conversa passa a ser dele e o agente cala."
-    dica "Ele volta quando a conversa voltar para Pendente, ou sozinho depois do tempo abaixo,"
-    dica "que é a rede de segurança para quando alguém esquece de devolver. 0 deixa parado."
+    dica "Atendente que responde no Chatwoot fica com a conversa. O agente volta quando ela voltar para Pendente, ou sozinho no prazo abaixo. 0 deixa parado."
   elif [ "$canal" = whatsapp ]; then
-    dica "Quando o agente passa a conversa, quem recebe o aviso atende pelo próprio WhatsApp."
-    dica "Para devolver ao agente: 👍 no aviso ou /retomar no mesmo chat."
-    dica "Sem nada disso, ele volta sozinho depois do tempo abaixo. 0 deixa parado até alguém devolver."
+    dica "Quem recebe o aviso atende pelo próprio WhatsApp e devolve com /retomar. Sem isso, o agente volta sozinho no prazo abaixo. 0 deixa parado."
   else
-    dica "Quando alguém da equipe responde pelo aparelho, o agente cala na hora e deixa a pessoa atender."
-    dica "Para devolver ao agente: reagir com 👍 em qualquer mensagem da conversa ou mandar /retomar."
-    dica "Sem nada disso, ele volta sozinho depois do tempo abaixo. 0 deixa parado até alguém devolver."
+    dica "Responder pelo aparelho cala o agente na hora. Para devolver: 👍 na conversa ou /retomar. Sem isso, ele volta sozinho no prazo abaixo. 0 deixa parado."
   fi
   pergunta_numero horas "Horas até o agente voltar sozinho (0 a 720)" 0 720 "$padrao"
   if [ "$horas" -eq 0 ]; then

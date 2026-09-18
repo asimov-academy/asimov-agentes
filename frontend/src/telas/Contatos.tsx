@@ -7,12 +7,14 @@ import {
   type Empresa,
 } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
+import { Botao } from "../design/Botao";
 import { Campo } from "../design/Campo";
 import { Carregando } from "../design/Carregando";
+import { Marca } from "../design/Marca";
 import { Modal } from "../design/Modal";
 import { Selo } from "../design/Selo";
 import { Vazio } from "../design/Vazio";
-import { ROTULO_DO_CANAL } from "./agente/canais";
+import { CANAIS, ROTULO_DO_CANAL } from "./agente/canais";
 
 /** A tela de Contatos: busca por nome ou telefone, e a ficha com as conversas da pessoa.
  *
@@ -33,16 +35,18 @@ export function Contatos({
   const [busca, setBusca] = useState("");
   const [contatos, setContatos] = useState<Contato[] | null>(null);
   const [aberto, setAberto] = useState<ContatoAberto | null>(null);
-  const [erro, setErro] = useState("");
+  // O erro carrega o próprio título: a lista e a ficha falham por motivos diferentes, e dizer
+  // "não deu para carregar os contatos" quando o que não abriu foi uma ficha é mentira curta.
+  const [erro, setErro] = useState<{ titulo: string; texto: string } | null>(null);
 
   const procura = useCallback(() => {
-    setErro("");
+    setErro(null);
     api
       .contatos(busca, empresa || undefined)
       .then(setContatos)
       .catch((problema) => {
         if (problema instanceof SemSessao) throw problema;
-        setErro(problema.message);
+        setErro({ titulo: "não deu para carregar os contatos", texto: problema.message });
       });
   }, [busca, empresa]);
 
@@ -67,7 +71,7 @@ export function Contatos({
             value={empresa}
             aria-label="Empresa"
             onChange={(e) => aoTrocarEmpresa(e.target.value)}
-            className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
+            className="rounded-md border border-borda bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
           >
             <option value="">Todas as empresas</option>
             {empresas.map((e) => (
@@ -91,8 +95,13 @@ export function Contatos({
 
       {erro ? (
         <div className="mt-8">
-          <Aviso tom="erro" titulo="a busca não voltou">
-            {erro}
+          <Aviso tom="erro" titulo={erro.titulo}>
+            <p>{erro.texto}</p>
+            <div className="mt-4">
+              <Botao icone="sys-refresh" pequeno onClick={procura}>
+                Tentar de novo
+              </Botao>
+            </div>
           </Aviso>
         </div>
       ) : contatos === null ? (
@@ -101,19 +110,29 @@ export function Contatos({
         </div>
       ) : contatos.length === 0 ? (
         <div className="mt-12">
-          <Vazio titulo={busca ? "ninguém com esse nome ou número" : "nenhum contato ainda"} icone="comm-mention">
+          <Vazio
+            titulo={busca ? "ninguém com esse nome ou número" : "nenhum contato ainda"}
+            icone="comm-mention"
+          >
             {busca
               ? "Tente só o começo do nome, ou o número sem pontuação."
-              : "Cada pessoa que escrever para um agente aparece aqui."}
+              : "Confira em Canais se algum agente está respondendo."}
           </Vazio>
         </div>
       ) : (
-        <ul className="mt-8 border-t border-borda">
+        <ul className="mt-8 flex flex-col gap-1">
           {contatos.map((c) => (
             <li key={c.id}>
               <button
-                onClick={() => api.contato(c.id).then(setAberto)}
-                className="flex w-full items-center justify-between gap-4 border-b border-borda py-4 text-left transition-colors hover:bg-surface"
+                onClick={() =>
+                  api
+                    .contato(c.id)
+                    .then(setAberto)
+                    .catch((problema) =>
+                      setErro({ titulo: "não deu para abrir o contato", texto: problema.message }),
+                    )
+                }
+                className="flex w-full items-center justify-between gap-4 rounded-md px-3 py-3 text-left transition-colors hover:bg-surface"
               >
                 <span className="min-w-0">
                   <span className="block truncate text-base text-texto">
@@ -123,9 +142,7 @@ export function Contatos({
                     {c.telefone ?? "sem telefone"}, fala com {c.agente}
                   </span>
                 </span>
-                <span className="shrink-0 font-mono text-xs text-dim">
-                  {data(c.ultima_mensagem_em)}
-                </span>
+                <span className="tecnico shrink-0 text-dim">{data(c.ultima_mensagem_em)}</span>
               </button>
             </li>
           ))}
@@ -149,19 +166,22 @@ export function Contatos({
           {aberto.conversas.length === 0 ? (
             <p className="mt-2 text-sm text-dim">Nenhuma conversa guardada.</p>
           ) : (
-            <ul className="mt-3 border-t border-borda">
-              {aberto.conversas.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex items-center justify-between gap-4 border-b border-borda py-3"
-                >
-                  <span className="text-sm text-texto">{ROTULO_DO_CANAL(c.canal)}</span>
-                  <span className="flex items-center gap-3">
-                    {c.status === "humano" && <Selo tom="atencao">com gente</Selo>}
-                    <span className="font-mono text-xs text-dim">{data(c.atualizado_em)}</span>
-                  </span>
-                </li>
-              ))}
+            <ul className="mt-3 flex flex-col divide-y divide-borda border-y border-borda">
+              {aberto.conversas.map((c) => {
+                const marca = CANAIS[c.canal]?.marca;
+                return (
+                  <li key={c.id} className="flex items-center justify-between gap-4 py-3">
+                    <span className="flex min-w-0 items-center gap-2 text-sm text-texto">
+                      {marca && <Marca nome={marca} tamanho={14} />}
+                      <span className="truncate">{ROTULO_DO_CANAL(c.canal)}</span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      {c.status === "humano" && <Selo tom="atencao">com uma pessoa</Selo>}
+                      <span className="tecnico text-dim">{data(c.atualizado_em)}</span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Modal>

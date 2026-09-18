@@ -541,7 +541,7 @@ class Waha:
                 f"a WAHA recusou o arquivo: HTTP {erro.response.status_code}"
             ) from erro
         except httpx.HTTPError as erro:
-            raise CredencialInvalida(f"não consegui baixar o arquivo na WAHA ({type(erro).__name__})") from erro
+            raise CredencialInvalida("não consegui baixar o arquivo na WAHA; o contato pode reenviar") from erro
         if not mime or mime == "application/octet-stream":
             mime = anexo.tipo_mime or mime
         return ArquivoBaixado(conteudo=b"".join(partes), tipo_mime=mime or "application/octet-stream")

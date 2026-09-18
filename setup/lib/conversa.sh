@@ -34,9 +34,8 @@ conversa_no_terminal() {
   if [ "$canal" != nativo ]; then
     aviso "Conversa de teste: as respostas aparecem só aqui, nada vai para o $canal."
   fi
-  dica "Cada linha é uma mensagem. O agente espera ${buffer} s depois da última antes de responder."
-  dica "/nova começa outra conversa · /retomar devolve ao agente depois do handoff"
-  dica "/sair ou Esc volta"
+  dica "Cada linha é uma mensagem, e o agente espera ${buffer} s depois da última para responder."
+  dica "/nova outra conversa · /retomar faz o agente voltar a responder · /sair volta"
   echo
 
   if ! tem_terminal; then

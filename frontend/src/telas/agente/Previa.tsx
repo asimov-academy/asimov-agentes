@@ -75,7 +75,7 @@ export function Previa({ escolhas }: { escolhas: EscolhasDaPrevia }) {
   const partes = emPartes(resposta, escolhas.partes);
 
   return (
-    <div className="flex h-full flex-col border border-borda bg-void p-5">
+    <div className="flex h-full flex-col rounded-lg border border-borda bg-void p-5">
       <p className="rotulo">como ele vai soar</p>
 
       <div className="mt-4 flex flex-1 flex-col gap-3">
@@ -101,7 +101,7 @@ export function Previa({ escolhas }: { escolhas: EscolhasDaPrevia }) {
       </div>
 
       <p className="mt-4 border-t border-borda pt-3 text-xs leading-snug text-dim">
-        Conversa de mentira, montada no navegador. Nenhum modelo foi chamado e nada foi cobrado.
+        Conversa de mentira: nenhum modelo foi chamado e nada foi cobrado.
       </p>
     </div>
   );
@@ -112,7 +112,7 @@ function Bolha({ de, children }: { de: "agente" | "contato"; children: React.Rea
   return (
     <div className={`flex ${doAgente ? "justify-start" : "justify-end"}`}>
       <p
-        className={`max-w-[85%] border px-3 py-2 text-sm leading-snug ${
+        className={`max-w-[85%] rounded-lg border px-3 py-2 text-sm leading-snug ${
           doAgente ? "border-borda bg-surface text-texto" : "border-ciano/30 bg-ciano/5 text-texto"
         }`}
       >
@@ -127,7 +127,7 @@ function Bolha({ de, children }: { de: "agente" | "contato"; children: React.Rea
 function Digitando() {
   return (
     <div className="flex justify-start">
-      <span className="border border-borda bg-surface px-3 py-1.5">
+      <span className="rounded-full border border-borda bg-surface px-3 py-1.5">
         <Carregando tipo="digitando" o_que="o agente está digitando" compacto />
       </span>
     </div>

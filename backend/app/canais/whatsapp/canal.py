@@ -571,7 +571,7 @@ class WhatsApp:
             ) from erro
         except httpx.HTTPError as erro:
             raise CredencialInvalida(
-                f"não consegui baixar o arquivo na Meta ({type(erro).__name__})"
+                "não consegui baixar o arquivo na Meta; o contato pode reenviar"
             ) from erro
         if not mime or mime == "application/octet-stream":
             mime = endereco["tipo_mime"] or anexo.tipo_mime or mime

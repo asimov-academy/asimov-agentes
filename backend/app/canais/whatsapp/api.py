@@ -23,8 +23,11 @@ Endpoints conferidos na documentação da Meta (2026-09-18):
 from typing import Any
 
 import httpx
+import structlog
 
 from app.canais.base import CredencialInvalida
+
+log = structlog.get_logger()
 
 GRAPH = "https://graph.facebook.com"
 VERSAO = "v23.0"
@@ -97,8 +100,9 @@ def _levanta(acao: str, resposta: httpx.Response) -> None:
         raise CredencialInvalida(
             f"a Meta recusou o token de acesso: {texto or 'token inválido ou expirado'}"
         )
+    log.warning("meta_recusou", acao=acao, status=resposta.status_code, detalhe=texto)
     raise CredencialInvalida(
-        f"a Meta recusou {acao}: HTTP {resposta.status_code}{f' ({texto})' if texto else ''}"
+        f"a Meta recusou {acao}. Confira no WhatsApp Manager se o número e o token seguem válidos"
     )
 
 
@@ -116,7 +120,7 @@ async def _chama(
         async with _http(token) as http:
             resposta = await http.request(metodo, caminho, json=json, params=params)
     except httpx.HTTPError as erro:
-        raise CredencialInvalida(f"não consegui {acao} na Meta ({type(erro).__name__})") from erro
+        raise CredencialInvalida(f"não consegui {acao} na Meta. Confira a internet da VPS e tente de novo") from erro
     if resposta.status_code >= 400:
         if _detalhe(_corpo(resposta))[0] in ignora:
             return {}

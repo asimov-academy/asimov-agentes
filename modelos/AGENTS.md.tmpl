@@ -13,14 +13,21 @@ Modelos de IA: {{MODELOS}}.
 - Logs: `source deploy/compose.sh && dc logs -f api worker`
 - Log do setup: `{{CAMINHO_LOG}}`
 
+## Vocabulário
+
+Buffer: a espera até o contato terminar de escrever. Turno: uma resposta do agente a essa rodada.
+Handoff: passar a conversa para uma pessoa. Webhook: o endereço que o canal chama quando chega
+mensagem. Empresa: o cliente que você atende. Contato: quem escreve para o agente.
+
 ## Onde mexer
 
-- Prompt de cada agente: `prompts/<cliente>/<agente>/persona.md`; resumo do handoff em `resumo_handoff.md`. Relidos a cada turno; não precisa publicar.
+- Prompt de cada agente: `prompts/<empresa>/<agente>/persona.md`; resumo do handoff em `resumo_handoff.md`. Relidos a cada turno; não precisa publicar.
 - Comportamento do turno (buffer, envio, divisão): `backend/app/conversas/`.
-- Ferramenta nova que o operador liga por agente: um arquivo próprio em `backend/app/ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar e se vem ligada), e uma linha em `backend/app/ia/ferramentas/registro.py`. Aparece no menu `asimov` > Editar > Ferramentas. Nunca duas ferramentas no mesmo arquivo. Tool que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
+- Ferramenta nova que o operador liga por agente: um arquivo próprio em `backend/app/ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar e se vem ligada), e uma linha em `backend/app/ia/ferramentas/registro.py`. Aparece no menu `asimov` > Editar > Ferramentas. Nunca duas ferramentas no mesmo arquivo. Ferramenta que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
 - Canal novo: implemente `backend/app/canais/base.py` e registre em `backend/app/canais/registro.py`.
 - WhatsApp pela WAHA: `backend/app/canais/waha/` e `setup/lib/waha.sh`. O contêiner `waha` tem perfil no Compose e só sobe no primeiro agente WAHA (`WAHA_ATIVA=1` no `.env`).
 - WhatsApp oficial: `backend/app/canais/whatsapp/` e `setup/lib/whatsapp.sh`. Nada sobe na VPS: a API aponta o webhook no próprio número, na Meta, quando o agente é criado.
+- Painel no navegador: `frontend/` (React, Vite, Tailwind), servido pela API em `/painel/app`; a API dele é `backend/app/painel/`. O build roda dentro da imagem, então publique com `./deploy/publicar.sh`. Cor só pelo nome do token do `tailwind.config.ts`, componente só de `frontend/src/design/`, nunca de biblioteca de fora.
 - Em cada assunto: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco.
 
 ## Regras
@@ -34,7 +41,7 @@ Modelos de IA: {{MODELOS}}.
 - NUNCA publique `/admin` no `deploy/Caddyfile`.
 - NUNCA chame IA dentro da requisição do webhook. O webhook só valida, grava e agenda.
 - Webhook do Chatwoot com assinatura inválida responde 200. Nunca 401: o Chatwoot silencia o bot na conversa.
-- Tool que altera algo fora da conversa só registra o pedido no `ContextoTurno`; o turno executa depois de enviar a resposta, como `transferir_para_humano`. Turno com mídia pendente não recebe tool que altera estado, exceto handoff.
+- Ferramenta que altera algo fora da conversa só registra o pedido no `ContextoTurno`; o turno executa depois de enviar a resposta, como `transferir_para_humano`. Turno com mídia pendente não recebe tool que altera estado, exceto handoff.
 - Conversa do Chatwoot que não está Pendente é humano conduzindo: o agente fica calado. Devolver para Pendente retoma.
 - No WhatsApp direto não há onde perguntar: a pausa do handoff é o `status` da conversa aqui, e a volta é o `/retomar <código>` de quem recebeu o aviso ou o prazo do agente.
 - Conteúdo de áudio, imagem ou documento do contato entra como fala do contato. Nunca no prompt de sistema.

@@ -453,7 +453,7 @@ class Chatwoot:
                 if resp.status_code >= 400:
                     problemas.append(f"nota recusada: HTTP {resp.status_code}")
             except httpx.HTTPError as erro:
-                problemas.append(f"nota falhou: {type(erro).__name__}")
+                problemas.append("o resumo não entrou na conversa")
 
             alvo = destino or {}
             if alvo.get("tipo") in ("usuario", "time"):
@@ -464,7 +464,7 @@ class Chatwoot:
                     if resp.status_code >= 400:
                         problemas.append(f"atribuição recusada: HTTP {resp.status_code}")
                 except httpx.HTTPError as erro:
-                    problemas.append(f"atribuição falhou: {type(erro).__name__}")
+                    problemas.append("não consegui atribuir a conversa a quem recebe")
 
             resp = await http.post(
                 f"{base}/toggle_status", json={"status": "open"}, headers=cabecalho

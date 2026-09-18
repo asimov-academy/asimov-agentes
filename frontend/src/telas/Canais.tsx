@@ -3,22 +3,25 @@ import { api, ErroDaApi, SemSessao, type Empresa, type LinhaDeCanal } from "../a
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Carregando } from "../design/Carregando";
+import { Marca } from "../design/Marca";
 import { Modal } from "../design/Modal";
 import { Vazio } from "../design/Vazio";
-import { ROTULO_DO_CANAL } from "./agente/canais";
+import { CANAIS, ROTULO_DO_CANAL } from "./agente/canais";
 
 /** A tela de Canais: uma linha por agente com a resposta do canal agora.
  *
- *  Cada canal é perguntado em separado no backend, e o que não responder vira linha vermelha em vez
- *  de derrubar a tela. Criar canal continua no terminal nesta versão; aqui dá para conferir,
- *  reiniciar a sessão do WhatsApp e ler o QR code de novo.
+ *  Cada canal é perguntado em separado, e o que não responder vira linha vermelha em vez de
+ *  derrubar a tela. Criar canal continua no terminal nesta versão; aqui dá para conferir,
+ *  reconectar o WhatsApp e ler o QR code de novo.
  */
 
+/** A cor da situação vira uma barra por dentro do cartão, nunca a borda de um lado: borda mais
+ *  grossa de um lado só com canto arredondado faz o canto virar uma cunha. */
 const COR: Record<string, string> = {
-  ok: "border-l-ok",
-  atencao: "border-l-atencao",
-  perigo: "border-l-perigo",
-  neutro: "border-l-dim",
+  ok: "bg-ok",
+  atencao: "bg-atencao",
+  perigo: "bg-perigo",
+  neutro: "bg-dim",
 };
 
 export function Canais({
@@ -78,7 +81,9 @@ export function Canais({
           <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
             Canais<span className="text-ciano">.</span>
           </h1>
-          <p className="mt-2 text-sm text-muted">Por onde cada agente atende, e se está de pé agora.</p>
+          <p className="mt-2 text-sm text-muted">
+            Por onde cada agente atende, e se está respondendo agora.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -87,7 +92,7 @@ export function Canais({
               value={empresa}
               aria-label="Empresa"
               onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
+              className="rounded-md border border-borda bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
             >
               <option value="">Todas as empresas</option>
               {empresas.map((e) => (
@@ -105,8 +110,13 @@ export function Canais({
 
       {erro ? (
         <div className="mt-10">
-          <Aviso tom="erro" titulo="a consulta não voltou">
-            {erro}
+          <Aviso tom="erro" titulo="não deu para carregar os canais">
+            <p>{erro}</p>
+            <div className="mt-4">
+              <Botao icone="sys-refresh" pequeno onClick={busca}>
+                Tentar de novo
+              </Botao>
+            </div>
           </Aviso>
         </div>
       ) : linhas === null ? (
@@ -116,54 +126,62 @@ export function Canais({
       ) : linhas.length === 0 ? (
         <div className="mt-16">
           <Vazio titulo="nenhum agente ainda" icone="cont-link">
-            Canal é do agente: crie um agente para ter o que conferir aqui.
+            Crie um agente para ter o que conferir aqui.
           </Vazio>
         </div>
       ) : (
         <ul className="mt-10 flex flex-col gap-3">
-          {linhas.map((l) => (
-            <li
-              key={l.agente_id}
-              className={`flex flex-wrap items-center justify-between gap-4 border border-borda border-l-2 bg-surface p-5 ${COR[l.situacao.cor] ?? COR.neutro}`}
-            >
-              <div className="min-w-0">
-                <p className="text-base text-texto">
-                  {l.agente}
-                  {!empresa && <span className="text-muted">, em {l.empresa}</span>}
-                </p>
-                <p className="mt-0.5 text-sm text-muted">
-                  {ROTULO_DO_CANAL(l.canal)}
-                  {!l.ativo && " (agente desligado)"}
-                </p>
-                <p className="mt-2 text-sm text-texto">{l.situacao.resumo}</p>
-                {l.situacao.erro && (
-                  <p className="mt-1 font-mono text-xs text-dim">{l.situacao.erro}</p>
-                )}
-              </div>
-
-              {l.canal === "waha" && (
-                <div className="flex flex-wrap gap-2">
-                  <Botao pequeno icone="sys-fullscreen" onClick={() => mostraQr(l)}>
-                    Ver QR code
-                  </Botao>
-                  <Botao
-                    pequeno
-                    icone="sys-refresh"
-                    ocupado={ocupado === l.agente_id}
-                    onClick={() => reinicia(l)}
-                  >
-                    Reiniciar
-                  </Botao>
+          {linhas.map((l) => {
+            const marca = CANAIS[l.canal]?.marca;
+            return (
+              <li
+                key={l.agente_id}
+                className="relative flex flex-wrap items-center justify-between gap-4 rounded-lg border border-borda bg-surface p-5 pl-6"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`absolute inset-y-4 left-2.5 w-0.5 rounded-full ${COR[l.situacao.cor] ?? COR.neutro}`}
+                />
+                <div className="min-w-0">
+                  <p className="text-base text-texto">
+                    {l.agente}
+                    {!empresa && <span className="text-muted">, em {l.empresa}</span>}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                    {marca && <Marca nome={marca} tamanho={14} apagada={!l.ativo} />}
+                    <span className="truncate">
+                      {ROTULO_DO_CANAL(l.canal)}
+                      {!l.ativo && " (agente inativo)"}
+                    </span>
+                  </p>
+                  <p className="mt-2 text-sm text-texto">{l.situacao.resumo}</p>
+                  {l.situacao.erro && <p className="tecnico mt-1 text-dim">{l.situacao.erro}</p>}
                 </div>
-              )}
-            </li>
-          ))}
+
+                {l.canal === "waha" && (
+                  <div className="flex flex-wrap gap-2">
+                    <Botao pequeno icone="sys-fullscreen" onClick={() => mostraQr(l)}>
+                      Ver QR code
+                    </Botao>
+                    <Botao
+                      pequeno
+                      icone="sys-refresh"
+                      ocupado={ocupado === l.agente_id}
+                      onClick={() => reinicia(l)}
+                    >
+                      Reconectar
+                    </Botao>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
       {qr && (
         <Modal
-          titulo={`Parear o número de ${qr.agente}`}
+          titulo={`Conectar o número de ${qr.agente}`}
           subtitulo="Abra o WhatsApp no celular, vá em Aparelhos conectados e aponte a câmera."
           aoFechar={() => setQr(null)}
           largura="max-w-xl"
@@ -172,19 +190,18 @@ export function Canais({
             <div className="py-8">
               <Carregando tipo="pulso" o_que="esperando o QR code" />
               <p className="mt-4 text-center text-sm text-muted">
-                O QR code só existe enquanto a sessão espera a leitura. Se não aparecer, reinicie a
-                sessão para vir um novo.
+                Se ele não aparecer, use Reconectar para gerar um novo.
               </p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
               <img
                 src={`data:image/png;base64,${qr.texto}`}
-                alt="QR code para parear o número"
-                className="w-full max-w-xs border border-borda bg-white p-2"
+                alt="QR code para conectar o número"
+                className="w-full max-w-xs rounded-lg border border-borda bg-white p-2"
               />
               <p className="text-sm text-muted">
-                O código expira em poucos segundos. Reinicie a sessão se ele vencer.
+                O código expira em poucos segundos. Use Reconectar para gerar um novo.
               </p>
             </div>
           )}

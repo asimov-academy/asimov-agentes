@@ -9,6 +9,9 @@ import type { ICONES } from "./icones";
  *  - `fantasma`: contorno branco fraco, com os cantos marcados. É o botão de andar pela tela.
  *
  *  O ciano cheio não é botão no original: ele é contorno. Trocar isso apaga a hierarquia inteira.
+ *
+ *  Os cantos marcados do fantasma saíram junto com os cantos retos (v0.21.0): eles eram o desenho
+ *  de um canto em ângulo, e não sobra canto em ângulo no painel.
  */
 type Tom = "solido" | "acento" | "fantasma" | "perigo";
 
@@ -36,35 +39,16 @@ export function Botao({
   disabled,
   ...resto
 }: Props) {
-  const tamanho = pequeno ? "px-4 py-2 text-xs gap-2" : "px-6 py-3 text-sm gap-3";
+  const tamanho = pequeno ? "rounded-md px-4 py-2 text-xs gap-2" : "rounded px-5 py-2.5 text-sm gap-2.5";
   return (
     <button
       {...resto}
       disabled={disabled || ocupado}
       aria-busy={ocupado || undefined}
-      className={`group relative inline-flex items-center justify-center overflow-hidden font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${tamanho} ${TONS[tom]} ${className}`}
+      className={`group relative inline-flex items-center justify-center font-semibold tracking-[0.02em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${tamanho} ${TONS[tom]} ${className}`}
     >
-      {ocupado ? (
-        <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" strokeWidth={3}>
-          <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-          <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-        </svg>
-      ) : (
-        icone && <Icone nome={icone} />
-      )}
+      {ocupado ? <Icone nome="sys-girando" className="animate-spin" /> : icone && <Icone nome={icone} />}
       <span>{children}</span>
-
-      {/* Cantos marcados: a assinatura do botão fantasma no design system. */}
-      {tom === "fantasma" && (
-        <>
-          <svg viewBox="0 0 10 10" className="pointer-events-none absolute left-0 top-0 h-2 w-2 text-texto">
-            <path d="M0 10V0H10" stroke="currentColor" fill="none" />
-          </svg>
-          <svg viewBox="0 0 10 10" className="pointer-events-none absolute bottom-0 right-0 h-2 w-2 text-texto">
-            <path d="M10 0V10H0" stroke="currentColor" fill="none" />
-          </svg>
-        </>
-      )}
     </button>
   );
 }
