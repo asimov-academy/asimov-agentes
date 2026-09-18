@@ -186,6 +186,7 @@ superior esquerdo. Itens, nesta ordem:
 | Visão geral | `/` | ativo |
 | Agentes | `/agentes` | ativo |
 | Canais | `/canais` | ativo |
+| Oportunidades | `/oportunidades` | ativo |
 | Conversas | `/chat` | ativo |
 | Contatos | `/contatos` | ativo |
 | Conhecimento | `/conhecimento` | em breve, item apagado com selo |
@@ -236,6 +237,23 @@ Cinco blocos, todos da instalação e nunca de uma empresa atendida:
 Espaço de trabalho, perfil e negócio moram numa linha só cada (`espaco_trabalho` e as colunas novas
 de `usuario_painel`), como o operador: a instalação é de quem tem a VPS. Salvar relê o `/painel/api/eu`,
 e o menu troca o nome e a sigla na hora.
+
+### 5.0b Oportunidades
+
+O kanban do funil, por empresa. Colunas do operador (`etapa_funil`), cartões (`oportunidade`) e
+etiquetas (`etiqueta`), tudo filtrado por `cliente_id` como o resto da plataforma: quem atende
+várias empresas tem um funil para cada uma.
+
+- **O quadro vem numa chamada só** (`GET /painel/api/empresas/{id}/funil`): coluna sem cartão e
+  cartão sem coluna não desenham nada, e três chamadas em sequência piscam a tela.
+- **A primeira visita cria o funil padrão** (Novo, Em conversa, Proposta, Ganho, Perdido). Quadro
+  que abre vazio não é kanban.
+- **Arrastar é o arrasto nativo do navegador** (`draggable` e `dataTransfer`), nunca biblioteca. O
+  cartão aparece na coluna nova antes de o servidor responder: a mão chega antes da rede.
+- **Coluna com cartão não some**: a remoção responde 409 dizendo quantos cartões mover antes.
+- **Cor de etiqueta é nome de token da paleta** (`ciano`, `ok`, `atencao`, `perigo`, `muted`),
+  nunca hexadecimal. Etiqueta fora da paleta estragaria o quadro inteiro, e o backend recusa.
+- Apagar etiqueta a tira dos cartões junto, pelo `ON DELETE CASCADE` da ligação.
 
 ### 5.1 Visão geral
 

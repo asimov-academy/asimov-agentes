@@ -115,6 +115,48 @@ export const api = {
   gravaPerfilDoOperador: (dados: PerfilDoOperador) =>
     chama<void>("/perfil", { method: "PUT", body: JSON.stringify(dados) }),
 
+  /** O kanban inteiro numa chamada: coluna sem cartão e cartão sem coluna não desenham nada. */
+  funil: (empresa: string) => chama<Funil>(`/empresas/${empresa}/funil`),
+
+  criaEtapa: (empresa: string, nome: string) =>
+    chama<EtapaDoFunil>(`/empresas/${empresa}/funil/etapas`, {
+      method: "POST",
+      body: JSON.stringify({ nome }),
+    }),
+
+  renomeiaEtapa: (empresa: string, id: string, nome: string) =>
+    chama<EtapaDoFunil>(`/empresas/${empresa}/funil/etapas/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ nome }),
+    }),
+
+  apagaEtapa: (empresa: string, id: string) =>
+    chama<void>(`/empresas/${empresa}/funil/etapas/${id}`, { method: "DELETE" }),
+
+  criaEtiqueta: (empresa: string, nome: string, cor: CorDeEtiqueta) =>
+    chama<EtiquetaDoFunil>(`/empresas/${empresa}/funil/etiquetas`, {
+      method: "POST",
+      body: JSON.stringify({ nome, cor }),
+    }),
+
+  apagaEtiqueta: (empresa: string, id: string) =>
+    chama<void>(`/empresas/${empresa}/funil/etiquetas/${id}`, { method: "DELETE" }),
+
+  criaOportunidade: (empresa: string, dados: Partial<OportunidadeDoFunil> & { titulo: string }) =>
+    chama<{ id: string }>(`/empresas/${empresa}/funil/oportunidades`, {
+      method: "POST",
+      body: JSON.stringify(dados),
+    }),
+
+  editaOportunidade: (empresa: string, id: string, mudancas: Record<string, unknown>) =>
+    chama<{ id: string; etapa_id: string }>(`/empresas/${empresa}/funil/oportunidades/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(mudancas),
+    }),
+
+  apagaOportunidade: (empresa: string, id: string) =>
+    chama<void>(`/empresas/${empresa}/funil/oportunidades/${id}`, { method: "DELETE" }),
+
   ferramentas: () => chama<Ferramenta[]>("/ferramentas"),
   modelos: () => chama<Modelos>("/modelos"),
   modelosDoProvedor: (provedor: string, funcao: string) =>
@@ -346,6 +388,41 @@ export type EspacoDeTrabalho = {
 };
 
 export type PerfilDoOperador = { nome: string; email: string };
+
+/** O funil de uma empresa: as colunas do kanban, os cartões e as etiquetas, numa chamada só. */
+export type EtapaDoFunil = {
+  id: string;
+  nome: string;
+  ordem: number;
+  ganha: boolean;
+  perdida: boolean;
+  /** Soma dos cartões da coluna, como texto decimal. */
+  total: string;
+};
+
+export type EtiquetaDoFunil = { id: string; nome: string; cor: CorDeEtiqueta };
+
+/** Cor é nome de token da paleta, nunca hexadecimal: um teste recusa cor solta no `src`. */
+export type CorDeEtiqueta = "ciano" | "ok" | "atencao" | "perigo" | "muted";
+
+export type OportunidadeDoFunil = {
+  id: string;
+  etapa_id: string;
+  titulo: string;
+  valor: string;
+  nota: string;
+  ordem: number;
+  contato_id: string | null;
+  contato: string | null;
+  etiquetas: string[];
+  criado_em: string;
+};
+
+export type Funil = {
+  etapas: EtapaDoFunil[];
+  etiquetas: EtiquetaDoFunil[];
+  oportunidades: OportunidadeDoFunil[];
+};
 
 export type PerfilDoAgente = {
   funcao?: "suporte" | "vendas" | "atendimento" | null;

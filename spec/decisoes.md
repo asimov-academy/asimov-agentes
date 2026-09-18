@@ -41,6 +41,35 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Funil de oportunidades, com kanban e etiquetas (v0.23.0)
+
+O operador pediu kanban, oportunidades e etiquetas para controle. Entrou o módulo
+`backend/app/oportunidades/` com quatro tabelas (migração `0019`, toda aditiva): `etapa_funil` (as
+colunas), `oportunidade` (os cartões), `etiqueta` e a ligação entre cartão e etiqueta.
+
+**Por empresa, sem exceção.** Todo método do repo recebe `cliente_id` e filtra por ele, e o
+`cliente_id` vem da URL conferida no banco, nunca do corpo. Três testes seguram isso: o funil de uma
+empresa não aparece na outra, etiqueta de outra empresa não cola no cartão e cartão de outra empresa
+não se move pela URL errada.
+
+**As colunas são do operador**, não fixas no código: kanban com coluna fixa serve para um negócio
+só. A primeira visita cria o funil padrão, porque quadro que abre vazio não é kanban. Coluna com
+cartão não some: responde 409 dizendo quantos mover antes, senão o cartão iria junto e o operador
+descobriria depois.
+
+**Cor de etiqueta é nome de token da paleta**, nunca hexadecimal. É a mesma regra que o teste do
+front já aplica ao `src`: etiqueta com cor livre estragaria o quadro inteiro.
+
+**Arrastar é o arrasto nativo do navegador**, sem biblioteca, como manda o `AGENTS.md`. O cartão
+aparece na coluna nova antes de o servidor responder, senão a mão chega antes da rede e parece que o
+arrasto não pegou.
+
+Junto, saiu a linha de situação de baixo do nome do espaço no menu e o ponto verde de perto do
+veredito da Visão geral: o estado já mora no ponto da marca, e colorir de verde uma frase que diz
+que nada aconteceu é contraditório.
+
+spec/frontend.md, seções 4 e 5.
+
 ## 2026-09-18: Espaço de trabalho, perfil do operador e dados do negócio (v0.22.0)
 
 O painel não guardava nada sobre quem opera nem sobre a instalação: o menu dizia ASIMOV para todo
