@@ -41,6 +41,29 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Contraste do texto do painel na régua da WCAG AA
+
+Na VPS o operador não conseguia ler rótulo de campo nem texto de apoio. Medido: `dim` (#444444)
+dava 1,9:1 sobre o preto e `muted` (#525252) dava 2,4:1, contra os 4,5:1 que a WCAG AA pede para
+texto normal. São 106 usos de texto entre os dois, mais borda de campo e trilho de interruptor, que
+pedem 3:1 por serem componente.
+
+`dim` foi para `#8a8a8a` (5,5:1) e `muted` para `#a3a3a3` (7,5:1), no `tailwind.config.ts` e no
+`painel/estaticos/painel.css` do login, que não passa pelo Tailwind. A escala de texto ficou 15:1,
+7,5:1 e 5,5:1, com a hierarquia preservada. Os outros tokens já passavam e não mudaram; `borda`
+(#222222) também não, porque separa cartão e não carrega texto.
+
+Um teste novo (`design/contraste.teste.ts`) lê os tokens do `tailwind.config.ts`, confere os 4,5:1
+de todo token de texto sobre os três fundos, confere a ordem da hierarquia e confere que o CSS do
+login repete os mesmos valores. Ele não escreve cor nenhuma, senão o teste que proíbe hexadecimal
+solto o reprovaria.
+
+Conferido no painel rodando: visão geral, agentes, canais, contatos, o popup do agente nos oito
+passos e as telas de entrar e de primeiro acesso, medindo o contraste no DOM com a transparência
+composta. Nenhum texto abaixo de 4,5:1; o menor é 5,47:1.
+
+spec/frontend.md, seção 3, e AGENTS.md.
+
 ## 2026-09-18: Cor principal do painel passa de lime para ciano
 
 O operador quis no painel o mesmo ciano que vê no CLI (o ciano ANSI do terminal web). O token `lime`

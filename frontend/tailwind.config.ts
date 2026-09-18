@@ -11,8 +11,12 @@ export default {
         surface: "#0a0a0a",
         panel: "#111111",
         borda: "#222222",
-        dim: "#444444",
-        muted: "#525252",
+        // A escala de texto vai de 15:1 a 5,5:1 sobre os três fundos, toda ela acima dos 4,5:1
+        // que a WCAG AA pede. `dim` (#444) e `muted` (#525252) ficavam em 1,9:1 e 2,4:1: rótulo
+        // de campo e texto de apoio sumiam no preto. `dim` também é borda de campo e trilho de
+        // interruptor, que pedem 3:1 por serem componente.
+        dim: "#8a8a8a",
+        muted: "#a3a3a3",
         texto: "#e5e5e5",
         ciano: "#29b8db",
         ok: "#00cc66",
