@@ -51,6 +51,7 @@ CAMPOS_EDITAVEIS = frozenset(
         "digitacao_caracteres_por_segundo",
         "digitacao_maximo_segundos",
         "ferramentas",
+        "emojis",
         "contatos_permitidos",
         *CAMPOS_MODELO,
     }

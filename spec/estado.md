@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.16.3` em `asimov-academy/asimov-agentes` (público): quando o token não enxerga nenhuma conta de WhatsApp Business, a mensagem passa a dizer a causa provável (token gerado antes de a conta ser atribuída ao usuário do sistema) e a saída (gerar o token de novo).
+- `v0.17.0` em `asimov-academy/asimov-agentes` (público): nível de emoji por agente (nenhum, pouco, médio ou muito), perguntado na criação em todo canal e editável no menu. Agente criado antes fica sem regra, como era.
+- `v0.16.3`: quando o token não enxerga nenhuma conta de WhatsApp Business, a mensagem passa a dizer a causa provável (token gerado antes de a conta ser atribuída ao usuário do sistema) e a saída (gerar o token de novo).
 - `v0.16.2`: o ícone do app também vem por URL (`/icone-app.png`, para baixar no navegador) e entrou `asimov diagnostico`, que diz a versão instalada e o código HTTP de cada endereço que precisa responder.
 - `v0.16.1`: uma política de privacidade por agente (`/privacidade/<empresa>/<agente>`, mostrada pronta no setup), e o Caddy passou a recarregar de verdade depois de atualizar, que era por que a URL respondia 404.
 - `v0.16.0`: a instalação serve a política de privacidade que a Meta exige para publicar o app (`https://bot.<dominio>/privacidade`, e por empresa com o slug), e o projeto traz um ícone quadrado pronto para o app. Erro de app trocado no token virou mensagem que diz o que fazer.
@@ -34,7 +35,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 264 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 266 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
 
 ## Fases
 
@@ -61,7 +62,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Instalação guiada: modo de uso, domínio, e-mail do SSL, agente de código, modelo por função com provedor próprio (`MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`; openai, anthropic, gemini, groq), DNS, instalação com retomada, primeiro agente e resumo.
 - Setup rodado de novo numa instalação concluída pede o que faltar de versões novas, reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
 - Menu (`setup/lib/menu.sh`, `asimov` sem argumento): criar agente (começa pelo canal: Chatwoot, WhatsApp oficial, WhatsApp pela WAHA ou nativo), conversar com agente nativo (`setup/lib/conversa.sh`), listar, editar e remover agente, ver consumo e falhas (escolhe a empresa), token do Chatwoot (esquecer) e sair. Subcomandos: `novo-agente`, `conversar`, `agentes`, `editar`, `remover`, `consumo`, `handoff`, `diagnostico`, `atualizar`, `ajuda`.
-- Editar agente: nome (renomeia o bot no Chatwoot também), buffer, mensagens por resposta, digitação, ferramentas (lista de marcar), modelos (inclui o do resumo do handoff) e, conforme o canal, destino do handoff, "Conectar a um canal" (nativo) ou "WhatsApp" (WAHA: número pareado, destino e horas até voltar sozinho; oficial: número na Meta, destino com template, horas e quem atende).
+- Editar agente: nome (renomeia o bot no Chatwoot também), buffer, mensagens por resposta, digitação, ferramentas (lista de marcar), emoji, modelos (inclui o do resumo do handoff) e, conforme o canal, destino do handoff, "Conectar a um canal" (nativo) ou "WhatsApp" (WAHA: número pareado, destino e horas até voltar sozinho; oficial: número na Meta, destino com template, horas e quem atende).
 - WhatsApp oficial (`setup/lib/whatsapp.sh`, v0.15.0): pede o ID do app, o token permanente e a chave secreta, descobre as contas de WhatsApp Business que o token alcança, lista os números da conta e os templates aprovados, e cria o agente já com o webhook apontado no número. Item "WhatsApp" em Editar agente: confere o número na Meta, troca destino e template do aviso, horas até voltar sozinho, quem o agente atende e refaz o webhook na Meta. Nada sobe na VPS por causa deste canal.
 - WhatsApp pela WAHA (`setup/lib/waha.sh`, v0.9.0): o contêiner sobe na primeira vez que o operador escolhe o canal (`garante_waha`), o QR code é desenhado com `qrencode` até o número parear e o destino do handoff é escolhido depois (número digitado ou grupo do próprio número). A imagem se atualiza sozinha: `asimov-waha.timer` (domingo de madrugada) roda `deploy/atualiza_waha.sh`, que volta para a versão anterior se algum número não reconectar em 2 minutos e deixa o aviso no menu. Item "WhatsApp (WAHA)" no menu: versão, última conferida, ligar ou desligar a automática e procurar versão nova agora.
 - Tela: escolhas com setas e Enter (números como atalho), Sim/Não com setas, lista de marcar com Espaço, cada seção limpa a tela e redesenha o banner, Esc volta à tela anterior (cada ação do menu roda em `com_voltar`), pausa com Enter antes de o menu limpar o que precisa ser lido.
@@ -80,7 +81,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), escolhidas na criação (nenhuma por padrão desde a v0.8.11). OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
-- Migrações até `0012` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`).
+- Migrações até `0013` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji).
 
 ## Pendências conhecidas
 

@@ -29,6 +29,7 @@ mostra_agente() {
   esac
   campo "Digitação" "$(jq -r '"\(.digitacao_caracteres_por_segundo) caracteres/s, até \(.digitacao_maximo_segundos) s por mensagem"' <<<"$AGENTE")"
   campo "Ferramentas" "$(jq -r '(.ferramentas // []) | if length == 0 then "nenhuma" else map({calculadora: "calculadora", busca_web: "busca na web"}[.] // .) | join(", ") end' <<<"$AGENTE")"
+  campo "Emoji" "$(emoji_do_agente "$AGENTE")"
 }
 
 # salva_agente JSON: PATCH só com os campos do JSON; atualiza AGENTE e deixa o RESULTADO para a
@@ -91,8 +92,8 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Modelos")
-    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_modelo)
+    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Emoji" "Modelos")
+    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_emoji edita_modelo)
     # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
     # ligar o agente num canal.
     case "$(jq -r '.canal' <<<"$AGENTE")" in
@@ -306,6 +307,11 @@ aplica_ritmo_do_whatsapp() {
   else
     RESULTADO+=$'\n'$(falha "Ritmo não mudou: $(detalhe_erro "$API_RESPOSTA")")
   fi
+}
+
+edita_emoji() {
+  pergunta_emoji "$(jq -r '.emojis' <<<"$AGENTE")"
+  salva_agente "$(jq -n --arg e "$EMOJIS" '{emojis: $e}')"
 }
 
 edita_handoff() {
