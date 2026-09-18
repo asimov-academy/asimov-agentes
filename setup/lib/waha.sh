@@ -31,7 +31,11 @@ tag_waha_mais_nova() {
   [ -n "$versao" ] && printf '%s%s' "$prefixo" "$versao"
 }
 
-sobe_waha() { dc up -d --wait waha; }
+# Avisa a plataforma antes de mexer no contêiner: a sessão vai passar por STOPPED, e isso não é
+# número fora do ar.
+avisa_manutencao() { api POST /admin/canais/waha/manutencao '{}' || true; }
+
+sobe_waha() { avisa_manutencao; dc up -d --wait waha; }
 sobe_api() { dc up -d api worker; }
 
 # garante_waha: deixa o contêiner da WAHA no ar. Chamado antes de criar ou ligar um agente WAHA.
@@ -143,7 +147,7 @@ espera_numeros_voltarem() {
   return 1
 }
 
-sobe_waha_de_novo() { dc up -d --wait waha; }
+sobe_waha_de_novo() { avisa_manutencao; dc up -d --wait waha; }
 
 # atualiza_waha [--silencioso]: troca a imagem da WAHA pela versão nova, se houver, e volta para a
 # anterior se algum número que estava conectado não voltar. O timer chama com --silencioso.
@@ -285,6 +289,7 @@ prepara_aparelho() {
   env_set WAHA_CLIENT_DEVICE_NAME "$aparelho"
   env_set WAHA_CLIENT_BROWSER_NAME Desktop
   printf '  %sPreparando o aparelho como %s…%s' "$CINZA" "$aparelho" "$NORMAL"
+  avisa_manutencao
   dc up -d waha >>"$LOG" 2>&1 || true
   espera_waha_no_ar
   printf '\r\033[K'

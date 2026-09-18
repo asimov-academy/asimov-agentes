@@ -894,3 +894,24 @@ async def test_retomar_sem_codigo_com_duas_conversas_pede_para_escolher(http, fi
     assert len(abertos) == 2, "com duas em atendimento, o comando sem código não escolhe sozinho"
     pedidos = [t for _, t in waha.enviadas if "mais de uma conversa em atendimento" in t]
     assert pedidos and all(f"/retomar {h.codigo}" in pedidos[-1] for h in abertos)
+
+
+async def test_log_nao_guarda_o_texto_de_conversa_que_nao_e_do_agente(http, fila, waha) -> None:  # type: ignore[no-untyped-def]
+    """`message.any` traz a conversa pessoal de quem tem o aparelho: isso não pode virar log."""
+    from structlog.testing import capture_logs
+
+    agente = await cria_waha(http)
+    segredo = "combinamos amanha na casa da minha mae"
+
+    with capture_logs() as registrado:
+        await manda(
+            http,
+            agente,
+            waha,
+            payload_waha(segredo, de="80869972770836@lid", minha=True, id_mensagem="true_priv_TTT"),
+        )
+
+    assert not any(segredo in str(linha) for linha in registrado), "conversa pessoal não entra no log"
+    assert any(linha.get("de") == "80869972770836@lid" for linha in registrado), (
+        "o remetente entra, para dar para diagnosticar"
+    )
