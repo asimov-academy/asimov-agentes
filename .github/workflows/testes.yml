@@ -1,0 +1,71 @@
+# Verificação automática do que o AGENTS.md manda rodar à mão antes de publicar: testes com
+# Postgres e Redis de verdade, shellcheck, simulação do onboarding e o ciclo das migrações.
+# A suíte cria o schema por metadata, então migração passa por um passo próprio.
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: asimov
+          POSTGRES_PASSWORD: senha-de-teste
+          POSTGRES_DB: asimov_teste
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U asimov -d asimov_teste"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TESTE_DATABASE_URL: postgresql+asyncpg://asimov:senha-de-teste@localhost:5432/asimov_teste
+      TESTE_REDIS_URL: redis://localhost:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Testes
+        working-directory: backend
+        run: uv run --all-extras pytest -q
+
+      - name: Migrações do zero e de volta
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://asimov:senha-de-teste@localhost:5432/asimov_migracoes
+          REDIS_URL: redis://localhost:6379/14
+          SUBDOMINIO_BOT: bot.exemplo.com.br
+          CHAVE_API_ADMIN: chave-de-ci
+          CHAVE_CRIPTOGRAFIA: chave-de-ci-sem-valor-real
+          MODELO_CONVERSA: openai:modelo
+          MODELO_VISAO: openai:modelo
+          MODELO_TRANSCRICAO: openai:modelo
+        run: |
+          PGPASSWORD=senha-de-teste createdb -h localhost -U asimov asimov_migracoes
+          uv run alembic upgrade head
+          uv run alembic check
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
+  setup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Shellcheck
+        run: |
+          uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR \
+            setup/instalar.sh setup/asimov.sh setup/install.sh setup/lib/*.sh deploy/*.sh
+      - name: Onboarding simulado
+        run: ASIMOV_TTY=setup/testes/respostas.txt bash setup/testes/simula_onboarding.sh

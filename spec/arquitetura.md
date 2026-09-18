@@ -68,6 +68,7 @@ Modelos de IA:
 ## 3. Autenticação e autorização
 
 - **Operador:** entra por SSH. As rotas administrativas (`/admin/*`) exigem o header `X-Admin-Key` com a `chave_api_admin` gerada pelo setup, comparada em tempo constante. O Caddy não publica `/admin/*`; a API escuta em `127.0.0.1:8000` e só o menu, na própria VPS, chega nela.
+- **Operador no painel (fase 8, opcional e desligado por padrão):** com `PAINEL_ATIVO`, o Caddy publica `app.<dominio>` e só o caminho `/painel/*`; `/admin*` e `/webhook*` respondem 404 nesse host. O painel não é cliente do `/admin` com a chave no navegador: é um caminho próprio que chama os mesmos serviços, então a regra de não publicar `/admin` continua valendo. Uma conta só (`usuario_painel`, com unicidade no banco), criada no primeiro acesso com um código de uso único que o `asimov painel` mostra no terminal; senha em scrypt, sessão no Redis com cookie `HttpOnly`, `Secure` e `SameSite=Strict`, origem conferida por host e freio de tentativa por IP. Trocar chave de provedor e modelo padrão continua no terminal: são do `.env`, e o contêiner não mexe nele.
 - **Canais:** cada webhook entra por `https://bot.<dominio>/webhook/{canal}/{token_webhook}`. O `token_webhook` identifica o agente e, por ele, o cliente. Depois disso, a assinatura do canal é verificada com a credencial daquele agente:
   - WhatsApp oficial: a API liga os webhooks do app (campo `messages`, com o token do app), inscreve a conta e aponta o endereço deste agente no número (`webhook_configuration`, o webhook override da Meta), em vez de usar a URL do app. O `GET` de verificação devolve `hub.challenge` quando `hub.verify_token` é igual ao `token_webhook` da URL: a Meta confere o endereço antes de o agente existir no banco, e quem sabe o token já sabe o segredo do webhook. O `POST` vem com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`), e corpo de outro `phone_number_id` é ignorado.
   - WAHA: não passa pelo Caddy. A WAHA chama `http://api:8000/webhook/waha/{token_webhook}` pela rede interna, com `X-Webhook-Hmac` = HMAC SHA-512 do corpo cru com a `hmac_key` do agente.
@@ -89,13 +90,13 @@ Modelos de IA:
 
 - **Token de administrador do Chatwoot:** pedido uma vez por URL e guardado criptografado com a mesma chave, fora das credenciais do agente (`acessos/`); o menu pode esquecê-lo. Quem tiver a VPS tem esse token, além dos tokens dos bots.
 - **Credenciais de canal:** criptografadas com Fernet usando `CHAVE_CRIPTOGRAFIA` do `.env` antes de gravar; decifradas só na memória do processo que usa. Nunca aparecem em log, resposta da API ou tela do menu (o menu mostra só os 4 últimos caracteres).
-- **`.env`:** gerado pelo setup, permissão 600, dono root, fora do git. O setup e a API recusam iniciar se ele estiver legível por outros.
+- **`.env`:** gerado pelo setup, permissão 600, dono root, fora do git. Toda execução do setup confere a permissão e devolve para 600 com aviso se alguém afrouxou; a API não lê o arquivo (recebe as variáveis pelo `env_file` do Compose), então a promessa antiga de "recusar iniciar" valia só para o setup e virou conserto com aviso.
 - **Conteúdo de conversa:** logs em nível informativo registram ids e tipos, não o texto. Texto só em nível de depuração, desligado por padrão.
 - **Mídia recebida:** baixada para `/var/lib/asimov/midia/<cliente>/<agente>/<hash>` em volume Docker, fora de qualquer rota pública. Limite de 20 MB por arquivo (conferido durante o download) e 5 minutos de áudio; acima disso, não processa, registra Falha, o agente avisa e a conversa vai para humano. O link do Chatwoot é baixado sem o token do bot.
 - **Conteúdo de mídia é entrada hostil:** o texto extraído entra na conversa rotulado como dado do contato, nunca no prompt de sistema, e o turno que processa mídia roda sem tools que alteram estado, exceto handoff.
 - **Documentos da base:** copiados para `/var/lib/asimov/conhecimento/<cliente>/<agente>/`.
-- **Exclusão:** lógica em Cliente, Agente e Documento. Trechos de documento removido são apagados. Remover Agente apaga as credenciais e invalida o `token_webhook`. Job diário apaga do disco mídias com mais de 90 dias, mantendo `texto_extraido`.
-- **Backup:** `deploy/backup.sh` com timer do systemd, diário às 3h: `pg_dump` em formato custom, `.env`, `prompts/` e a pasta de conhecimento, compactados em `/var/backups/asimov/`, retenção de 14 dias, cópia remota opcional via `rclone` se configurada. A mídia de contatos não entra no backup (tem retenção de 90 dias e o texto já está no banco).
+- **Exclusão:** lógica em Cliente, Agente e Documento. Trechos de documento removido são apagados. Remover Agente apaga as credenciais e invalida o `token_webhook`. Job diário apaga do disco o arquivo de mídia com mais de `MIDIA_HORAS_NO_DISCO` horas (24 por padrão, então na prática de um a dois dias), em lotes até esgotar, mantendo `texto_extraido`. Três retenções diferentes, de propósito: o **arquivo** dura um dia, o **texto extraído** fica com a conversa, e a **conversa** não é apagada.
+- **Backup (fase 7, ainda não construído):** `deploy/backup.sh` com timer do systemd, diário às 3h: `pg_dump` em formato custom, `.env`, `prompts/` e a pasta de conhecimento, compactados em `/var/backups/asimov/`, retenção de 14 dias, cópia remota opcional via `rclone` se configurada. A mídia de contatos não entra no backup (tem retenção de 90 dias e o texto já está no banco).
 
 ## 5. Organização interna
 
@@ -115,6 +116,7 @@ backend/app/
 ├── ia/             fábrica de modelos por provedor (provedores.py), agente PydanticAI (agente.py)
 │   └── ferramentas/ uma ferramenta por arquivo (calculadora.py, busca_web.py), ficha em base.py, catálogo em registro.py
 ├── midia/          download, cache por hash, transcrição, visão
+├── painel/         painel web do operador (fase 8): acesso, sessão, páginas e templates
 ├── conhecimento/   ingestão, divisão em trechos, embeddings, busca, tool de busca
 ├── handoff/        tool de transferência, aviso, comando de retomada, retomada automática
 ├── consumo/        turnos, falhas, relatório por cliente
@@ -127,7 +129,7 @@ prompts/<cliente>/<agente>/resumo_handoff.md
 ```
 
 - Em cada assunto: `rotas.py` só recebe e valida, `servico.py` tem a regra, `repo.py` fala com o banco. Rota nunca chama banco direto.
-- Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo. O que muda entre canais vira atributo ou método do contrato, nunca `if canal ==` fora de `canais/`: `webhook_interno` (WAHA chama a API pela rede do Compose), `agente_pode_falar(credenciais, conversa, status)` (o Chatwoot pergunta ao Chatwoot; o canal direto vale-se do status da conversa), `interpretar(payload, credenciais, destino)` (o destino do handoff é de onde vem o `/retomar`), `transferir(..., codigo)`, `avisa_destino` e `rotulo_da_conversa`.
+- Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo. O que muda entre canais vira atributo ou método do contrato, nunca `if canal ==` fora de `canais/`: `webhook_interno` (WAHA chama a API pela rede do Compose), `agente_pode_falar(credenciais, conversa, status)` (o Chatwoot pergunta ao Chatwoot; o canal direto vale-se do status da conversa), `interpretar(payload, credenciais, destino)` (o destino do handoff é de onde vem o `/retomar`), `interpretar_todos` (um envelope pode trazer várias mensagens; o padrão devolve uma), `transferir(..., codigo)`, `avisa_destino` e `rotulo_da_conversa`.
 - Ferramenta nova que o operador liga por agente é um arquivo próprio em `ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar, se vem ligada), listada em `ia/ferramentas/registro.py`. Um teste falha se houver arquivo fora do registro. Tool que todo agente tem é registrada em `ia/agente.py`.
 - Por que assim: para mudar como a WAHA envia mensagem, mexe-se só em `canais/waha/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
 
@@ -137,7 +139,7 @@ Rotas administrativas: prefixo `/admin`, chamadas pelo menu, exigem `X-Admin-Key
 
 | Operação | Rota | Recebe | Devolve | Regras |
 |---|---|---|---|---|
-| Verificar saúde | `GET /health` (pública) | nada | status de api, banco e redis | não expõe versões nem dados |
+| Verificar saúde | `GET /health` (pública) | nada | status de api, banco, redis e worker | não expõe versões nem dados; `worker` vem do pulso de minuto em minuto no Redis, e `aguardando` (instalação que ainda não viu o worker subir) não reprova |
 | Criar cliente | `POST /admin/clientes` | nome | cliente | slug único |
 | Listar clientes | `GET /admin/clientes` | nada | lista | só não removidos |
 | Criar agente | `POST /admin/clientes/{cliente_id}/agentes` | nome, canal, conexao (Chatwoot: url, conta, caixas e token de administrador se não houver guardado), handoff_destino, handoff_template, modelos, buffer, retomada | agente com URL do webhook | cliente existe e ativo; canal conectado antes de gravar (Chatwoot: cria o Agent Bot com a URL do webhook, liga nas caixas e confere na caixa que o bot ficou; se não ficou ou a gravação falhar, apaga o bot); o agente guarda só o token e o secret do bot, e o token de administrador que funcionou vai para Acesso ao canal; sem token guardado nem informado, 428; modelos só de provedores com chave; cria pasta e arquivos de prompt padrão; na WAHA cria a sessão com o webhook interno; no nativo não conecta nada |

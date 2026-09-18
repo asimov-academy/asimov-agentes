@@ -7,6 +7,7 @@ from app.consumo.modelos import Falha, Turno
 from app.conversas.modelos import Contato, Conversa, Mensagem
 from app.handoff.modelos import Handoff
 from app.midia.modelos import Midia
+from app.painel.modelos import UsuarioPainel
 from app.plataforma.banco import Base
 
-__all__ = ["AcessoCanal", "Agente", "Base", "Cliente", "Contato", "Conversa", "Falha", "Handoff", "Mensagem", "Midia", "Turno"]
+__all__ = ["AcessoCanal", "Agente", "Base", "Cliente", "Contato", "Conversa", "Falha", "Handoff", "Mensagem", "Midia", "Turno", "UsuarioPainel"]

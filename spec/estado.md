@@ -2,6 +2,12 @@
 
 Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-09-18.
 
+## Auditoria local
+
+Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-2026-09-18.md), com inventário, 22 achados priorizados e oito reproduções executáveis. Foram verificados os 266 testes e as 13 migrações da base publicada. O painel que surgiu em trabalho concorrente recebeu revisão parcial separada; esses resultados não validam suas alterações. Não muda a fase nem a versão publicada.
+
+**Os seis P1 foram corrigidos** (spec/decisoes.md, 2026-09-18): reentrega recupera turno perdido (A01), envio que não saiu não conta como respondido (A02), prazo do token de buffer não descarta resposta (A03), humano que assume cala o agente na hora (A04), prompt não passa de uma empresa para outra (A05) e o lock passa a durar mais que o job (A06). Viraram 16 regressões em `backend/testes/test_auditoria_p1.py`; a suíte está em 311 testes. **Nada disso rodou em VPS**: precisa de validação real antes de virar versão. Seguem abertos os 14 P2 e 2 P3, com três sondas em `backend/testes/auditoria_2026_09_18.py`.
+
 ## Versão publicada
 
 - `v0.17.0` em `asimov-academy/asimov-agentes` (público): nível de emoji por agente (nenhum, pouco, médio ou muito), perguntado na criação em todo canal e editável no menu. Agente criado antes fica sem regra, como era.

@@ -35,7 +35,7 @@ api() {
     "POST /admin/canais/chatwoot/descobrir")
       # Como a API: sem token guardado pede o token (428); o que vier fica guardado.
       if [ ! -f "$DIR/token" ] && ! grep -q token_admin <<<"$3"; then API_STATUS=428; API_RESPOSTA='{"detail":"informe o token"}'; return; fi
-      touch "$DIR/token"; API_STATUS=200; API_RESPOSTA='{"contas":[{"id":4,"nome":"Loja Exemplo","caixas":[{"id":1,"nome":"BecomApp"},{"id":3,"nome":"WhatsApp"}],"atendentes":[{"id":7,"nome":"Joana"}],"times":[{"id":2,"nome":"Vendas"}]},{"id":3,"nome":"Contour","caixas":[{"id":9,"nome":"Site"}]}]}' ;;
+      touch "$DIR/token"; API_STATUS=200; API_RESPOSTA='{"contas":[{"id":4,"nome":"Loja Exemplo","caixas":[{"id":1,"nome":"Atendimento"},{"id":3,"nome":"WhatsApp"}],"atendentes":[{"id":7,"nome":"Joana"}],"times":[{"id":2,"nome":"Vendas"}]},{"id":3,"nome":"Clinica Exemplo","caixas":[{"id":9,"nome":"Site"}]}]}' ;;
     "GET /admin/clientes") API_STATUS=200; API_RESPOSTA='[{"id":"c1","nome":"Loja Exemplo"},{"id":"c2","nome":"Padaria Pão Quente"}]' ;;
     "POST /admin/clientes") API_STATUS=201; API_RESPOSTA='{"id":"c9"}' ;;
     "PATCH /admin/clientes/c1/agentes/a1") API_STATUS=200; API_RESPOSTA=$(jq -c --argjson m "$3" '. + $m' <<<'{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","ativo":true,"url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/tok1","buffer_segundos":8,"max_mensagens_por_resposta":3,"modelo_conversa":"openai:gpt-5.5","modelo_fallback":null,"modelo_auxiliar":"openai:gpt-5.5","modelo_visao":"openai:gpt-5-mini","modelo_transcricao":"openai:whisper-1","handoff_destino":null,"digitacao_caracteres_por_segundo":6,"digitacao_maximo_segundos":20,"ferramentas":["calculadora","busca_web"],"emojis":"livre","credenciais":{"url":"https://chatwoot.exemplo.com.br","account_id":4}}') ;;
@@ -71,7 +71,7 @@ api() {
       if grep -q waba_id <<<"$3"; then
         API_STATUS=200; API_RESPOSTA='{"numeros":[{"phone_number_id":"1099","numero":"+55 11 3333-4444","nome":"Loja Exemplo"},{"phone_number_id":"1100","numero":"+55 11 3333-5555","nome":"Loja Exemplo Vendas"}],"templates":[{"nome":"aviso_handoff","idioma":"pt_BR","situacao":"APPROVED","categoria":"UTILITY","parametros":3}],"templates_todos":[{"nome":"aviso_handoff","idioma":"pt_BR","situacao":"APPROVED","categoria":"UTILITY","parametros":3},{"nome":"promo_mes","idioma":"pt_BR","situacao":"APPROVED","categoria":"MARKETING","parametros":1}]}'
       else
-        API_STATUS=200; API_RESPOSTA='{"contas":[{"waba_id":"220011","nome":"Loja Exemplo"},{"waba_id":"220012","nome":"Contour"}]}'
+        API_STATUS=200; API_RESPOSTA='{"contas":[{"waba_id":"220011","nome":"Loja Exemplo"},{"waba_id":"220012","nome":"Clinica Exemplo"}]}'
       fi ;;
     "GET /admin/clientes/c1/agentes/a5/whatsapp") API_STATUS=200; API_RESPOSTA='{"phone_number_id":"1099","numero":"+55 11 3333-4444","nome":"Loja Exemplo"}' ;;
     "POST /admin/clientes/c1/agentes/a5/whatsapp/webhook") API_STATUS=204; API_RESPOSTA='' ;;

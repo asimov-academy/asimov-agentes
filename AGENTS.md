@@ -37,14 +37,14 @@ Fale com o operador em português, curto e direto.
 
 - `setup/` é o único cliente da API. Depois que a API sobe, ele NUNCA acessa o banco.
 - `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
-- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA chama banco direto.
+- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `painel/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.
 - Não existe `frontend/` na primeira versão.
 
 ## Regras que não mudam
 
-- Todo repositório recebe `cliente_id` obrigatório e toda consulta filtra por ele. Única exceção: `acessos/` (token do operador no canal, da instalação). NUNCA use `cliente_id` vindo do corpo da requisição: nos webhooks ele sai do `token_webhook`, nas rotas admin da URL conferida no banco.
+- Todo repositório recebe `cliente_id` obrigatório e toda consulta filtra por ele. Exceções, todas da instalação e nunca de dado de um cliente pedido por outro: `acessos/` (token do operador no canal), `painel/` (a conta do operador), a resolução do agente pelo `token_webhook`, as listagens globais do operador (agentes, consumo, handoffs vencidos) e os jobs de manutenção. NUNCA use `cliente_id` vindo do corpo da requisição: nos webhooks ele sai do `token_webhook`, nas rotas admin da URL conferida no banco.
 - Busca vetorial filtra `cliente_id` e `agente_id` no `WHERE`.
 - Webhook do Chatwoot com assinatura inválida responde 200 e registra Falha. NUNCA 401: o Chatwoot silencia o bot na conversa.
 - No WhatsApp direto a pausa do handoff é o `status` da conversa aqui, e a volta é `/retomar <código>` do destino ou o prazo do agente. NUNCA guarde essa pausa em dois lugares.
@@ -66,6 +66,7 @@ Fale com o operador em português, curto e direto.
 - Helpers de tela (`pergunta`, `escolha`, `le_tecla`) usam locais com prefixo `__`; nome igual ao da variável de quem chama quebra o `printf -v`.
 - Setas só com terminal (`tem_terminal`); com `ASIMOV_TTY` apontando para arquivo a leitura é por linha. Teste de teclas: pty com `pyte`, esperando o script carregar antes da primeira tecla.
 - Teste teclas com bash 5 (o da VPS), não o 3.2 do macOS: o tempo de espera do Esc é outro.
+- Item novo no menu muda a numeração: `setup/testes/respostas.txt` responde por número e a simulação passa a descarrilar no meio. Rode `simula_onboarding.sh` e confira que a saída é 0, não só que ele abriu.
 - Terminal no navegador da Hostinger manda Enter como `\r\n`: toda leitura com terminal começa por `descarta_pendentes`, senão o Enter sobra e responde a pergunta seguinte.
 - Ação do menu roda em `com_voltar` (subshell, para o Esc voltar): variável alterada lá dentro some, a não ser que saia por `devolve`.
 - WAHA: o contêiner tem perfil no Compose e só sobe no primeiro agente WhatsApp (`WAHA_ATIVA=1` no `.env`, lido pelo `dc`). A `WAHA_API_KEY` nasce na instalação: gerá-la depois obrigaria a reiniciar a API. A imagem é atualizada por timer do systemd no host (`deploy/atualiza_waha.sh`), nunca pelo worker: contêiner com socket do Docker é a VPS inteira.
