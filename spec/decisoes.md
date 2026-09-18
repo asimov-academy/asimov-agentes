@@ -2,6 +2,18 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O painel sobrevive a `asimov atualizar` (v0.25.1)
+
+`deploy/caddy/painel.caddy` é versionado, com o conteúdo de painel desligado, e o pacote da
+atualização passa por cima do bloco que `asimov painel` tinha escrito na VPS. Quem estava com o
+painel ligado perdia o host `app.<dominio>` a cada atualização: o `bot` seguia respondendo e o
+painel dava falha de TLS, porque o Caddy não conhecia mais aquele host. Só voltava desligando e
+ligando o painel de novo.
+
+A atualização passou a reescrever o bloco quando ele sumiu (`painel_garante_caddy`, chamado em
+`atualiza()`), e a armadilha virou linha no `AGENTS.md`: arquivo versionado que o setup reescreve
+na VPS volta ao conteúdo do repositório a cada atualização.
+
 ## 2026-09-18: Conta de IA vinculada na instalação e copiloto no painel (v0.25.0)
 
 O setup instalava o Claude Code ou o Codex e parava aí. Quem nunca abria o CLI ficava com um binário

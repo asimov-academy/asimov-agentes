@@ -15,6 +15,8 @@ atualiza() {
   tela_instalacao
   ajusta_permissoes
   instala_comando
+  # O pacote da atualização traz o painel.caddy desligado por cima do bloco do operador.
+  painel_garante_caddy
   # Instalação que ligou o WhatsApp antes de o timer semanal e dos eventos de hoje.
   if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
     instala_timer_waha || true
