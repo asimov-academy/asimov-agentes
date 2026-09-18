@@ -57,6 +57,15 @@ class Nativo:
     ) -> Evento:
         raise NotImplementedError("o canal nativo não recebe webhook")
 
+    def interpretar_todos(
+        self,
+        payload: dict[str, Any],
+        credenciais: dict[str, Any],
+        destino: dict[str, Any] | None = None,
+    ) -> list[Evento]:
+        """Este canal manda um evento por webhook."""
+        return [self.interpretar(payload, credenciais, destino)]
+
     async def agente_pode_falar(
         self, credenciais: dict[str, Any], conversa_externa: str, status: str
     ) -> bool:

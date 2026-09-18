@@ -10,11 +10,19 @@ from app.handoff import servico as handoff
 from app.midia import servico as midia
 from app.plataforma.banco import fabrica_sessao
 from app.plataforma.config import config
+from app.plataforma import pulso as pulso_do_worker
 from app.plataforma.log import configura_log
 
 
 async def ao_iniciar(ctx: dict[str, Any]) -> None:
     configura_log(config().log_nivel)
+    # Já no boot: esperar o primeiro cron deixaria a instalação nova parecendo sem worker.
+    await pulso_do_worker.bate(ctx["redis"])
+
+
+async def pulso(ctx: dict[str, Any]) -> None:
+    """De minuto em minuto: é isto que `/health` lê para saber se há quem processe turno."""
+    await pulso_do_worker.bate(ctx["redis"])
 
 
 async def assumir_conversa(
@@ -51,6 +59,7 @@ async def confere_whatsapp(ctx: dict[str, Any]) -> int:
 class Configuracao:
     functions = [processar_turno, assumir_conversa]
     cron_jobs = [
+        cron(pulso, second=30, run_at_startup=True),
         cron(retomada_automatica, second=0, run_at_startup=False),
         cron(confere_whatsapp, minute={0, 10, 20, 30, 40, 50}, second=30, run_at_startup=False),
         cron(limpar_midia, hour=4, minute=7, run_at_startup=False),

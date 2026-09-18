@@ -478,6 +478,15 @@ class Chatwoot:
     def _cabecalho_bot(self, credenciais: dict[str, Any]) -> dict[str, str]:
         return {"api_access_token": credenciais["api_access_token"]}
 
+    def interpretar_todos(
+        self,
+        payload: dict[str, Any],
+        credenciais: dict[str, Any],
+        destino: dict[str, Any] | None = None,
+    ) -> list[Evento]:
+        """Este canal manda um evento por webhook."""
+        return [self.interpretar(payload, credenciais, destino)]
+
     async def agente_pode_falar(
         self, credenciais: dict[str, Any], conversa_externa: str, status: str
     ) -> bool:

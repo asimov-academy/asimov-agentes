@@ -6,16 +6,25 @@ API_LOCAL="http://127.0.0.1:8000"
 
 # api MÉTODO CAMINHO [JSON]: grava o status HTTP em API_STATUS e o corpo em API_RESPOSTA.
 # Não chame dentro de $(...): as variáveis se perderiam na subshell.
+#
+# O corpo vai por arquivo, não por argumento: ele carrega token de canal, e argumento de processo
+# é legível por qualquer usuário da máquina com `ps` (auditoria de 2026-09-18, A13). A chave
+# administrativa já ia pela entrada padrão pelo mesmo motivo.
 api() {
-  local metodo=$1 caminho=$2 corpo=${3:-} saida
+  local metodo=$1 caminho=$2 corpo=${3:-} saida arquivo=""
   local dados=()
-  [ -n "$corpo" ] && dados=(--data "$corpo")
   saida=$(mktemp)
+  if [ -n "$corpo" ]; then
+    arquivo=$(mktemp)
+    chmod 600 "$arquivo"
+    printf '%s' "$corpo" >"$arquivo"
+    dados=(--data-binary "@$arquivo")
+  fi
   API_STATUS=$(printf 'X-Admin-Key: %s\n' "$(env_get CHAVE_API_ADMIN)" |
     curl -s -o "$saida" -w '%{http_code}' -X "$metodo" -H @- \
       -H 'Content-Type: application/json' "${dados[@]}" "$API_LOCAL$caminho" || true)
   API_RESPOSTA=$(cat "$saida")
-  rm -f "$saida"
+  rm -f "$saida" ${arquivo:+"$arquivo"}
 }
 
 # exige_api: para o comando quando a última chamada não deu 200.
@@ -89,7 +98,9 @@ api_com_token() {
       dica "Fica guardado criptografado; só é pedido de novo se o Chatwoot recusar."
     fi
     pergunta_secreta token "Token de acesso do Chatwoot"
-    corpo=$(jq -c --arg t "$token" '.conexao = ((.conexao // {}) + {token_admin: $t})' <<<"$corpo")
+    # Pelo ambiente, não por argumento: `jq --arg token` apareceria em `ps` (A13).
+    corpo=$(ASIMOV_TOKEN="$token" jq -c \
+      '.conexao = ((.conexao // {}) + {token_admin: env.ASIMOV_TOKEN})' <<<"$corpo")
     unset token
     tentou=1
   done
@@ -360,7 +371,15 @@ fluxo_agente_chatwoot() {
 tela_primeiro_agente() {
   estado_tem agente_id && return 0
   secao "Primeiro agente"
+  AGENTE_ID=""
   fluxo_novo_agente
+  # Sem id não houve criação (o operador desistiu no meio, e desistir é uma saída normal). Gravar
+  # a etapa aqui fazia o setup seguinte pular o primeiro agente para sempre, com a instalação sem
+  # agente nenhum (auditoria de 2026-09-18, A19).
+  if [ -z "${AGENTE_ID:-}" ]; then
+    aviso "Nenhum agente criado. Rode $(destaque "asimov novo-agente") quando quiser criar."
+    return 0
+  fi
   estado_set agente_nome "$AGENTE_NOME"
   estado_set agente_canal "$AGENTE_CANAL"
   estado_set agente_caixa "$AGENTE_CAIXA"

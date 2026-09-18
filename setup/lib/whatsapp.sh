@@ -95,8 +95,10 @@ pede_credenciais_whatsapp() {
     pergunta_secreta token "Token de acesso"
     dica "Chave secreta do app: painel do app, em Configurações do app > Básico."
     pergunta_secreta segredo "Chave secreta do app"
-    WHATSAPP_CONEXAO=$(jq -n --arg a "$app" --arg t "$token" --arg s "$segredo" \
-      '{app_id: $a, access_token: $t, app_secret: $s}')
+    # Pelo ambiente, não por argumento: `jq --arg` deixaria token e chave secreta visíveis em
+    # `ps` para qualquer usuário da máquina (auditoria de 2026-09-18, A13).
+    WHATSAPP_CONEXAO=$(ASIMOV_APP="$app" ASIMOV_TOKEN="$token" ASIMOV_SEGREDO="$segredo" jq -n \
+      '{app_id: env.ASIMOV_APP, access_token: env.ASIMOV_TOKEN, app_secret: env.ASIMOV_SEGREDO}')
     unset token segredo
 
     # O ID da conta de WhatsApp Business é o dado mais escondido do painel: em vez de mandar o

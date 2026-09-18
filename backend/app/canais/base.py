@@ -24,6 +24,8 @@ class Acao(StrEnum):
     """Grava e cala o agente: uma pessoa da empresa assumiu a conversa pelo próprio aparelho."""
     ALERTA = "alerta"
     """O canal avisou um problema que deixa o agente mudo (número desconectado do WhatsApp)."""
+    ENTREGA_RECUSADA = "entrega_recusada"
+    """O canal aceitou o envio e depois avisou que não entregou (status `failed` da Cloud API)."""
     RETOMAR = "retomar"
     """O atendente devolveu a conversa ao agente: fecha o handoff aberto."""
     RETOMAR_POR_CODIGO = "retomar_por_codigo"
@@ -151,6 +153,19 @@ class Canal(Protocol):
         """`destino` é o `handoff_destino` do agente: nos canais diretos, o número ou grupo de
         onde vem o `/retomar <código>`; nos outros, não muda nada."""
         ...
+
+    def interpretar_todos(
+        self,
+        payload: dict[str, Any],
+        credenciais: dict[str, Any],
+        destino: dict[str, Any] | None = None,
+    ) -> list[Evento]:
+        """Um webhook pode trazer mais de um evento; o padrão é o canal que traz um só.
+
+        Quem recebe lote (a Cloud API junta o que chegou junto) sobrescreve. O webhook processa
+        cada evento como processava o único que existia antes.
+        """
+        return [self.interpretar(payload, credenciais, destino)]
 
     async def agente_pode_falar(
         self, credenciais: dict[str, Any], conversa_externa: str, status: str

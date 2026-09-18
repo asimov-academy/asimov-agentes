@@ -110,11 +110,16 @@ def _para_o_template(texto: str) -> str:
 # ── Leitura do webhook ─────────────────────────────────────────────────────
 
 
-def _mudanca(payload: dict[str, Any]) -> dict[str, Any] | None:
-    """A Meta embrulha tudo em `entry[].changes[].value`. Só interessa o campo `messages`."""
+def _mudancas(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """A Meta embrulha tudo em `entry[].changes[].value`. Só interessa o campo `messages`.
+
+    Devolve todas: um envelope pode trazer várias entradas e várias mudanças, e ler só a primeira
+    perdia mensagem com o webhook confirmado (auditoria de 2026-09-18, A08).
+    """
+    achadas: list[dict[str, Any]] = []
     entradas = payload.get("entry")
     if not isinstance(entradas, list):
-        return None
+        return achadas
     for entrada in entradas:
         mudancas = entrada.get("changes") if isinstance(entrada, dict) else None
         if not isinstance(mudancas, list):
@@ -123,8 +128,13 @@ def _mudanca(payload: dict[str, Any]) -> dict[str, Any] | None:
             if isinstance(mudanca, dict) and mudanca.get("field") == "messages":
                 valor = mudanca.get("value")
                 if isinstance(valor, dict):
-                    return valor
-    return None
+                    achadas.append(valor)
+    return achadas
+
+
+def _mudanca(payload: dict[str, Any]) -> dict[str, Any] | None:
+    mudancas = _mudancas(payload)
+    return mudancas[0] if mudancas else None
 
 
 def _nome_do_contato(valor: dict[str, Any], de: str) -> str | None:
@@ -293,26 +303,61 @@ class WhatsApp:
         credenciais: dict[str, Any],
         destino: dict[str, Any] | None = None,
     ) -> Evento:
+        """O primeiro evento do envelope. Quem processa tudo é `interpretar_todos`."""
+        return self.interpretar_todos(payload, credenciais, destino)[0]
+
+    def interpretar_todos(
+        self,
+        payload: dict[str, Any],
+        credenciais: dict[str, Any],
+        destino: dict[str, Any] | None = None,
+    ) -> list[Evento]:
+        """Um envelope da Cloud API pode trazer várias mensagens; cada uma vira um evento."""
         if payload.get("object") != "whatsapp_business_account":
-            return Evento(Acao.IGNORAR, f"webhook fora da lista: {payload.get('object')!r}")
-        valor = _mudanca(payload)
-        if valor is None:
-            return Evento(Acao.IGNORAR, "webhook sem mensagem")
+            return [Evento(Acao.IGNORAR, f"webhook fora da lista: {payload.get('object')!r}")]
 
-        metadados = valor.get("metadata")
-        numero_do_webhook = metadados.get("phone_number_id") if isinstance(metadados, dict) else None
-        meu = credenciais.get("phone_number_id")
-        if numero_do_webhook and meu and str(numero_do_webhook) != str(meu):
-            return Evento(Acao.IGNORAR, f"número de outro agente: {numero_do_webhook!r}")
+        eventos: list[Evento] = []
+        vazio = Evento(Acao.IGNORAR, "webhook sem mensagem")
+        for valor in _mudancas(payload):
+            metadados = valor.get("metadata")
+            numero_do_webhook = metadados.get("phone_number_id") if isinstance(metadados, dict) else None
+            meu = credenciais.get("phone_number_id")
+            if numero_do_webhook and meu and str(numero_do_webhook) != str(meu):
+                vazio = Evento(Acao.IGNORAR, f"número de outro agente: {numero_do_webhook!r}")
+                continue
+            if valor.get("statuses"):
+                vazio = self._entrega(valor)
+                continue
+            mensagens = valor.get("messages")
+            if not isinstance(mensagens, list):
+                continue
+            for mensagem in mensagens:
+                if isinstance(mensagem, dict):
+                    eventos.append(self._evento_da_mensagem(valor, mensagem, destino))
+        return eventos or [vazio]
 
-        if valor.get("statuses"):
-            return Evento(Acao.IGNORAR, "recibo de entrega da própria mensagem")
+    def _entrega(self, valor: dict[str, Any]) -> Evento:
+        """Recibo de entrega. `failed` vira falha visível: a mensagem não chegou ao contato.
 
-        mensagens = valor.get("messages")
-        if not isinstance(mensagens, list) or not mensagens or not isinstance(mensagens[0], dict):
-            return Evento(Acao.IGNORAR, "webhook sem mensagem")
-        mensagem = mensagens[0]
+        A Meta avisa a recusa por aqui, depois de aceitar o envio, e antes isso era descartado
+        junto com o recibo comum (auditoria de 2026-09-18, A07).
+        """
+        for status in valor.get("statuses") or []:
+            if not isinstance(status, dict) or status.get("status") != "failed":
+                continue
+            erros = status.get("errors")
+            primeiro = erros[0] if isinstance(erros, list) and erros and isinstance(erros[0], dict) else {}
+            return Evento(
+                Acao.ENTREGA_RECUSADA,
+                f"a Meta recusou a entrega: {primeiro.get('title') or primeiro.get('message') or 'sem detalhe'}",
+                texto=str(primeiro.get("code") or ""),
+                mensagem_externa=str(status.get("id")) if status.get("id") else None,
+            )
+        return Evento(Acao.IGNORAR, "recibo de entrega da própria mensagem")
 
+    def _evento_da_mensagem(
+        self, valor: dict[str, Any], mensagem: dict[str, Any], destino: dict[str, Any] | None
+    ) -> Evento:
         de = str(mensagem.get("from") or "")
         if not de:
             return Evento(Acao.IGNORAR, "mensagem sem remetente")

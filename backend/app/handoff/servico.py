@@ -275,7 +275,14 @@ async def retomada_automatica(sessao: AsyncSession) -> int:
             await sessao.commit()
             continue
         conversa = await conversas_repo.obter_conversa(sessao, aberto.cliente_id, aberto.conversa_id)
-        canal, credenciais = _canal_do_agente(agente)
+        # Pelo canal da conversa, não pelo do agente: a conversa de teste no terminal é nativa até
+        # em agente de Chatwoot ou WhatsApp, e devolver por lá não faria sentido nenhum
+        # (auditoria de 2026-09-18, A10).
+        canal, credenciais = (
+            agentes_servico.canal_da_conversa(agente, conversa)
+            if conversa is not None
+            else _canal_do_agente(agente)
+        )
         if conversa is not None and not await _devolve_no_canal(
             sessao, agente, canal, credenciais, conversa, aberto
         ):
@@ -330,6 +337,8 @@ async def _devolve_no_canal(
 
 
 def _canal_do_agente(agente: "Agente") -> tuple["Canal", dict[str, Any]]:
+    """O canal do agente. Quando existe conversa, use `canal_da_conversa`: ela pode ser do
+    terminal (nativa) mesmo num agente de canal externo."""
     from app.canais.registro import obter_canal
 
     return obter_canal(agente.canal), agentes_servico.credenciais(agente)
