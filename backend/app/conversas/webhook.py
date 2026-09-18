@@ -106,8 +106,15 @@ async def receber(
         return Response(status_code=200)
 
     if evento.acao is Acao.IGNORAR:
-        # Info de propósito: evento ignorado sem motivo visível é o que mais atrasa o debug de canal novo.
-        log.info("webhook_ignorado", motivo=evento.motivo)
+        # Info de propósito, e com o remetente: evento ignorado sem dizer de onde veio é o que mais
+        # atrasa o debug, e foi o que escondeu um `/retomar` que não chegava (v0.13.3).
+        log.info(
+            "webhook_ignorado",
+            motivo=evento.motivo,
+            de=evento.conversa_externa,
+            telefone=evento.contato_telefone,
+            texto=(evento.texto or "")[:60] or None,
+        )
         return Response(status_code=200)
 
     if evento.acao is Acao.RETOMAR_POR_CODIGO:
@@ -195,7 +202,13 @@ async def receber(
             log.error("webhook_agendamento_falhou", erro=repr(erro))
             return Response(status_code=500)
 
-    log.info("webhook_aceito", acao=str(evento.acao), motivo=evento.motivo)
+    log.info(
+        "webhook_aceito",
+        acao=str(evento.acao),
+        motivo=evento.motivo,
+        de=evento.conversa_externa,
+        telefone=evento.contato_telefone,
+    )
     return Response(status_code=200)
 
 

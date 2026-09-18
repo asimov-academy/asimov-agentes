@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Log do webhook diz de quem é a mensagem (v0.13.3)
+
+- **Um `/retomar` que não funcionava não aparecia no log**: nem como comando, nem como conversa, nem como ignorado. As linhas de ignorado diziam só "mensagem de grupo", sem dizer de qual conversa, o que não permite concluir nada.
+- `webhook_ignorado` e `webhook_aceito` passaram a levar a conversa, o telefone resolvido e os primeiros 60 caracteres do texto. Mensagem de grupo e conversa não atendida também levam o chat.
+- É log local do operador, na VPS dele, e é o que transforma "não funcionou" em uma linha que aponta a causa.
+
 ## 2026-09-18: O aviso de handoff dizia um número que não existe (v0.13.2)
 
 - **Achado do operador**: o aviso chegou com "Assumi a conversa com +1151135133847". Aquilo era o `@lid` do contato formatado como telefone: são dígitos, mas não são o número de ninguém, e quem recebe o aviso tenta ligar para o nada.
