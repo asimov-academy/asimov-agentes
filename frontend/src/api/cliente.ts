@@ -404,6 +404,9 @@ export type Agente = {
   digitacao_maximo_segundos: number;
   ferramentas: string[];
   emojis: string;
+  tom: TomDeVoz;
+  transfere_para_humano: boolean;
+  restringe_temas: boolean;
   contatos_permitidos: string[];
   handoff_destino: Record<string, unknown> | null;
   retomada_automatica_horas: number | null;
@@ -412,6 +415,9 @@ export type Agente = {
 };
 
 export type NivelDeEmoji = "nenhum" | "pouco" | "medio" | "muito";
+
+/** Como o agente fala. Muda o jeito, nunca o conteúdo. */
+export type TomDeVoz = "formal" | "normal" | "descontraido";
 
 export type NovoAgente = {
   nome: string;
@@ -425,6 +431,9 @@ export type NovoAgente = {
   digitacao_maximo_segundos?: number;
   ferramentas?: string[];
   emojis?: NivelDeEmoji;
+  tom?: TomDeVoz;
+  transfere_para_humano?: boolean;
+  restringe_temas?: boolean;
   contatos_permitidos?: string[];
   /** Só a resposta: resumo, imagem e áudio nascem no mesmo provedor e mudam na ficha. */
   modelo_conversa?: string;
@@ -434,6 +443,9 @@ export type EdicaoDoAgente = {
   nome: string;
   ativo: boolean;
   emojis: NivelDeEmoji | "livre";
+  tom: TomDeVoz;
+  transfere_para_humano: boolean;
+  restringe_temas: boolean;
   buffer_segundos: number;
   max_mensagens_por_resposta: number;
   digitacao_caracteres_por_segundo: number;

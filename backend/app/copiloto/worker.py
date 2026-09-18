@@ -20,8 +20,7 @@ from app.plataforma.log import configura_log
 
 log = structlog.get_logger()
 
-FILA = "arq:fila:copiloto"
-"""Fila própria: o worker de atendimento não enxerga estes jobs, e vice-versa."""
+FILA = servico.FILA
 
 
 async def ao_iniciar(ctx: dict[str, Any]) -> None:
@@ -47,8 +46,24 @@ async def turno_do_copiloto(ctx: dict[str, Any], texto: str) -> bool:
     return True
 
 
+async def melhorar_texto(ctx: dict[str, Any], texto: str, empresa: str) -> str:
+    """O botão de estrelinha do onboarding, pela assinatura do operador em vez de chave de API.
+
+    A instrução é a mesma do caminho por chave (`ia/redacao.py`), inclusive a delimitação do texto
+    do operador: ele é material a reescrever, nunca instrução para o modelo.
+    """
+    from app.ia import redacao
+
+    pedido = (
+        f"{redacao.INSTRUCAO}\n\nEmpresa: {empresa or 'sem nome informado'}\n\n"
+        f"<material>\n{texto[: redacao.LIMITE_DE_ENTRADA]}\n</material>"
+    )
+    melhorado = (await servico.redige(pedido)).strip()
+    return melhorado[: redacao.LIMITE_DE_SAIDA] or texto
+
+
 class Configuracao:
-    functions = [turno_do_copiloto]
+    functions = [turno_do_copiloto, melhorar_texto]
     on_startup = ao_iniciar
     redis_settings = RedisSettings.from_dsn(config().redis_url)
     queue_name = FILA

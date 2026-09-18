@@ -43,6 +43,16 @@ class Agente(ComId, ComCriacao, Base):
     )
     """Nomes do catálogo de `ia/ferramentas/registro.py` ligados neste agente."""
 
+    tom: Mapped[str] = mapped_column(String(20), default="normal", server_default="normal")
+    """Como o agente fala: `formal`, `normal` ou `descontraido`. Muda só o jeito, nunca o conteúdo."""
+
+    transfere_para_humano: Mapped[bool] = mapped_column(default=True, server_default="true")
+    """Com isto desligado, a tool de handoff nem é oferecida ao modelo: o agente atende sozinho até
+    o fim. Quem vende sem equipe de atendimento não quer o agente prometendo uma pessoa que não existe."""
+
+    restringe_temas: Mapped[bool] = mapped_column(default=False, server_default="false")
+    """O agente só fala do que é da empresa dele e devolve qualquer outro assunto para o atendimento."""
+
     emojis: Mapped[str] = mapped_column(String(10), default="nenhum", server_default="livre")
     """Quanto o agente usa emoji: `nenhum`, `pouco`, `medio` ou `muito`. `livre` é o que os agentes
     criados antes desta escolha mantêm, e para eles a plataforma não diz nada sobre emoji."""

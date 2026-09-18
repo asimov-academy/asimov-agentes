@@ -158,6 +158,11 @@ Commit: `feat: WhatsApp direto oficial e WAHA, handoff por aviso e agente nativo
 
 Objetivo: cada agente responde com base nos documentos do próprio cliente.
 
+Onde ela mora no painel já está decidido e desenhado: a aba **Treinamento** da ficha do agente
+(`spec/frontend.md`, 5.3), com cinco formas de ensinar a mesma coisa (texto, site, vídeo, documento
+e base compartilhada entre agentes). A tela existe vazia desde a v0.26.0, com selo "em breve": o
+lugar combinado veio antes da máquina para nenhum tipo de material nascer num canto diferente.
+
 O que entra:
 - Entidades Documento e Trecho; modelo de embeddings da Instalação.
 - API: enviar, listar e remover documento.

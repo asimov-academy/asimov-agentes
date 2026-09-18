@@ -147,6 +147,11 @@ jq -c . "$DIR/patch_whatsapp"
 com_voltar edita_whatsapp
 # Diagnóstico: o que está no ar e em que versão (curl é falso aqui, então cai no ramo de falha).
 com_voltar fluxo_diagnostico
+# Jeito de falar do agente: tom, emoji, se pode passar para uma pessoa e se só fala do que é da empresa.
+AGENTE='{"id":"a1","cliente_id":"c1","nome":"Luiz","canal":"chatwoot","tom":"normal","emojis":"livre","transfere_para_humano":true,"restringe_temas":false}'
+com_voltar edita_jeito
+jq -c '{tom, emojis, transfere_para_humano, restringe_temas}' <<<"$AGENTE"
+
 # Atualização de quem tinha o painel ligado: o pacote traz o painel.caddy desligado por cima, e a
 # atualização precisa reescrever o bloco do host, senão o painel some do servidor web.
 ARQ_CADDY_PAINEL=$DIR/painel.caddy

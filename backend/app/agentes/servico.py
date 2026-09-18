@@ -53,6 +53,9 @@ CAMPOS_EDITAVEIS = frozenset(
         "digitacao_maximo_segundos",
         "ferramentas",
         "emojis",
+        "tom",
+        "transfere_para_humano",
+        "restringe_temas",
         "contatos_permitidos",
         *CAMPOS_MODELO,
     }
@@ -75,6 +78,15 @@ def _valida_contatos(numeros: list[str]) -> list[str]:
         if digitos not in limpos:
             limpos.append(digitos)
     return limpos
+
+
+TONS = ("formal", "normal", "descontraido")
+
+
+def _valida_tom(tom: Any) -> str:
+    if tom not in TONS:
+        raise CampoInvalido(f"tom precisa ser um de: {', '.join(TONS)}")
+    return str(tom)
 
 
 def _valida_ferramentas(nomes: list[str]) -> list[str]:
@@ -190,6 +202,8 @@ async def criar_agente(
     _valida_retomada(canal_obj, opcoes.get("retomada_automatica_horas"))
     if opcoes.get("ferramentas") is not None:
         opcoes["ferramentas"] = _valida_ferramentas(opcoes["ferramentas"])
+    if opcoes.get("tom") is not None:
+        opcoes["tom"] = _valida_tom(opcoes["tom"])
     if opcoes.get("contatos_permitidos") is not None:
         opcoes["contatos_permitidos"] = _valida_contatos(opcoes["contatos_permitidos"])
     token = cripto.novo_token()
@@ -321,6 +335,8 @@ async def editar_agente(
     valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
     if "ferramentas" in campos:
         campos["ferramentas"] = _valida_ferramentas(campos["ferramentas"])
+    if "tom" in campos:
+        campos["tom"] = _valida_tom(campos["tom"])
     if "contatos_permitidos" in campos:
         campos["contatos_permitidos"] = _valida_contatos(campos["contatos_permitidos"] or [])
     if no_canal and "nome" in campos and campos["nome"] != agente.nome:

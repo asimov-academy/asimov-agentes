@@ -95,7 +95,15 @@ async def transferir(
     conversa: "Conversa",
     motivo: str,
 ) -> str:
-    """Devolve `transferido`, `ja_aberto` ou `falhou`. Quem chama faz o commit."""
+    """Devolve `transferido`, `desligado`, `ja_aberto` ou `falhou`. Quem chama faz o commit.
+
+    Agente com `transfere_para_humano` desligado não transfere por caminho nenhum, nem pela tool
+    (que nem é oferecida ao modelo), nem por falha no turno, nem por arquivo grande demais: quem
+    desligou não tem equipe esperando do outro lado, e avisar que alguém vai assumir seria mentira.
+    """
+    if not agente.transfere_para_humano:
+        log.info("handoff_desligado_no_agente", agente_id=str(agente.id), motivo=motivo)
+        return "desligado"
     if await repo.aberto(sessao, agente.cliente_id, conversa.id) is not None:
         return "ja_aberto"
 
