@@ -223,10 +223,19 @@ aconteceu e o botão de tentar de novo. Tela sem os três não passa na revisão
 
 ### 5.0 Configurações
 
-Conta (operador, quando o acesso nasceu, último acesso e sair), Instalação (endereço do painel e dos
-agentes, quantas empresas e agentes) e **Chaves de IA**: uma por provedor, com o estado de cada uma e
-o formulário para guardar ou trocar. A chave é da instalação, não do agente, e antes só existia
-dentro da ficha de um agente, na hora de escolher um modelo.
+Cinco blocos, todos da instalação e nunca de uma empresa atendida:
+
+| Bloco | O que tem |
+|---|---|
+| Instalação | endereço do painel e dos agentes, quantas empresas e agentes, quando o acesso nasceu e o sair |
+| Espaço de trabalho | nome e sigla, que aparecem no menu no lugar de ASIMOV. Serve para reconhecer de qual instalação é a aba aberta |
+| Perfil do operador | nome e e-mail de quem administra. Não serve para entrar: a senha continua a única credencial |
+| Dados do negócio | razão social, documento, e-mail, telefone e site de quem opera, não das empresas atendidas |
+| Chaves de IA | uma por provedor, com o estado de cada uma e o formulário para guardar ou trocar. A chave é da instalação e antes só existia dentro da ficha de um agente |
+
+Espaço de trabalho, perfil e negócio moram numa linha só cada (`espaco_trabalho` e as colunas novas
+de `usuario_painel`), como o operador: a instalação é de quem tem a VPS. Salvar relê o `/painel/api/eu`,
+e o menu troca o nome e a sigla na hora.
 
 ### 5.1 Visão geral
 

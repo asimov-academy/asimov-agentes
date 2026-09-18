@@ -62,6 +62,9 @@ export function Casca({
   }, [gaveta]);
 
   const endereco = eu?.instalacao.subdominio_app || eu?.instalacao.subdominio_bot || "…";
+  const nomeDoEspaco = eu?.espaco?.nome?.trim() || "ASIMOV";
+  const sigla = eu?.espaco?.sigla?.trim() || nomeDoEspaco.slice(0, 1).toUpperCase();
+  const quemOpera = eu?.operador?.nome?.trim() || "Operador";
 
   return (
     // A página não rola: quem rola é o conteúdo da direita. É o que deixa o menu parado de verdade
@@ -85,13 +88,34 @@ export function Casca({
         {/* Recolhido, a faixa é estreita demais para a marca e o botão lado a lado: eles ficavam
             apertados e fora do eixo dos ícones. Sobra a marca, centrada no mesmo eixo, e quem abre
             o menu é o botão que flutua na borda, que não disputa largura nenhuma. */}
-        <div className={`flex items-center gap-2 px-3 py-4 ${recolhido ? "justify-center" : ""}`}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-ciano text-sm font-bold text-void">
-            A
+        <div className={`flex items-center gap-2.5 px-3 py-4 ${recolhido ? "justify-center" : ""}`}>
+          <span
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-ciano text-sm font-bold text-void"
+            title={recolhido && situacao ? situacao.texto : undefined}
+          >
+            {sigla}
+            {situacao && (
+              <span
+                aria-hidden="true"
+                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-panel ${
+                  CORES_DA_SITUACAO[situacao.cor]
+                }`}
+              />
+            )}
           </span>
           {!recolhido && (
-            <span className="min-w-0 flex-1 text-sm font-semibold tracking-[0.08em] text-texto">
-              ASIMOV
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold tracking-[0.08em] text-texto">
+                {nomeDoEspaco}
+              </span>
+              {situacao && (
+                <span
+                  className="block truncate text-xs text-muted"
+                  aria-label={`Situação da instalação: ${situacao.texto}`}
+                >
+                  {situacao.texto}
+                </span>
+              )}
             </span>
           )}
           <button
@@ -175,23 +199,9 @@ export function Casca({
           ))}
         </nav>
 
-        {/* A área da conta: a situação da instalação, quem está dentro e para onde ir mexer nela.
-            Recolhido, sobra o ponto colorido e o avatar. */}
+        {/* A área da conta: quem está dentro e para onde ir mexer na instalação. A situação subiu
+            para a marca, no topo. */}
         <div className="border-t border-borda p-3">
-          {situacao && (
-            <div
-              className={`mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 ${recolhido ? "justify-center" : ""}`}
-              title={situacao.texto}
-              aria-label={`Situação da instalação: ${situacao.texto}`}
-            >
-              <span
-                className={`h-2 w-2 shrink-0 rounded-full ${CORES_DA_SITUACAO[situacao.cor]}`}
-                aria-hidden="true"
-              />
-              {!recolhido && <span className="truncate text-xs text-muted">{situacao.texto}</span>}
-            </div>
-          )}
-
           <NavLink
             to="/configuracoes"
             title={recolhido ? "Perfil e configurações" : undefined}
@@ -217,7 +227,7 @@ export function Casca({
             )}
             {!recolhido && (
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">Operador</span>
+                <span className="block truncate text-sm">{quemOpera}</span>
                 <span className="block truncate text-xs text-dim">{endereco}</span>
               </span>
             )}

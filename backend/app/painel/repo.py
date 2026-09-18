@@ -11,7 +11,7 @@ from app.clientes.modelos import Cliente
 from app.consumo.modelos import Falha, Turno
 from app.conversas.modelos import Contato, Conversa
 from app.handoff.modelos import Handoff
-from app.painel.modelos import UsuarioPainel
+from app.painel.modelos import EspacoTrabalho, UsuarioPainel
 from app.plataforma.banco import agora
 
 
@@ -32,6 +32,17 @@ async def troca_senha(sessao: AsyncSession, usuario: UsuarioPainel, senha: str) 
 
 async def marca_acesso(sessao: AsyncSession, usuario: UsuarioPainel) -> None:
     usuario.ultimo_acesso_em = agora()
+
+
+async def espaco(sessao: AsyncSession) -> EspacoTrabalho:
+    """Nasce vazio na primeira leitura: assim nenhuma tela precisa tratar a ausência."""
+    achado = await sessao.scalar(select(EspacoTrabalho).limit(1))
+    if achado is not None:
+        return achado
+    novo = EspacoTrabalho()
+    sessao.add(novo)
+    await sessao.flush()
+    return novo
 
 
 # Visão geral
