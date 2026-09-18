@@ -47,7 +47,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 
 - Objetivo: instalar e subir a estrutura do agente.
 - Quem acessa: operador.
-- Mostra: passos numerados `N/T - [ OK ] - descrição` (firewall, Node, Python e uv, agente de código escolhido, SDK do provedor de IA escolhido, banco, proxy com SSL, projeto base, serviços no ar, health check da API em `https://bot.<dominio>`).
+- Mostra: os onze passos numerados `N/T ✓ descrição` (firewall, Node, uv, assistente de código escolhido, senhas e chaves, plataforma, banco e Redis, tabelas, API e worker com HTTPS, API respondendo e certificado em `https://bot.<dominio>`). A imagem leva os SDKs dos quatro provedores de IA: nada de SDK escolhido na instalação desde a v0.20.0.
 - Ações: nenhuma; só acompanhar.
 
 ### 5a. Conta de IA (vínculo)
@@ -85,7 +85,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Objetivo: fechar a instalação e orientar o próximo passo.
 - Quem acessa: operador.
 - Antes de mostrar: gera `AGENTS.md` e `CLAUDE.md` na raiz do projeto instalado (regras em spec/arquitetura.md, seção 11) e faz o primeiro commit do projeto.
-- Mostra: o que foi instalado, URL da API, endereço e código de primeiro acesso do painel (se ligado e sem conta), agentes criados com canal e webhook, caminho do projeto, caminho do log e os próximos passos (entrar na pasta do projeto e abrir Claude Code ou Codex, que já leem o `CLAUDE.md` ou `AGENTS.md`).
+- Mostra: o que foi instalado, URL da API, endereço e código de primeiro acesso do painel (se ligado e sem conta), agentes criados com canal e webhook, caminho do projeto, caminho do log, a conta de IA vinculada quando existe, e os próximos passos (entrar na pasta do projeto e abrir Claude Code ou Codex, que já leem o `CLAUDE.md` ou `AGENTS.md`).
 - Ações: nenhuma.
 
 ### 8. Comando `asimov` e setup rodado de novo
@@ -93,7 +93,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Objetivo: operar os agentes sem front.
 - Quem acessa: operador.
 - Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo), reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
-- `asimov` sem argumento abre o mesmo menu. Cada ação também existe como subcomando: `novo-agente`, `conversar` (desde a v0.8.0), `agentes`, `editar`, `remover`, `consumo`, `handoff` (desde a v0.4.0), `atualizar` e `ajuda`.
+- `asimov` sem argumento abre o mesmo menu. Cada ação também existe como subcomando: `novo-agente`, `conversar` (desde a v0.8.0), `agentes`, `editar`, `remover`, `consumo`, `handoff` (desde a v0.4.0), `painel`, `ia` (desde a v0.25.0), `diagnostico`, `atualizar` e `ajuda`.
 - Atualizar para a v0.4.0 pergunta uma vez o destino do handoff dos agentes que não têm.
 - Ações do menu:
   - Criar agente (mesmo fluxo da tela 6).
@@ -102,6 +102,8 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
   - Criação e edição no Chatwoot perguntam também em quantas horas o agente volta sozinho se o atendente esquecer de devolver a conversa (v0.11.0).
   - Editar agente: escolhe o agente, vê a configuração. Agente nativo tem "Conectar a um canal" no lugar de Handoff (v0.8.2): escolhe o canal (Chatwoot, WhatsApp oficial ou WhatsApp pela WAHA), caixa ou pareamento e destino do handoff; se o ritmo for o de teste, oferece o do WhatsApp. Agente do WhatsApp oficial tem "WhatsApp" no lugar de Handoff (v0.15.0): confere o número na Meta, troca quem recebe o handoff junto com o template do aviso, as horas até o agente voltar sozinho, quem pode falar com ele e refaz o webhook na Meta (para quando alguém mexe na configuração pelo painel). Agente da WAHA tem "WhatsApp" no lugar de Handoff (v0.9.0): mostra o número pareado, pareia de novo (trocar de número), troca quem recebe o handoff, as horas até o agente voltar sozinho e quem pode falar com ele. A tela explica que responder pelo aparelho cala o agente e que 👍 na conversa o traz de volta (v0.10.0). Muda nome (também o nome do bot no Chatwoot; se o Chatwoot estiver fora, oferece salvar só na plataforma), tempo de buffer, mensagens por resposta, digitação (caracteres por segundo e teto por mensagem), ferramentas (lista de marcar: calculadora e busca na web), emoji, modelos (resposta, fallback, resumo do handoff, visão, áudio; provedor sem chave pede a chave na hora) ou destino do handoff. Vale na próxima mensagem. No Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente; por isso lá não há tempo de retomada.
   - Remover agente: pede o nome do agente para confirmar e apaga o bot no Chatwoot junto; se o Chatwoot estiver fora, oferece remover deixando o bot lá. No modo revenda, empresa que ficou sem agentes pode ser removida junto.
+  - Painel no navegador: liga ou desliga o painel e gera o código de primeiro acesso.
+  - Conta de IA (v0.25.0): mostra o assistente, a conta vinculada e se o copiloto do painel está ligado; vincula, troca de assistente e desvincula. Trocar de assistente pede o login do novo, porque a imagem do copiloto leva o CLI dentro.
   - Token do Chatwoot: mostra onde há token guardado e permite esquecê-lo.
   - Subir base de conhecimento (fase 6): escolher o agente e a pasta ou arquivo; listar e remover documentos já carregados.
   - Ver consumo e falhas: escolhe uma empresa ou todas; por empresa e agente, últimos 7 e 30 dias lado a lado, com turnos, tokens e custo estimado em dólar, e as últimas falhas (derivado).

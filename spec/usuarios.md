@@ -7,11 +7,12 @@
 Quem roda o setup numa VPS: o dono do projeto, alunos da metodologia e clientes da metodologia. Familiaridade alta com tecnologia: usa SSH, terminal, domínio e DNS, e desenvolve com vibecoding.
 
 No app:
-- Roda o setup, escolhe Claude Code ou Codex e informa domínio, e-mail do SSL e chaves.
+- Roda o setup, escolhe Claude Code ou Codex e informa domínio e e-mail do SSL. Entra na conta desse assistente quando a instalação pede: é a assinatura dele que move o copiloto do painel.
+- Informa a chave de cada provedor de IA na criação do primeiro agente que a usa, não na instalação.
 - Cria os agentes de cada cliente (empresa), escolhe o canal de cada agente (Chatwoot, WhatsApp oficial, WhatsApp não oficial pela WAHA ou nativo no terminal) e informa as credenciais.
 - Cola a URL de webhook gerada no canal.
 - Sobe a base de conhecimento de cada agente.
-- Depois do setup, evolui prompts, tools e comportamento em vibecoding direto no projeto.
+- Depois do setup, evolui prompts, tools e comportamento em vibecoding direto no projeto, ou pede ao copiloto do painel, que propõe e espera a confirmação dele.
 
 ### Contato
 
@@ -56,7 +57,7 @@ O operador, sozinho. Não existe outro papel administrativo.
 
 ## Implicações técnicas
 
-- Autenticação de pessoas: nenhuma dentro do app. O acesso administrativo é o SSH da VPS. Qualquer rota administrativa da API (criar agente, subir base de conhecimento) escuta só em localhost ou exige chave de API guardada em variável de ambiente (derivado).
+- Autenticação de pessoas: o acesso administrativo é o SSH da VPS, e as rotas `/admin` escutam só em localhost com chave em variável de ambiente. Desde o painel (fase 8) há um segundo caminho, opcional: uma conta só de operador em `app.<dominio>`, com senha em scrypt, sessão no Redis e o primeiro acesso liberado por um código de uso único mostrado no terminal da VPS. O painel nunca fala com `/admin` e não conhece a chave administrativa.
 - Autenticação de entrada dos canais: todo webhook é verificado antes de processar. WhatsApp pela assinatura `X-Hub-Signature-256` com o app secret; WAHA pela assinatura `X-Webhook-Hmac` (HMAC SHA-512 do corpo) com a chave do agente, chegando só pela rede interna do Docker; Chatwoot pela assinatura HMAC `X-Chatwoot-Signature` com o secret do Agent Bot, além do token secreto único por agente na URL do webhook (derivado). Webhook sem verificação válida é rejeitado.
 - Autorização por papel:
 
@@ -64,6 +65,7 @@ O operador, sozinho. Não existe outro papel administrativo.
 |---|---|---|---|
 | Rodar setup e configurar VPS | sim | não | não |
 | Criar e editar agente, canal e credenciais | sim | não | não |
+| Pedir mudança ao copiloto do painel, e confirmá-la | sim | não | não |
 | Subir base de conhecimento | sim | não | não |
 | Conversar com o agente | não | não | sim, só a própria conversa |
 | Receber handoff | não | sim, só do próprio cliente | não |

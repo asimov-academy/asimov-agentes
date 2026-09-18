@@ -81,6 +81,11 @@ Modelos de IA:
   filtro. Nada que esteja cifrado no banco vira JSON: credencial de canal sai mascarada, o endereço
   do webhook só na ficha, e a falha sai como resumo curto, nunca com o corpo que o provedor
   respondeu (que já veio com chave de API dentro).
+- **O copiloto entra pela mesma porta do painel.** As rotas `/painel/api/copiloto/*` exigem a
+  sessão e o CSRF como qualquer outra. Ele não ganha credencial nem atalho: o CLI roda num
+  contêiner sem porta publicada, alcança a plataforma só pelas ferramentas MCP, e a única
+  escrita é a rota que o operador clica para confirmar uma proposta. Texto de prompt e de
+  conversa chega ao modelo delimitado, como material, nunca como instrução.
 - **Estático do painel, tudo da VPS.** O front construído é servido em `/painel/app`, com o
   `index.html` sem cache e os arquivos com hash no nome guardados para sempre. O `painel.css` das
   telas de login leva a versão no endereço, e as fontes saem de `/painel/fontes/<arquivo>`, de uma
@@ -252,7 +257,7 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 
 ## 9. Hospedagem e publicação
 
-- **Onde roda:** tudo numa VPS do operador com Ubuntu 24.04, mínimo 2 vCPU, 4 GB de RAM e 40 GB de disco (o setup recusa menos de 2 GB de RAM e 20 GB livres). Containers: `caddy` (80 e 443 públicas), `api` (127.0.0.1:8000), `worker`, `postgres` e `redis` sem porta pública.
+- **Onde roda:** tudo numa VPS do operador com Ubuntu 24.04, mínimo 2 vCPU, 4 GB de RAM e 40 GB de disco (o setup recusa menos de 2 GB de RAM e 20 GB livres). Containers: `caddy` (80 e 443 públicas), `api` (127.0.0.1:8000), `worker`, `postgres` e `redis` sem porta pública, mais `waha` e `copiloto` sob demanda, também sem porta.
 - **Caminho do projeto:** `$HOME/asimov-agentes` do usuário que roda o setup (assumido). Estado do setup em `$HOME/.asimov/estado` (CHAVE=VALOR), log em `$HOME/.asimov/setup.log`.
 - **Publicação na primeira instalação:** o próprio setup (tela 5) sobe com `docker compose up -d --build`, roda `alembic upgrade head` e confere `https://bot.<dominio>/health`.
 - **Publicação depois de mudanças em vibecoding:** `deploy/publicar.sh` na raiz do projeto: roda `deploy/testar.sh`, build, migrações, sobe os serviços e faz health check. Migração nova com `deploy/nova_migracao.sh`. Todos usam `dc`, de `deploy/compose.sh`. É o que o `AGENTS.md` gerado manda o agente de código usar.
@@ -271,7 +276,8 @@ Automatizados desde a primeira fase (pytest, com Postgres e Redis reais em conta
 - **Handoff:** conversa pausada não gera resposta; `/retomar` com código válido vindo do destino retoma; o mesmo comando vindo de outro número vira mensagem comum; retomada automática fecha no horário.
 - **Divisão de mensagens:** nunca passa de `max_mensagens_por_resposta`.
 - **Credenciais:** gravadas criptografadas; nunca aparecem em resposta da API nem em log.
-- **Setup:** `shellcheck` sem erros em todos os scripts; funções de checagem (versão do Ubuntu, memória, DNS, estado de retomada) testadas isoladamente.
+- **Setup:** `shellcheck` sem erros em todos os scripts; funções de checagem (versão do Ubuntu, memória, DNS, estado de retomada) testadas isoladamente; `setup/testes/simula_onboarding.sh` percorre o onboarding inteiro com a API e o Docker falsos.
+- **Copiloto:** nenhuma ferramenta do modelo escreve na plataforma (propor registra proposta e para aí); a escrita só acontece na rota que o operador clica; o comando do CLI sai sem as ferramentas de código dele; o registro de ferramentas recusa arquivo solto na pasta.
 
 Manual, pelo operador:
 
@@ -280,6 +286,7 @@ Manual, pelo operador:
 - Mandar texto, áudio, imagem e PDF para um agente em cada canal e conferir resposta, digitando e divisão.
 - Forçar um handoff em cada canal e retomar.
 - Abrir o projeto no Claude Code e no Codex e confirmar que eles leem o `CLAUDE.md`/`AGENTS.md`.
+- Vincular a conta de IA na instalação, pedir uma mudança ao copiloto do painel, confirmar a proposta e conferir no terminal que ela valeu.
 
 ## 11. Arquivos de contexto do projeto gerado
 
