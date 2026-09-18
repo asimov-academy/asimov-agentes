@@ -51,7 +51,8 @@ class Config(BaseSettings):
     # Soma do digitando de uma resposta; abaixo do lock, que também cobre mídia e modelo.
     digitacao_total_maximo_segundos: int = 90
 
-    # O arquivo é insumo: depois de virar texto, ninguém mais o lê. Fica um dia para conferência.
+    # O arquivo é insumo: depois de virar texto, ninguém mais o lê. A limpeza é diária, então na
+    # prática ele dura de um a dois dias, o que basta para conferir um atendimento estranho.
     midia_horas_no_disco: int = 24
     midia_limite_bytes: int = 20 * 1024 * 1024
     midia_limite_audio_segundos: int = 5 * 60

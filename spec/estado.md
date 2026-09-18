@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.13.0` em `asimov-academy/asimov-agentes` (público): o arquivo de áudio, imagem e documento sai do disco em 24 horas; o texto lido dele fica.
+- `v0.13.1` em `asimov-academy/asimov-agentes` (público): o arquivo de áudio, imagem e documento sai do disco na limpeza diária (um a dois dias depois de lido); o texto lido dele fica.
 - `v0.12.3`: áudio, imagem e PDF voltam a ser lidos (o arquivo era anunciado em `localhost`, que no contêiner do worker é o próprio worker), e pedir QR code novo deixou de disparar alarme de número fora do ar.
 - `v0.12.2`: o aparelho conectado aparece no celular como `Agente (Empresa)`, em vez de "Ubuntu Firefox".
 - `v0.12.1`: o id do número do handoff passa a ser o que o próprio WhatsApp devolve (nono dígito, `@lid`), conferido na escolha e corrigido no envio.
@@ -59,7 +59,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - Canal nativo (`canais/nativo/`): sem conexão nem webhook; rotas `POST` e `GET .../terminal` em `canais/nativo/rotas.py`; envio, digitando e humano conduzindo no Redis (`memoria.py`); a leitura diz se o turno ainda está em andamento. Handoff mostra motivo, resumo e código no terminal e `/retomar` usa a retomada do operador.
 - Canal Chatwoot (`canais/chatwoot/`): cria o Agent Bot e confere na caixa que ele ficou ligado; aceita evento de qualquer caixa em que o bot esteja ligado (a assinatura prova o bot).
 - Turno (`conversas/turno.py`): buffer por conversa, lock de 240 s, mídia antes do modelo, resposta descartada se chegar mensagem nova antes do envio, digitando com o tempo de uma pessoa digitar (6 caracteres/s, variação de 15%, teto de 20 s por mensagem, soma até 90 s; editável por agente).
-- Mídia: transcrição, visão e PDF com texto, cache por cliente e hash, limites de 20 MB e 5 minutos. O arquivo sai do disco em 24 horas (`limpar_midia`); o texto lido fica com a conversa.
+- Mídia: transcrição, visão e PDF com texto, cache por cliente e hash, limites de 20 MB e 5 minutos. O arquivo sai do disco na limpeza diária, um dia depois de lido (`limpar_midia`); o texto lido fica com a conversa.
 - Handoff no Chatwoot: nota privada curta, atribuição, status aberto; retomada pelo status pendente ou pelo prazo do agente (que devolve para pendente e desatribui); atendente que responde por lá pausa o agente e fica com a conversa; falha do modelo e arquivo grande também transferem. Retomada pelo operador existe na API (`POST .../conversas/{id}/retomar`), sem opção no menu.
 - Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), escolhidas na criação (nenhuma por padrão desde a v0.8.11). OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
