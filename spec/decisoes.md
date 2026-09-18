@@ -41,6 +41,25 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Auditoria de copy do produto inteiro (v0.20.4)
+
+Auditoria de todo texto que alguém lê: documentação, telas do terminal, painel, popups, páginas
+servidas, descrições de ferramenta, mensagens dos canais e o banco de ícones. Relatório em
+`docs/auditoria-copy-2026-09-18.md`, com o método e a lista completa.
+
+Nove achados foram corrigidos na hora, por serem erro de fato e não questão de gosto: telefone real
+no repositório público, aviso que dizia que o WhatsApp oficial ainda não existia, duas datas
+escritas no passado antes de acontecerem, instrução de retomada que ninguém no destino consegue
+seguir, promessa de uma tela que não existe, caminho do contêiner numa resposta pública, tipagem que
+deixava passar nome de ícone inválido, README descrevendo o setup anterior à v0.20.0 e "risco de
+bloqueio: nenhum".
+
+O resto (cerca de 180 achados de jargão de tela, verbosidade medida, vocabulário inconsistente entre
+terminal e painel, limitação que o painel esconde, ícones mortos e improvisados) ficou no relatório
+para o operador decidir, porque é reescrita de voz e ele é quem manda nela.
+
+spec/estado.md.
+
 ## 2026-09-18: Contraste do texto do painel na régua da WCAG AA
 
 Na VPS o operador não conseguia ler rótulo de campo nem texto de apoio. Medido: `dim` (#444444)
@@ -491,7 +510,7 @@ Aberto e não tocado aqui: os 14 P2 e 2 P3 do relatório, com as três sondas qu
 
 ## 2026-09-18: `/retomar` do número do agente vale em qualquer conversa (v0.13.5)
 
-- **O log fechou o caso**: `acao: pausar, de: 1151135133847@lid`. O operador escreveu o `/retomar` pelo WhatsApp Web do número do agente, dentro da conversa do contato, e aquilo era lido como ele assumindo a conversa.
+- **O log fechou o caso**: `acao: pausar, de: 1100000000000@lid`. O operador escreveu o `/retomar` pelo WhatsApp Web do número do agente, dentro da conversa do contato, e aquilo era lido como ele assumindo a conversa.
 - **Quem escreve do número do agente é o operador falando com o sistema**, e o código diz qual conversa devolver: o comando passou a valer em qualquer chat, não só no de quem recebeu o aviso. Conversa comum escrita do aparelho continua sendo intervenção humana, que é o que o operador espera.
 - **O aviso de handoff ficou explícito** sobre os dois caminhos, em vez de "reaja com 👍 na conversa ou mande /retomar aqui", que lia como se os dois fossem no mesmo lugar: 1) joinha na conversa com o contato; 2) `/retomar <código>` respondendo o aviso.
 - Custou quatro rodadas de teste porque cada versão anterior cobria um caminho que não era o que o operador usava. A lição, já aplicada nas v0.13.3 e v0.13.4: nenhuma saída do webhook sem log, com o remetente.
@@ -509,7 +528,7 @@ Aberto e não tocado aqui: os 14 P2 e 2 P3 do relatório, com as três sondas qu
 
 ## 2026-09-18: O aviso de handoff dizia um número que não existe (v0.13.2)
 
-- **Achado do operador**: o aviso chegou com "Assumi a conversa com +1151135133847". Aquilo era o `@lid` do contato formatado como telefone: são dígitos, mas não são o número de ninguém, e quem recebe o aviso tenta ligar para o nada.
+- **Achado do operador**: o aviso chegou com "Assumi a conversa com +1100000000000". Aquilo era o `@lid` do contato formatado como telefone: são dígitos, mas não são o número de ninguém, e quem recebe o aviso tenta ligar para o nada.
 - **Quem monta o nome do contato é o serviço de handoff**, não o canal: nome e telefone do Contato (que a v0.11.1 passou a resolver por trás do `@lid`), na forma `Maria (+55 51 99999-8888)`. Sem nome, só o telefone; sem telefone, o rótulo do canal. Vale para o aviso de handoff e para os dois avisos de retomada.
 - **`numero_legivel` não formata mais `@lid` como telefone**: devolve "o contato".
 - **`/retomar` do destino que escreve por trás de um `@lid`**: a comparação era só pelo id guardado no cadastro do destino, e quem escreve nem sempre aparece por ele. Agora o telefone resolvido desempata (`e_o_destino`), como já era para o contato na lista de quem pode falar.
@@ -536,7 +555,7 @@ Aberto e não tocado aqui: os 14 P2 e 2 P3 do relatório, com as três sondas qu
 
 ## 2026-09-17: Quem diz o id do número do handoff é o WhatsApp (v0.12.1)
 
-- **Achado no teste**: o handoff abriu (o agente calou), mas o aviso não chegou: `handoff_incompleto` com "aviso de handoff não chegou: CredencialInvalida". Os números que apareceram nas falhas do mesmo teste (`555197035844`, `555186389892`) mostraram a causa provável: naquela região o WhatsApp usa o número **sem** o nono dígito, e o destino estava cadastrado com ele.
+- **Achado no teste**: o handoff abriu (o agente calou), mas o aviso não chegou: `handoff_incompleto` com "aviso de handoff não chegou: CredencialInvalida". Os números que apareceram nas falhas do mesmo teste (`555197035844`, `555133332222`) mostraram a causa provável: naquela região o WhatsApp usa o número **sem** o nono dígito, e o destino estava cadastrado com ele.
 - **`check-exists` na escolha do destino**: o setup pergunta ao WhatsApp se o número existe e guarda o `chatId` que ele devolve, que hoje pode até ser um `@lid`. Número sem WhatsApp é recusado na hora, com o motivo, em vez de virar um handoff mudo semanas depois.
 - **Rede de segurança no envio**: se o aviso falhar com o id guardado, o canal pergunta o id de verdade e tenta uma vez, registrando na falha que o destino precisa ser trocado no menu. Assim o agente já existente volta a avisar sem depender de reconfiguração.
 - **Erro do envio passou a levar o motivo** da WAHA, não só o tipo da exceção. Foi a terceira vez que um erro genérico custou uma rodada de diagnóstico (antes: download de mídia e sessão).
@@ -560,7 +579,7 @@ Aberto e não tocado aqui: os 14 P2 e 2 P3 do relatório, com as três sondas qu
 
 - **Achado no primeiro teste de ponta a ponta**: o agente não respondeu a um número liberado na lista. O log mostrou `contato fora da lista do agente`, e o log da WAHA mostrou a razão: o WhatsApp entrega a conversa endereçada por `@lid` (id oculto), não pelo telefone. A comparação não tinha como bater.
 - **O telefone de verdade vem resolvido pela WAHA** (2026.8.1+) em `pn` ou, no GOWS, em `_data.Info.SenderAlt`; em grupo, no participante. `telefone_do_contato` procura nesses campos e guarda o número no Contato; a conversa continua endereçada pelo `@lid`, que é por onde se responde. `@lid` nunca é lido como telefone: os dígitos dele não são o número de ninguém.
-- **Nono dígito**: a comparação passou a aceitar o mesmo celular com e sem o 9 (`555186389892` e `5551986389892`), que é como o mesmo número aparece conforme a idade do cadastro. DDDs diferentes continuam diferentes.
+- **Nono dígito**: a comparação passou a aceitar o mesmo celular com e sem o 9 (`555133332222` e `5551933332222`), que é como o mesmo número aparece conforme a idade do cadastro. DDDs diferentes continuam diferentes.
 - **Contato barrado vira Falha** com o identificador, visível em Ver consumo e falhas. Antes só havia uma linha de log em nível info: o operador via o agente mudo e não tinha como saber que a lista tinha barrado, nem quem.
 
 ## 2026-09-17: Atendente assume a conversa no Chatwoot, com prazo de volta (v0.11.0)

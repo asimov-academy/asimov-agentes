@@ -40,7 +40,7 @@ precisa dele: o setup descobre. Se quiser conferir, está em
 
 ## Duas mudanças recentes que valem ler antes
 
-**1. Desde 1º de outubro de 2026 a resposta dentro da janela de 24 horas é cobrada.** Era o que
+**1. A partir de 1º de outubro de 2026 a resposta dentro da janela de 24 horas passa a ser cobrada.** Era o que
 mais confundia: até setembro de 2026, responder um contato que escreveu primeiro não custava nada.
 Agora cada mensagem de serviço (a resposta em texto livre, que é o que o agente manda) é cobrada
 pela tarifa de utilidade do país, depois de **1.000 mensagens grátis por número por mês**, que não
@@ -129,7 +129,7 @@ que é onde você confere o **ID do número** se precisar.
    > Cobrança e pagamentos**.
 2. Adicione um cartão à conta de WhatsApp Business.
 
-**Não deixe para depois.** Desde outubro de 2026, conta sem forma de pagamento não tem mensagem de
+**Não deixe para depois.** A partir de outubro de 2026, conta sem forma de pagamento deixa de ter mensagem de
 serviço entregue, e mensagem de serviço é justamente a resposta do agente ao contato.
 
 ## 6. Nome de exibição
@@ -356,7 +356,7 @@ Quando o número de verdade estiver pronto, crie outro agente com ele.
 | | Oficial (Cloud API) | WAHA |
 |---|---|---|
 | Homologação | da Meta | nenhuma, é API não oficial |
-| Risco de bloqueio | nenhum | o número pode ser bloqueado sem aviso |
+| Risco de bloqueio | baixo: o número é homologado, mas a conta pode ser suspensa por violar a política | o número pode ser bloqueado sem aviso |
 | Custo | por mensagem, tabela da Meta, com 1.000 respostas grátis por número por mês | só a VPS |
 | Preparação | os passos deste documento | ler um QR code no terminal |
 | Número | não roda no celular | é o seu celular, alguém pode responder pelo aparelho |

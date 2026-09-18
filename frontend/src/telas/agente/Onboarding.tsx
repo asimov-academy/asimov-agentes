@@ -502,7 +502,7 @@ export function Onboarding({
                 </div>
               )}
               <p className="mt-6 text-sm text-dim">
-                Passar a conversa para uma pessoa está sempre ligado, e o destino se escolhe depois.
+                Passar a conversa para uma pessoa está sempre ligado.
               </p>
             </Pergunta>
           )}

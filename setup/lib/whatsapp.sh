@@ -28,10 +28,10 @@ mostra_template_sugerido() {
 # aviso_oficial: o que muda em relação à WAHA. Devolve 1 se o operador desistir.
 aviso_oficial() {
   echo
-  info "O WhatsApp oficial é a $(destaque "Cloud API da Meta"): número homologado, sem risco de bloqueio."
-  dica "A Meta cobra por mensagem, conforme a tabela dela, e desde outubro de 2026 a resposta na"
-  dica "janela de 24 h também conta (1.000 grátis por número por mês). Sem forma de pagamento na"
-  dica "conta, ela não entrega as respostas do agente."
+  info "O WhatsApp oficial é a $(destaque "Cloud API da Meta"): número homologado, sem risco de bloqueio por uso."
+  dica "A Meta cobra por mensagem, conforme a tabela dela, e a partir de 1º de outubro de 2026 a"
+  dica "resposta na janela de 24 h também conta (1.000 grátis por número por mês). Sem forma de"
+  dica "pagamento na conta, ela não entrega as respostas do agente."
   dica "O número fica só com o agente: ele não roda no celular, então ninguém responde pelo"
   dica "aparelho como acontece na WAHA."
   dica "Você precisa ter, na Meta: um app, a conta de WhatsApp Business com o número, um token de"

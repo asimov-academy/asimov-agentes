@@ -148,7 +148,7 @@ tela_dados() {
       [ "$dominio" = "$digitado" ] || ok "Entendi $(destaque "$dominio"): os agentes ficam em $(destaque "bot.$dominio")"
       break
     fi
-    falha "Domínio inválido. Ex: minhaempresa.com.br"
+    falha "Domínio inválido. Ex: exemplo.com.br"
   done
   while true; do
     pergunta email "E-mail para o SSL" "$(estado_get email)"

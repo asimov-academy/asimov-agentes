@@ -4,8 +4,39 @@
     {
       "name": "painel-prototipo",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8777", "--directory", "painel/prototipo"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8777",
+        "--directory",
+        "painel/prototipo"
+      ],
       "port": 8777
+    },
+    {
+      "name": "painel-local",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=postgresql+asyncpg://paim@/asimov_local?host=/tmp",
+        "REDIS_URL=redis://localhost:6390/0",
+        "SUBDOMINIO_BOT=bot.exemplo.com.br",
+        "SUBDOMINIO_APP=localhost:8778",
+        "CHAVE_API_ADMIN=local",
+        "CHAVE_CRIPTOGRAFIA=bG9jYWwtbG9jYWwtbG9jYWwtbG9jYWwtbG9jYWwtMTI=",
+        "PAINEL_ATIVO=1",
+        "DIRETORIO_PROMPTS=/Users/paim/script-test/prompts",
+        "DIRETORIO_MODELOS=/Users/paim/script-test/modelos",
+        "DIRETORIO_MIDIA=/private/tmp/claude-501/-Users-paim-script-test/cd8d5693-e5ec-404b-b923-bfa0aa967534/scratchpad/midia",
+        "uv",
+        "run",
+        "--directory",
+        "backend",
+        "uvicorn",
+        "app.main:app",
+        "--port",
+        "8778"
+      ],
+      "port": 8778
     }
   ]
 }
