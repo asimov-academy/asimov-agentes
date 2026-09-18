@@ -37,7 +37,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Parte 1 (agente nativo) concluída e validada em VPS real na v0.8.11. **Parte 2 (WAHA) construída na v0.9.0, aguardando o critério de aceite numa VPS real.** Próxima: WhatsApp oficial. Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Parte 1 (agente nativo) validada em VPS real (v0.8.11). **Parte 2 (WAHA) validada em VPS real em 2026-09-18 (v0.14.2)**: instalação, pareamento, texto, áudio, imagem, PDF, lista de quem atende, handoff com aviso e código, `/retomar`, joinha, pausa por resposta pelo aparelho, retomada por tempo e remoção tirando o aparelho do celular. **Em construção: WhatsApp oficial.** Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -75,8 +75,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Pendências conhecidas
 
-- Teste de ponta a ponta na VPS (2026-09-17, agente Spencer, VPS reinstalada do zero): instalação, pareamento e conversa de texto funcionando. Barrado antes pelo `@lid` (v0.11.1) e áudio não baixado (v0.11.2). Falta conferir áudio e imagem depois da correção, handoff, `/retomar`, joinha, pausa por resposta pelo aparelho e remoção.
-- **Parte 2 (WAHA) ainda não rodou inteira numa VPS**: falta parear um número de verdade, conferir texto, áudio e imagem, o aviso de handoff e o `/retomar`, a remoção tirando o aparelho da lista do WhatsApp e o timer de atualização (`systemctl list-timers asimov-waha.timer`). O que o operador precisa: um chip de teste que possa ser bloqueado e o número ou grupo que recebe o handoff.
+- Sessão órfã na WAHA: agente removido e recriado deixa a sessão antiga viva, que manda webhook com token que já não vale (`webhook_token_desconhecido`). Falta uma conferência de sessões no menu, que liste e deixe apagar.
+- O número usado no teste é um celular de uso pessoal: como a sessão assina `message.any`, toda conversa particular passa pelo webhook (não é gravada, e desde a v0.14.2 o texto não entra no log). Em produção, chip só do agente.
 - Da parte 1, não conferido na VPS depois das correções: contas pela calculadora nova (v0.8.7: ponto de milhar, porcentagem, parcela, datas), citação da busca sem markdown (v0.8.10) e `/retomar` no terminal. Cobertos por teste automatizado.
 - Mídia (visão e PDF) na OpenAI Responses ainda não conferida na VPS.
 - Uma mensagem digitada no terminal da VPS chegou como "Ol�a" (byte inválido antes do "a"). Suspeita: apagar uma letra acentuada; não reproduzido local com bash 5.
