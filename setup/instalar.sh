@@ -22,6 +22,7 @@ atualiza() {
     reconfigura_sessoes_waha
   fi
   tela_handoff_pendente
+  tela_painel_oferta
   mostra_resumo
   [ -n "${ASIMOV_ATUALIZAR:-}" ] || menu_operador
 }
@@ -46,6 +47,7 @@ principal() {
   ajusta_permissoes
   tela_primeiro_agente
   estado_set handoff_perguntado "$(date -Is)"
+  tela_painel_oferta
   tela_final
 }
 

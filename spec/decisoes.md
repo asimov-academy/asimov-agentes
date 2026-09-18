@@ -2,6 +2,24 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: A instalação passa a oferecer o painel (v0.19.0)
+
+O painel existia e ninguém ligava: a instalação só citava `asimov painel` numa lista de comandos no
+fim. Quem termina o setup não sabe que dá para administrar pelo navegador.
+
+Entrou `tela_painel_oferta`, perguntada **uma vez**, na instalação nova e na primeira atualização de
+quem já tinha instalado (marcada no estado, como o `handoff_perguntado`). Ela explica o que o painel
+faz, avisa do registro DNS de `app.<dominio>` antes de perguntar, e quem disser não recebe o comando
+para depois. Dizer sim cai no `painel_liga`, que já existia e cuida de DNS, Caddy, reinício e código
+de acesso.
+
+A simulação do onboarding ganhou a tela no fim, com a resposta "não", que é o caminho que não
+depende de DNS nem de contêiner. No caminho, uma linha vazia que sobrava no fim do
+`setup/testes/respostas.txt` saiu: ela nunca era lida, e o `confirma` novo a leria como "sim",
+porque resposta vazia é sim.
+
+spec/fases.md e spec/estado.md.
+
 ## 2026-09-18: Um painel só, e três bugs que apareceram ao rodar de verdade
 
 Ao subir a aplicação inteira na máquina (Postgres, Redis, API e worker) para o operador testar, o

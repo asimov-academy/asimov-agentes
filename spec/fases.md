@@ -237,6 +237,7 @@ Critério de aceite:
 - Escolher o terminal na instalação não cria rota nem host novo: a API fica como sempre foi.
 
 O que o operador precisa fazer:
-- Criar o registro DNS de `app.<dominio>` e decidir se quer o painel na instalação.
+- Criar o registro DNS de `app.<dominio>`. A instalação pergunta uma vez se quer ligar o painel, e
+  `asimov painel` liga depois.
 
 Commit: `feat: painel web do operador em app.<dominio>`
