@@ -2,6 +2,15 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O ícone também vem por URL, e `asimov diagnostico` (v0.16.2)
+
+- **O 404 da página, na prática, era o operador estar em `/root`**: `source deploy/compose.sh` não existe fora da pasta do projeto, então o `dc restart caddy` nunca rodou. Toda dica de comando do setup passou a vir com `cd $RAIZ_PROJETO` na frente.
+- **`asimov diagnostico`** (e item no menu): versão do código, versão instalada, pasta e o código HTTP de cada endereço que precisa responder (API por dentro, API pelo domínio, política, ícone e WAHA quando ligada), mais os comandos completos de recarregar o servidor web e ver o log. Nasceu de duas rodadas de diagnóstico por mensagem para achar algo que a própria instalação sabia responder.
+- **O ícone virou URL pública** (`/icone-app.png`), pedido do operador: baixar pelo navegador e subir no app da Meta, sem `scp`. Para isso o arquivo saiu de `docs/imagens/` e foi para `modelos/`, que já é montado nos contêineres e já é onde ficam os arquivos que o operador ajusta (prompts, `AGENTS.md.tmpl`, `privacidade.html`). O gerador foi junto: `python3 modelos/gerar_icone.py`.
+- **A tela que manda o operador ao painel da Meta confere os dois endereços** antes, pelo domínio, que é como a Meta vai abrir. Endereço que não responde vira aviso com o comando de recarregar, em vez de a Meta recusar a URL depois.
+- **Arquivo de modelo ausente responde 503 com o caminho**, não erro interno sem explicação: acontece quando a atualização não trouxe `modelos/`.
+- Atualizados `docs/whatsapp-oficial.md` (URL do ícone), spec/arquitetura.md e spec/estado.md.
+
 ## 2026-09-18: Uma política por agente, e o Caddy recarregando de verdade (v0.16.1)
 
 - **A URL da política respondia 404 numa VPS atualizada.** O Caddyfile é montado no contêiner: `dc up -d caddy` não recria o contêiner quando só o arquivo muda, e o Caddy segue com a configuração que já carregou. `sobe_servicos` passou a rodar `caddy reload` depois do `dc up`, com `dc restart caddy` como reserva. Vale para qualquer caminho público que apareça no futuro, não só este. Virou linha nas armadilhas do AGENTS.md.

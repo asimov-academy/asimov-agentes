@@ -66,3 +66,13 @@ async def test_agente_de_outra_empresa_nao_aparece_na_url_dela(http, canal) -> N
     await http.post("/admin/clientes", json={"nome": "Outra"}, headers=ADMIN)
 
     assert (await http.get("/privacidade/outra/ana")).status_code == 404
+
+
+async def test_icone_do_app_sai_como_png_para_baixar(http) -> None:  # type: ignore[no-untyped-def]
+    """O operador baixa pelo navegador e sobe no app da Meta, sem tirar o arquivo da VPS."""
+    resp = await http.get("/icone-app.png")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/png"
+    assert resp.content.startswith(b"\x89PNG\r\n\x1a\n")
+    assert "icone-app.png" in resp.headers.get("content-disposition", "")

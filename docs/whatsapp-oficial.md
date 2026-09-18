@@ -222,16 +222,16 @@ atendimento trata (mensagens, nome e telefone, arquivos, uso de provedores de IA
 contato), e **você deve revisar** para bater com o seu caso. É a sua política, não a nossa. Depois
 de editar, não precisa reiniciar nada: a página é lida a cada visita.
 
-**Ícone quadrado do app.** Tem um pronto no projeto, 1024x1024 PNG:
+**Ícone quadrado do app.** A instalação também serve, para você abrir no navegador e salvar:
 
 ```
-docs/imagens/icone-app.png
+https://bot.<seu-dominio>/icone-app.png
 ```
 
-Baixe da VPS com `scp`, ou pegue direto no
-[repositório](https://github.com/asimov-academy/asimov-agentes/blob/main/docs/imagens/icone-app.png).
-Para gerar outro, `python3 docs/imagens/gerar_icone.py` (as cores e a letra estão no começo do
-arquivo).
+É um PNG 1024x1024. Para trocar por outro, sobrescreva `modelos/icone-app.png`; para gerar uma
+variação, `python3 modelos/gerar_icone.py` (as cores e a letra estão no começo do arquivo). Também
+está no
+[repositório](https://github.com/asimov-academy/asimov-agentes/blob/main/modelos/icone-app.png).
 
 Com os dois preenchidos em **Configurações do app > Básico**, e a empresa verificada
 ([passo 9](#9-etapa-3-verificação-da-empresa)), o botão de publicar libera.
