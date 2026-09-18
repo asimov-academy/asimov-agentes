@@ -349,7 +349,7 @@ export function Onboarding({
                         }`}
                       >
                         <span className="flex items-center gap-2.5">
-                          {texto && <Marca nome={texto.marca} tamanho={20} apagada={!marcado} />}
+                          {texto && <Marca nome={texto.marca} tamanho={20} />}
                           <span className="text-sm font-semibold text-texto">
                             {texto?.rotulo ?? c.nome}
                           </span>

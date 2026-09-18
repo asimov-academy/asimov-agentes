@@ -8,6 +8,7 @@ import {
 } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
+import { Cabecalho } from "../design/Cabecalho";
 import { Campo } from "../design/Campo";
 import { Carregando } from "../design/Carregando";
 import { Marca } from "../design/Marca";
@@ -58,13 +59,11 @@ export function Contatos({
 
   return (
     <>
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Contatos<span className="text-ciano">.</span>
-          </h1>
-          <p className="mt-2 text-sm text-muted">Quem já conversou com algum agente.</p>
-        </div>
+      <Cabecalho
+        titulo="Contatos"
+        contexto="Quem já conversou com algum agente."
+        acoes={
+          <>
 
         {empresas.length > 1 && (
           <select
@@ -81,7 +80,9 @@ export function Contatos({
             ))}
           </select>
         )}
-      </header>
+          </>
+        }
+      />
 
       <div className="mt-8 max-w-md">
         <Campo

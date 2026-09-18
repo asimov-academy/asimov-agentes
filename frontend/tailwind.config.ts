@@ -24,11 +24,6 @@ export default {
         perigo: "#ff453a",
         // A régua do gráfico da AXIS (seção 2, `.grid-line`), mais clara que a borda do cartão.
         grade: "#262626",
-        // Marcas das integrações. Só o logo de cada serviço usa estas cores, nunca a interface:
-        // elas são da empresa dona da marca e não entram na escala de contraste do painel.
-        whatsapp: "#25d366",
-        chatwoot: "#1f93ff",
-        meta: "#0866ff",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

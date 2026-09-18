@@ -10,7 +10,7 @@ export function EmBreve({ titulo }: { titulo: string }) {
   return (
     <>
       <header className="border-b border-borda pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-texto">
           {titulo}
           <span className="text-ciano">.</span>
         </h1>
@@ -41,7 +41,7 @@ export function NaoEncontrada() {
   return (
     <>
       <header className="border-b border-borda pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-texto">
           Este endereço não existe<span className="text-ciano">.</span>
         </h1>
       </header>

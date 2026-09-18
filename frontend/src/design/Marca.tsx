@@ -1,20 +1,18 @@
-import { COR_DA_MARCA, MARCAS, type NomeDeMarca } from "./marcas";
+import { MARCAS, type NomeDeMarca } from "./marcas";
 
-/** O logo de uma integração, na cor da marca.
+/** O logo de uma integração, na cor do texto em volta.
  *
- *  Diferente do `Icone`: marca é preenchida, não traçada, e não muda de cor com o texto em volta,
- *  porque é o logo de outra empresa. Com `apagada`, ela herda a cor do texto, para quando o canal
- *  está desligado ou o contraste com o fundo não ajuda.
+ *  Diferente do `Icone` só no preenchimento: marca é `fill`, ícone é `stroke`. A cor vem da paleta
+ *  do painel, nunca da marca: verde do WhatsApp e azul do Chatwoot ao lado do ciano brigam com a
+ *  interface e cada linha da lista puxa para um lado.
  */
 export function Marca({
   nome,
   tamanho = 20,
-  apagada = false,
   className = "",
 }: {
   nome: NomeDeMarca;
   tamanho?: number;
-  apagada?: boolean;
   className?: string;
 }) {
   return (
@@ -25,7 +23,7 @@ export function Marca({
       fill="currentColor"
       aria-hidden="true"
       focusable="false"
-      className={`shrink-0 ${apagada ? "text-dim" : COR_DA_MARCA[nome]} ${className}`}
+      className={`shrink-0 ${className}`}
       dangerouslySetInnerHTML={{ __html: `<path d="${MARCAS[nome]}" />` }}
     />
   );

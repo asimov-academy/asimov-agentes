@@ -297,7 +297,7 @@ function Perfil({
         <Linha rotulo="Empresa">{agente.empresa}</Linha>
         <Linha rotulo="Canal">
           <span className="inline-flex items-center gap-2">
-            {marca && <Marca nome={marca} tamanho={16} apagada={!agente.ativo} />}
+            {marca && <Marca nome={marca} tamanho={16} />}
             {ROTULO_DO_CANAL(agente.canal)}
           </span>
         </Linha>
