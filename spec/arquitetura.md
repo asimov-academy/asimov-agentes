@@ -199,7 +199,7 @@ Worker arq, mesmo código do backend, container `worker`:
 | `ingerir_documento` | envio de documento | extrai texto, divide em trechos de cerca de 800 tokens com sobreposição de 100, gera embeddings em lote, marca `pronto` ou `erro` |
 | `confere_whatsapp` | cron a cada dez minutos | confere se os números dos agentes WAHA continuam pareados; fora do ar vira Falha, uma por agente por hora |
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
-| `limpar_midia` | cron diário | apaga arquivos de mídia com mais de 90 dias |
+| `limpar_midia` | cron de hora em hora | apaga do disco o arquivo de mídia com mais de 24 horas; o texto lido dele fica, e o hash mantém o cache valendo |
 
 Fora do worker, no host: `asimov-waha.timer` (systemd, domingo de madrugada) roda `deploy/atualiza_waha.sh`, que atualiza a imagem da WAHA e volta para a anterior se algum número não reconectar. Fica no host porque atualizar contêiner pede o Docker, e dar o socket do Docker a um contêiner é dar a VPS inteira.
 

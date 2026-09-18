@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,5 +20,7 @@ class Midia(ComId, ComCriacao, Base):
     tipo_mime: Mapped[str] = mapped_column(String(100))
     tamanho_bytes: Mapped[int]
     caminho_arquivo: Mapped[str] = mapped_column(String(500))
+    arquivo_apagado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """O arquivo some do disco em 24 horas; o texto lido dele fica. É o texto que a IA usa."""
     resultado: Mapped[str] = mapped_column(Text)
     metadados: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)

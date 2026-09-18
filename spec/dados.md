@@ -141,6 +141,7 @@ Arquivo recebido de contato, com o cache do processamento.
 | tipo_mime | texto | sim |
 | tamanho_bytes | inteiro | sim |
 | caminho_arquivo | texto | sim |
+| arquivo_apagado_em | quando o arquivo saiu do disco (24 horas depois de lido). O texto fica | não |
 | resultado | texto extraído (transcrição ou leitura) | sim; só existe registro de mídia lida com sucesso |
 | metadados | estruturado: modelo, páginas lidas, forma de leitura | sim |
 | criado_em | data e hora | sim |
