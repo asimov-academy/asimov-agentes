@@ -72,8 +72,11 @@ class Config(BaseSettings):
             "groq": self.groq_api_key,
         }.get(provedor, "")
 
+    def url_publica(self) -> str:
+        return f"https://{self.subdominio_bot}"
+
     def url_webhook(self, canal: str, token: str) -> str:
-        return f"https://{self.subdominio_bot}/webhook/{canal}/{token}"
+        return f"{self.url_publica()}/webhook/{canal}/{token}"
 
     def url_webhook_interna(self, canal: str, token: str) -> str:
         """Para o canal que roda na própria VPS (WAHA): não passa pelo Caddy nem pela internet."""

@@ -45,8 +45,8 @@ aviso_oficial() {
 dados_para_publicar_o_app() {
   echo
   info "Para publicar o app (sair do modo de desenvolvimento), a Meta pede dois dados:"
-  dica "Política de privacidade: https://$(env_get SUBDOMINIO_BOT)/privacidade"
-  dica "  Por empresa: https://$(env_get SUBDOMINIO_BOT)/privacidade/<slug-da-empresa>"
+  dica "Política de privacidade: esta instalação serve uma por agente, e o endereço aparece no fim"
+  dica "  desta tela e em Editar agente. A da instalação é https://$(env_get SUBDOMINIO_BOT)/privacidade"
   dica "  O texto fica em modelos/privacidade.html, para você ajustar ao seu caso."
   dica "Ícone quadrado do app: docs/imagens/icone-app.png, aqui no projeto."
   echo
@@ -257,6 +257,9 @@ fluxo_agente_whatsapp() {
   echo
   ok "$(destaque "$nome") no ar no número $(destaque "$WHATSAPP_NUMERO") ${CINZA}· $EMPRESA_NOME${NORMAL}"
   ok "Handoff para $(destaque "$(nome_do_destino "$(jq -c .handoff_destino <<<"$AGENTE")")")"
+  echo
+  info "Política de privacidade deste agente, para o app da Meta dele:"
+  printf '    %s\n' "$(destaque "$(jq -r '.url_privacidade' <<<"$AGENTE")")"
   dica "Mande uma mensagem para o número e o agente responde."
 }
 
@@ -310,6 +313,7 @@ edita_whatsapp() {
   campo "Template" "$(jq -r '.handoff_destino.template.nome // "nenhum: o aviso só chega dentro da janela de 24 h"' <<<"$AGENTE")"
   campo "Retomada" "👍 no aviso$(jq -r 'if .retomada_automatica_horas then ", ou sozinho em \(.retomada_automatica_horas) h" else " ou /retomar" end' <<<"$AGENTE")"
   campo "Atende" "$(atende_do_agente "$AGENTE")"
+  campo "Privacidade" "$(jq -r '.url_privacidade // "-"' <<<"$AGENTE")"
   echo
   ESC_ESCOLHE=5 escolha op "O que fazer?" \
     "Quem recebe o handoff  ${CINZA}número e template${NORMAL}" \

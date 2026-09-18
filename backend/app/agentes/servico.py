@@ -336,6 +336,16 @@ async def remover_agente(
     return desconectado
 
 
+def url_privacidade(agente: Agente) -> str:
+    """URL pública da política de privacidade deste agente, que o app da Meta dele pede.
+
+    O slug da empresa sai de `arquivo_prompt` (`<empresa>/<agente>/persona.md`), que já carrega os
+    dois: assim a saída da API não precisa de uma consulta a mais só para montar um endereço.
+    """
+    empresa = Path(agente.arquivo_prompt).parts[0]
+    return f"{config().url_publica()}/privacidade/{empresa}/{agente.slug}"
+
+
 def url_webhook(agente: Agente) -> str:
     return _url_webhook(obter_canal(agente.canal), agente.canal, cripto.decifra_texto(agente.token_webhook_cifrado))
 

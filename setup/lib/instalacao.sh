@@ -62,7 +62,14 @@ ajusta_permissoes() {
 
 sobe_banco() { dc up -d --wait postgres redis; }
 migra() { dc run --rm api alembic upgrade head; }
-sobe_servicos() { dc up -d api worker caddy; }
+sobe_servicos() {
+  dc up -d api worker caddy
+  # O Caddyfile é montado, então atualizar o projeto muda o arquivo mas não o que o Caddy já
+  # carregou: caminho público novo continuava respondendo 404 depois de `asimov atualizar`.
+  # `reload` não derruba conexão; se ele falhar (contêiner recém-criado, por exemplo), reinicia.
+  dc exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >>"$LOG" 2>&1 ||
+    dc restart caddy >>"$LOG" 2>&1 || true
+}
 
 espera_url() {
   local url=$1 tentativas=${2:-24}

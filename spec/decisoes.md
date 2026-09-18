@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Uma política por agente, e o Caddy recarregando de verdade (v0.16.1)
+
+- **A URL da política respondia 404 numa VPS atualizada.** O Caddyfile é montado no contêiner: `dc up -d caddy` não recria o contêiner quando só o arquivo muda, e o Caddy segue com a configuração que já carregou. `sobe_servicos` passou a rodar `caddy reload` depois do `dc up`, com `dc restart caddy` como reserva. Vale para qualquer caminho público que apareça no futuro, não só este. Virou linha nas armadilhas do AGENTS.md.
+- **O caminho no Caddy virou `/privacidade*`**, um padrão só: em matcher do Caddy `path /privacidade/*` não cobre dois níveis de forma óbvia, e `/privacidade*` cobre qualquer profundidade sem ambiguidade.
+- **Uma política por agente** (pedido do operador): na Meta existe um app por número, e cada app quer a própria URL. Entrou `GET /privacidade/{empresa}/{agente}`, que nomeia a empresa e o agente. A API passou a devolver `url_privacidade` em cada agente, montada do `arquivo_prompt` (que já carrega os dois slugs, evitando uma consulta só para montar endereço), e o setup mostra a URL pronta no fim da criação e em Editar agente > WhatsApp.
+- Atualizados `docs/whatsapp-oficial.md` (três níveis de URL, erro do 404), spec/arquitetura.md e AGENTS.md.
+
 ## 2026-09-18: A instalação serve a política de privacidade, e um ícone para o app (v0.16.0)
 
 - **O app precisa ser publicado** para atender número de produção, e a Meta pede política de privacidade e ícone antes. Mandar o operador hospedar uma página em outro lugar é atrito à toa: a instalação já tem domínio com HTTPS. `GET /privacidade` e `GET /privacidade/{slug}` devolvem HTML de `modelos/privacidade.html`, com o nome da empresa, o domínio, o contato (o e-mail do SSL) e a data. É a única rota que devolve HTML, e o Caddy passou a publicar esses dois caminhos. Slug inexistente responde 404 e não há listagem: quem não sabe o slug não descobre os clientes da instalação.

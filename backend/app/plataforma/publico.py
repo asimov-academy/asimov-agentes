@@ -5,9 +5,9 @@ tem domínio com HTTPS. Em vez de mandar o operador hospedar uma página em outr
 plataforma serve uma, a partir de `modelos/privacidade.html`: é o único lugar do projeto onde a API
 devolve HTML. O operador edita o arquivo e a página muda.
 
-`/privacidade/{slug}` nomeia a empresa do cliente, para o app da Meta daquela empresa apontar para
-uma página com o nome dela. Não existe listagem: quem não sabe o slug não descobre quem são os
-clientes da instalação.
+Três endereços, porque na Meta existe um app por número: `/privacidade` para a instalação,
+`/privacidade/{empresa}` para o cliente e `/privacidade/{empresa}/{agente}` para um agente dele.
+Não existe listagem: quem não sabe o slug não descobre quem são os clientes da instalação.
 """
 
 from datetime import date
@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 
+from app.agentes import repo as agentes_repo
 from app.clientes import repo as clientes_repo
 from app.plataforma.banco import sessao
 from app.plataforma.config import config
@@ -33,7 +34,7 @@ def _por_extenso(dia: date) -> str:
     return f"{dia.day} de {MESES[dia.month - 1]} de {dia.year}"
 
 
-def pagina(empresa: str) -> str:
+def pagina(empresa: str, agente: str = "") -> str:
     cfg = config()
     arquivo = cfg.diretorio_modelos / "privacidade.html"
     contato = (
@@ -44,6 +45,7 @@ def pagina(empresa: str) -> str:
     return (
         arquivo.read_text(encoding="utf-8")
         .replace("{{EMPRESA}}", empresa)
+        .replace("{{AGENTE}}", f" · atendimento de {agente}" if agente else "")
         .replace("{{DOMINIO}}", cfg.subdominio_bot)
         .replace("{{CONTATO}}", contato)
         .replace("{{ATUALIZADO_EM}}", _por_extenso(date.today()))
@@ -56,10 +58,24 @@ async def privacidade() -> HTMLResponse:
     return HTMLResponse(pagina("O atendimento desta instalação"))
 
 
-@router.get("/privacidade/{slug}", response_class=HTMLResponse)
-async def privacidade_do_cliente(slug: str, s: AsyncSession = Depends(sessao)) -> HTMLResponse:
+@router.get("/privacidade/{empresa}", response_class=HTMLResponse)
+async def privacidade_do_cliente(empresa: str, s: AsyncSession = Depends(sessao)) -> HTMLResponse:
     """Política com o nome da empresa, para o app da Meta daquela empresa."""
-    cliente = await clientes_repo.por_slug(s, slug)
+    cliente = await clientes_repo.por_slug(s, empresa)
     if cliente is None:
         raise HTTPException(status_code=404, detail="empresa não encontrada")
     return HTMLResponse(pagina(cliente.nome))
+
+
+@router.get("/privacidade/{empresa}/{agente}", response_class=HTMLResponse)
+async def privacidade_do_agente(
+    empresa: str, agente: str, s: AsyncSession = Depends(sessao)
+) -> HTMLResponse:
+    """Política de um agente: na Meta é um app por número, e cada app quer a própria URL."""
+    cliente = await clientes_repo.por_slug(s, empresa)
+    if cliente is None:
+        raise HTTPException(status_code=404, detail="empresa não encontrada")
+    achado = await agentes_repo.por_slug(s, cliente.id, agente)
+    if achado is None:
+        raise HTTPException(status_code=404, detail="agente não encontrado")
+    return HTMLResponse(pagina(cliente.nome, achado.nome))
