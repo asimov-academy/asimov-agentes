@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, SemSessao, type Agente, type Empresa } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
+import { Cabecalho } from "../design/Cabecalho";
 import { Carregando } from "../design/Carregando";
 import { Icone } from "../design/Icone";
 import { Marca } from "../design/Marca";
@@ -58,21 +59,17 @@ export function Agentes({
 
   return (
     <>
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Agentes<span className="text-ciano">.</span>
-          </h1>
-          {/* A contagem só aparece quando há o que contar: sem agente, quem diz isso é o estado
-              vazio, e quem está buscando já tem o carregando embaixo. */}
-          {agentes !== null && agentes.length > 0 && (
-            <p className="mt-2 text-sm text-muted">
-              {agentes.length} {agentes.length === 1 ? "agente" : "agentes"}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
+      {/* A contagem só aparece quando há o que contar: sem agente, quem diz isso é o estado vazio,
+          e quem está buscando já tem o carregando embaixo. */}
+      <Cabecalho
+        titulo="Agentes"
+        contexto={
+          agentes !== null && agentes.length > 0
+            ? `${agentes.length} ${agentes.length === 1 ? "agente" : "agentes"}`
+            : undefined
+        }
+        acoes={
+          <>
           {empresas.length > 1 && (
             <select
               value={empresa}
@@ -104,11 +101,12 @@ export function Agentes({
             ))}
           </div>
 
-          <Botao tom="acento" pequeno icone="act-add" onClick={() => navega("/agentes/novo")}>
-            Criar agente
-          </Botao>
-        </div>
-      </header>
+            <Botao tom="acento" pequeno icone="act-add" onClick={() => navega("/agentes/novo")}>
+              Criar agente
+            </Botao>
+          </>
+        }
+      />
 
       {erro ? (
         <div className="mt-10">
@@ -149,15 +147,30 @@ export function Agentes({
                     {a.nome.slice(0, 1).toUpperCase()}
                   </span>
 
+                  {/* A largura carrega o que o operador consultaria abrindo a ficha: onde o agente
+                      atende, de quem ele é e qual IA responde por ele. Some por coluna conforme a
+                      tela encolhe, e no celular sobra nome e canal, que é o mínimo para escolher. */}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-base text-texto">{a.nome}</span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
-                      {marca && <Marca nome={marca} tamanho={14} apagada={!a.ativo} />}
-                      <span className="truncate">
-                        {ROTULO_DO_CANAL(a.canal)}
-                        {empresa ? "" : `, em ${a.empresa}`}
-                      </span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-sm text-muted md:hidden">
+                      {marca && <Marca nome={marca} tamanho={14} />}
+                      <span className="truncate">{ROTULO_DO_CANAL(a.canal)}</span>
                     </span>
+                  </span>
+
+                  <span className="hidden min-w-0 basis-44 items-center gap-1.5 text-sm text-muted md:flex">
+                    {marca && <Marca nome={marca} tamanho={14} />}
+                    <span className="truncate">{ROTULO_DO_CANAL(a.canal)}</span>
+                  </span>
+
+                  {!empresa && (
+                    <span className="hidden min-w-0 basis-40 truncate text-sm text-muted lg:block">
+                      {a.empresa}
+                    </span>
+                  )}
+
+                  <span className="tecnico hidden min-w-0 basis-44 truncate text-dim xl:block">
+                    {a.modelo_conversa}
                   </span>
 
                   {!a.ativo && <Selo>inativo</Selo>}

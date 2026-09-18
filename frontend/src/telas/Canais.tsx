@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ErroDaApi, SemSessao, type Empresa, type LinhaDeCanal } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
+import { Cabecalho } from "../design/Cabecalho";
 import { Carregando } from "../design/Carregando";
 import { Marca } from "../design/Marca";
 import { Modal } from "../design/Modal";
@@ -76,17 +77,11 @@ export function Canais({
 
   return (
     <>
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Canais<span className="text-ciano">.</span>
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Por onde cada agente atende, e se está respondendo agora.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
+      <Cabecalho
+        titulo="Canais"
+        contexto="Por onde cada agente atende, e se está respondendo agora."
+        acoes={
+          <>
           {empresas.length > 1 && (
             <select
               value={empresa}
@@ -105,8 +100,9 @@ export function Canais({
           <Botao pequeno icone="sys-refresh" onClick={busca}>
             Conferir de novo
           </Botao>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {erro ? (
         <div className="mt-10">
@@ -142,24 +138,27 @@ export function Canais({
                   aria-hidden="true"
                   className={`absolute inset-y-4 left-2.5 w-0.5 rounded-full ${COR[l.situacao.cor] ?? COR.neutro}`}
                 />
-                <div className="min-w-0">
-                  <p className="text-base text-texto">
+                <div className="min-w-0 basis-56">
+                  <p className="truncate text-base text-texto">
                     {l.agente}
                     {!empresa && <span className="text-muted">, em {l.empresa}</span>}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
-                    {marca && <Marca nome={marca} tamanho={14} apagada={!l.ativo} />}
+                    {marca && <Marca nome={marca} tamanho={14} />}
                     <span className="truncate">
                       {ROTULO_DO_CANAL(l.canal)}
                       {!l.ativo && " (agente inativo)"}
                     </span>
                   </p>
-                  <p className="mt-2 text-sm text-texto">{l.situacao.resumo}</p>
-                  {l.situacao.erro && <p className="tecnico mt-1 text-dim">{l.situacao.erro}</p>}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-texto">{l.situacao.resumo}</p>
+                  {l.situacao.erro && <p className="tecnico mt-1 break-words text-dim">{l.situacao.erro}</p>}
                 </div>
 
                 {l.canal === "waha" && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex shrink-0 flex-wrap gap-2">
                     <Botao pequeno icone="sys-fullscreen" onClick={() => mostraQr(l)}>
                       Ver QR code
                     </Botao>

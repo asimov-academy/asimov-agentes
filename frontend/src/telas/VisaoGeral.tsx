@@ -170,7 +170,7 @@ export function VisaoGeral({
       <header
         className={`border-l-4 pl-5 ${dados ? REGUA[dados.situacao.cor] : "border-l-dim"}`}
       >
-        <h1 className="max-w-[22ch] text-3xl font-semibold leading-tight tracking-tight text-texto md:text-5xl">
+        <h1 className="max-w-[34ch] text-2xl font-semibold leading-tight tracking-tight text-texto md:text-3xl">
           {erro ? "O painel não conseguiu somar o período" : esperando ? "Somando o período" : veredito(dados, dias)}
         </h1>
 

@@ -52,6 +52,16 @@ cantos marcados do botão fantasma e do popup: eles eram o desenho de um canto e
 ângulo no painel. O campo deixou de ser só borda de baixo e virou moldura inteira; o interruptor
 deixou de ser retângulo e virou cápsula.
 
+**Marca na paleta do painel.** A primeira tentativa usou a cor de cada marca (verde do WhatsApp,
+azul do Chatwoot e da Meta) como token. O operador reprovou: logo de terceiro segue a paleta do
+produto, não a identidade própria. Os três tokens saíram e a `Marca` passou a herdar a cor do texto,
+como o `Icone`.
+
+**Título e largura.** O título de seção era `text-5xl` com subtítulo embaixo e régua depois, e comia
+um terço da tela antes do conteúdo; a linha da lista usava um terço da largura e deixava o resto
+vazio. Entrou o `Cabecalho` compartilhado, em `text-2xl` e com o contexto na mesma linha, e as listas
+passaram a distribuir informação pela largura.
+
 **Canto e acento.** O operador reprovou a primeira tentativa: cartão arredondado com `border-l-2`
 na cor da situação. No canto, a borda de 2px encontra a de 1px e o raio transforma a junção numa
 cunha. Virou regra: canto arredondado nunca anda com borda mais grossa de um lado. O acento de cor

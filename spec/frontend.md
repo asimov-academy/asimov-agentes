@@ -86,9 +86,19 @@ modelo (`openai:gpt-5.1`), endereço, código e identificador. As duas vêm dos 
 só no subconjunto latino, e entram no build: são servidas da VPS, nunca de CDN.
 
 **Marcas das integrações.** O logo de cada serviço fica em `design/marcas.ts` e é desenhado pelo
-`design/Marca.tsx`: preenchido, na cor da marca (`whatsapp`, `chatwoot`, `meta` como tokens), e
-nunca traçado como o resto. Fica fora de `icones.ts` de propósito: ícone é do sistema e herda a cor
-do texto, marca é de outra empresa. Nenhuma biblioteca de fora, aqui também.
+`design/Marca.tsx`: preenchido (`fill`), e não traçado como o resto. **A cor é a da paleta do
+painel, nunca a da marca**: verde do WhatsApp e azul do Chatwoot ao lado do ciano brigam com a
+interface e cada linha da lista puxa para um lado, então a marca herda a cor do texto, como o ícone.
+Nenhuma biblioteca de fora, aqui também.
+
+**Cabeçalho de seção.** `design/Cabecalho.tsx` em toda tela: título em `text-2xl`, o contexto na
+mesma linha quando cabe e as ações à direita, com a régua encostada. Título grande com subtítulo
+embaixo comia um terço da tela antes de qualquer conteúdo.
+
+**Listagem.** A largura carrega informação que o operador consultaria abrindo a ficha, em colunas
+que somem conforme a tela encolhe. Em Agentes: canal, empresa e modelo de resposta. Em Canais: a
+situação ocupa a coluna do meio e as ações ficam à direita. No celular sobra o mínimo para escolher
+uma linha.
 
 Os componentes não são inspirados no design system: são a forma dele. O que cada um copia, com a
 seção de origem:

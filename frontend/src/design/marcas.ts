@@ -1,8 +1,12 @@
 /** Logos das integrações, desenhados aqui como caminho SVG.
  *
  *  Não são do design system: são a marca de cada serviço, e servem para o operador reconhecer o
- *  canal de relance, em vez de ler o nome. Ficam separados de `icones.ts` porque são preenchidos
- *  (`fill`), e não traçados como o resto do sistema, e porque cada um tem a cor da própria marca.
+ *  canal de relance, em vez de ler o nome. Ficam separados de `icones.ts` só porque são preenchidos
+ *  (`fill`) e não traçados como o resto do sistema.
+ *
+ *  **Cor é a da paleta do painel, nunca a da marca.** Verde do WhatsApp e azul do Chatwoot ao lado
+ *  do ciano brigam com a interface e cada linha da lista puxa para um lado. Como o ícone, a marca
+ *  herda a cor do texto em volta.
  *
  *  Nenhuma biblioteca de fora: a regra do projeto vale também para logo.
  */
@@ -18,11 +22,3 @@ export const MARCAS = {
 } as const satisfies Record<string, string>;
 
 export type NomeDeMarca = keyof typeof MARCAS;
-
-/** A cor de cada marca, no nome do token. Marca sem cor própria herda a cor do texto. */
-export const COR_DA_MARCA: Record<NomeDeMarca, string> = {
-  whatsapp: "text-whatsapp",
-  chatwoot: "text-chatwoot",
-  meta: "text-meta",
-  terminal: "text-muted",
-};

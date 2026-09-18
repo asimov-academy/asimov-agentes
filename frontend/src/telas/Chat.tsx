@@ -9,6 +9,7 @@ import {
 } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
+import { Cabecalho } from "../design/Cabecalho";
 import { Carregando } from "../design/Carregando";
 import { Marca } from "../design/Marca";
 import { Selo } from "../design/Selo";
@@ -113,19 +114,15 @@ export function Chat({
 
   return (
     <>
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Chat<span className="text-ciano">.</span>
-          </h1>
-          {conversas !== null && conversas.length > 0 && (
-            <p className="mt-2 text-sm text-muted">
-              {conversas.length} {conversas.length === 1 ? "conversa recente" : "conversas recentes"}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
+      <Cabecalho
+        titulo="Conversas"
+        contexto={
+          conversas !== null && conversas.length > 0
+            ? `${conversas.length} ${conversas.length === 1 ? "conversa recente" : "conversas recentes"}`
+            : undefined
+        }
+        acoes={
+          <>
           {empresas.length > 1 && (
             <select
               value={empresa}
@@ -155,8 +152,9 @@ export function Chat({
               </button>
             ))}
           </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {erro && (
         <div className="mt-6">
