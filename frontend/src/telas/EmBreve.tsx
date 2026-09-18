@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { Botao } from "../design/Botao";
-import { Vazio } from "../design/Vazio";
 
-/** A tela do que ainda não existe. Ela diz o que vai fazer e quando, em vez de só "em breve". */
-export function EmBreve({ titulo, etapa }: { titulo: string; etapa: string }) {
+/** A tela do que ainda não existe: uma linha do que vai fazer e o que dá para usar hoje.
+ *
+ *  A fase do plano não vai para a tela: "Fase 6" é
+ *  nome do nosso plano, e não diz nada a quem está no painel (auditoria de copy de 2026-09-18).
+ */
+export function EmBreve({ titulo }: { titulo: string }) {
   return (
     <>
       <header className="border-b border-borda pb-6">
@@ -11,17 +14,15 @@ export function EmBreve({ titulo, etapa }: { titulo: string; etapa: string }) {
           {titulo}
           <span className="text-ciano">.</span>
         </h1>
-        <p className="mt-2 text-sm text-muted">Ainda não construída, e entra na {etapa}.</p>
+        <p className="mt-2 text-sm text-muted">Ainda não construída.</p>
       </header>
 
       <div className="mt-10 max-w-[70ch]">
         <p className="text-base leading-relaxed text-texto">
-          O agente vai poder responder com base nos seus documentos: você sobe um PDF ou cola um
-          texto, e ele passa a citar aquilo em vez de inventar. Cada empresa tem a própria base, e o
-          agente só enxerga a dela.
+          O agente vai poder responder com base nos seus documentos, em vez de só com o prompt.
         </p>
         <p className="mt-4 text-sm text-muted">
-          Enquanto isso, o que o agente sabe está no prompt dele, na aba Trabalho.
+          Por enquanto, o que ele sabe está no prompt dele, na aba Trabalho.
         </p>
         <div className="mt-6">
           <Link to="/agentes">
@@ -35,7 +36,7 @@ export function EmBreve({ titulo, etapa }: { titulo: string; etapa: string }) {
   );
 }
 
-/** Rota que não existe. Ela não pede desculpa e oferece o caminho de volta. */
+/** Rota que não existe. Ela não pede desculpa, não explica o que houve e oferece a saída. */
 export function NaoEncontrada() {
   return (
     <>
@@ -45,16 +46,11 @@ export function NaoEncontrada() {
         </h1>
       </header>
       <div className="mt-10">
-        <Vazio titulo="nada aqui" icone="stat-info">
-          O endereço pode ter mudado de nome numa versão nova do painel.
-        </Vazio>
-        <div className="mt-6">
-          <Link to="/">
-            <Botao pequeno icone="nav-dashboard">
-              Ir para a visão geral
-            </Botao>
-          </Link>
-        </div>
+        <Link to="/">
+          <Botao pequeno icone="nav-dashboard">
+            Ir para a visão geral
+          </Botao>
+        </Link>
       </div>
     </>
   );

@@ -325,8 +325,8 @@ async def modelos(s: AsyncSession = Depends(sessao)) -> dict[str, Any]:
         "com_chave": await chaves.provedores_com_chave(s),
         "funcoes": [
             {"campo": "modelo_conversa", "funcao": "conversa", "rotulo": "Conversa", "obrigatorio": True},
-            {"campo": "modelo_fallback", "funcao": "conversa", "rotulo": "Reserva", "obrigatorio": False},
-            {"campo": "modelo_auxiliar", "funcao": "auxiliar", "rotulo": "Resumo do handoff", "obrigatorio": True},
+            {"campo": "modelo_fallback", "funcao": "conversa", "rotulo": "Reserva, se o de conversa falhar", "obrigatorio": False},
+            {"campo": "modelo_auxiliar", "funcao": "auxiliar", "rotulo": "Resumo ao passar a conversa para uma pessoa", "obrigatorio": True},
             {"campo": "modelo_visao", "funcao": "visao", "rotulo": "Imagem e PDF", "obrigatorio": True},
             {"campo": "modelo_transcricao", "funcao": "transcricao", "rotulo": "Áudio", "obrigatorio": True},
         ],

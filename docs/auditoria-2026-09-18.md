@@ -1,5 +1,10 @@
 # Auditoria técnica de 18/09/2026
 
+> **Situação em 2026-09-18, depois do relatório.** Os seis achados P1 foram corrigidos na v0.18.0 e
+> viraram 16 regressões em `backend/testes/test_auditoria_p1.py`. Seguem abertos os 14 P2 e os 2 P3.
+> A tabela de divergências da especificação também envelheceu: o WhatsApp oficial já está no README
+> desde a v0.15.0. O relatório abaixo está como foi escrito, e descreve os P1 como defeitos vivos.
+
 ## Parecer
 
 A base tem organização por domínio, contratos de canal, testes úteis e migrações consistentes. Entretanto, há falhas de confiabilidade que permitem perder respostas, responder durante atendimento humano e reutilizar arquivos de um cliente excluído em outro cliente. A prioridade recomendada é corrigir esses caminhos antes de ampliar o uso em produção.

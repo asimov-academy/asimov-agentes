@@ -16,6 +16,7 @@ import { Icone } from "../../design/Icone";
 import { Interruptor } from "../../design/Interruptor";
 import { Modal } from "../../design/Modal";
 import { Passos } from "../../design/Passos";
+import { Marca } from "../../design/Marca";
 import { CANAIS } from "./canais";
 import { EscolheIA } from "./EscolheIA";
 import { Previa } from "./Previa";
@@ -40,7 +41,7 @@ const PASSOS = [
   "Jeito de falar",
   "Ferramentas",
   "IA",
-  "Conferir",
+  "Confirmação",
 ];
 
 const FUNCOES: { valor: string; rotulo: string; explica: string }[] = [
@@ -207,7 +208,7 @@ export function Onboarding({
 
   function sai() {
     const escreveu = dados.nome.trim() || dados.canal || dados.sobre.trim();
-    if (escreveu && !window.confirm("Sair do onboarding? O rascunho fica guardado para depois.")) {
+    if (escreveu && !window.confirm("Sair? O que você já respondeu fica guardado.")) {
       return;
     }
     aoFechar();
@@ -217,7 +218,7 @@ export function Onboarding({
   if (criado) {
     return (
       <Modal
-        titulo={`${criado.nome} está de pé`}
+        titulo={`${criado.nome} está pronto`}
         subtitulo={`em ${criado.empresa}, ${CANAIS[criado.canal]?.rotulo ?? criado.canal}`}
         aoFechar={() => aoCriar(criado)}
         largura="max-w-3xl"
@@ -240,16 +241,11 @@ export function Onboarding({
           </>
         }
       >
-        <div className="mb-6 flex items-start gap-3 border-l-4 border-l-ok pl-4">
-          <div>
-            <p className="text-base text-texto">Fale com ele agora.</p>
-            <p className="mt-1 max-w-[60ch] text-sm text-muted">
-              {criado.canal === "nativo"
-                ? "Ele ainda não atende ninguém de fora. Conecte a um canal pela ficha quando quiser."
-                : `Ele nasceu sem conectar ao canal. Você conecta pela ficha quando tiver em mãos: ${CANAIS[criado.canal]?.exige.toLowerCase() ?? "o acesso do canal"}`}
-            </p>
-          </div>
-        </div>
+        <p className="mb-5 max-w-[62ch] text-sm text-muted">
+          {criado.canal === "nativo"
+            ? "Fale com ele agora. Ele ainda não atende ninguém de fora: conecte a um canal pela ficha quando quiser."
+            : `Fale com ele agora. Para conectar ao canal, a ficha dele pede ${CANAIS[criado.canal]?.exige ?? "o acesso do canal"}.`}
+        </p>
 
         <Teste
           agenteId={criado.id}
@@ -299,7 +295,11 @@ export function Onboarding({
           {passo === 0 && (
             <Pergunta
               titulo="De qual empresa é este agente?"
-              ajuda="Cada empresa tem os próprios agentes, conversas e prompts, separados das outras."
+              ajuda={
+                listaDeEmpresas.length > 1
+                  ? "Cada empresa tem os próprios agentes e conversas, separados das outras."
+                  : ""
+              }
             >
               {listaDeEmpresas.length > 0 && (
                 <div className="flex flex-col gap-2">
@@ -332,10 +332,7 @@ export function Onboarding({
           )}
 
           {passo === 1 && (
-            <Pergunta
-              titulo="Por onde ele vai atender?"
-              ajuda="Cada cartão diz o que você precisa ter na mão antes de começar."
-            >
+            <Pergunta titulo="Por onde ele vai atender?" ajuda="">
               {canais.length === 0 ? (
                 <Carregando tipo="pontos" o_que="buscando os canais" />
               ) : (
@@ -347,20 +344,26 @@ export function Onboarding({
                       <button
                         key={c.nome}
                         onClick={() => muda("canal", c.nome)}
-                        className={`relative flex flex-col gap-2 border p-4 text-left transition-colors ${
+                        className={`relative flex flex-col gap-2 rounded-lg border p-4 text-left transition-colors ${
                           marcado ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
                         }`}
                       >
-                        <span className="flex items-center gap-2">
-                          <Icone nome={texto?.icone ?? "cont-link"} className={marcado ? "text-ciano" : "text-muted"} />
+                        <span className="flex items-center gap-2.5">
+                          {texto && <Marca nome={texto.marca} tamanho={20} apagada={!marcado} />}
                           <span className="text-sm font-semibold text-texto">
                             {texto?.rotulo ?? c.nome}
                           </span>
                         </span>
                         <span className="text-sm leading-snug text-muted">{texto?.serve}</span>
-                        <span className="mt-1 text-xs leading-snug text-dim">
-                          Você vai precisar de: {texto?.exige ?? "nada"}
+                        <span className="text-xs leading-snug text-dim">
+                          Precisa de {texto?.exige ?? "nada"}.
                         </span>
+                        {texto?.atencao && (
+                          <span className="mt-1 flex items-start gap-1.5 text-xs leading-snug text-atencao">
+                            <Icone nome="stat-warning" tamanho={14} className="mt-px" />
+                            {texto.atencao}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -399,7 +402,7 @@ export function Onboarding({
           {passo === 3 && (
             <Pergunta
               titulo={`O que o agente precisa saber sobre ${empresaEscolhida?.nome ?? "a empresa"}?`}
-              ajuda="Isto vira o prompt dele. Pode pular e escrever depois, na aba Trabalho."
+              ajuda="Isto vira o prompt dele. Pode pular e escrever depois."
             >
               <Campo
                 rotulo="Quem fala com ele"
@@ -422,7 +425,7 @@ export function Onboarding({
                   value={dados.sobre}
                   onChange={(e) => muda("sobre", e.target.value)}
                   placeholder="O que ela vende, desde quando, o que a diferencia."
-                  className="mt-2 w-full border-b border-dim bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none"
+                  className="mt-2 w-full rounded-md border border-borda bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none focus:ring-1 focus:ring-ciano"
                 />
               </label>
             </Pergunta>
@@ -431,7 +434,7 @@ export function Onboarding({
           {passo === 4 && (
             <Pergunta
               titulo="Como ele fala?"
-              ajuda="A prévia ao lado muda junto: escolha e veja o efeito."
+              ajuda="Emoji e tamanho da resposta mudam o jeito de falar."
             >
               <p className="rotulo">Emoji</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -439,7 +442,7 @@ export function Onboarding({
                   <button
                     key={e.valor}
                     onClick={() => muda("emojis", e.valor)}
-                    className={`border px-4 py-2 text-sm transition-colors ${
+                    className={`rounded-md border px-4 py-2 text-sm transition-colors ${
                       dados.emojis === e.valor
                         ? "border-ciano text-ciano"
                         : "border-borda text-muted hover:text-texto"
@@ -477,7 +480,7 @@ export function Onboarding({
           {passo === 5 && (
             <Pergunta
               titulo="O que ele pode usar?"
-              ajuda="Ferramenta ligada gasta token em todo turno. O agente nasce sem nenhuma."
+              ajuda="Cada ferramenta ligada deixa a resposta um pouco mais cara. Ele nasce sem nenhuma."
             >
               {ferramentas.length === 0 ? (
                 <Carregando tipo="pontos" o_que="buscando o catálogo" />
@@ -510,22 +513,24 @@ export function Onboarding({
           {passo === 6 && (
             <Pergunta
               titulo="Qual IA responde por ele?"
-              ajuda="Cada agente tem a própria. Resumo, imagem e áudio nascem no mesmo provedor e mudam depois, na ficha."
+              ajuda="Vale para a resposta ao contato. O resto segue este provedor e muda na ficha."
             >
               <EscolheIA funcao="conversa" valor={dados.modelo} aoMudar={(m) => muda("modelo", m)} />
-              <p className="mt-6 text-sm text-dim">
-                A Anthropic não transcreve áudio: com ela, guarde também a chave da OpenAI, da Groq ou
-                do Gemini para o agente ouvir áudio.
-              </p>
+              {dados.modelo.startsWith("anthropic:") && (
+                <p className="mt-5 text-sm text-atencao">
+                  A Anthropic não transcreve áudio. Para o agente ouvir áudio, guarde também a chave
+                  da OpenAI, da Groq ou do Gemini.
+                </p>
+              )}
             </Pergunta>
           )}
 
           {passo === 7 && (
             <Pergunta
-              titulo="Confere e cria"
-              ajuda="Nada foi gravado ainda. O agente nasce inteiro quando você clicar."
+              titulo="Confira antes de criar"
+              ajuda="Nada foi gravado ainda."
             >
-              <dl className="flex flex-col divide-y divide-borda border-y border-borda">
+              <dl className="flex flex-col divide-y divide-borda rounded-lg border border-borda px-4">
                 <Linha rotulo="Empresa">{empresaEscolhida?.nome ?? dados.empresaNova}</Linha>
                 <Linha rotulo="Canal">{CANAIS[dados.canal]?.rotulo ?? dados.canal}</Linha>
                 <Linha rotulo="Nome">{dados.nome}</Linha>
@@ -544,8 +549,8 @@ export function Onboarding({
               </dl>
               {CANAIS[dados.canal] && dados.canal !== "nativo" && (
                 <p className="mt-6 text-sm leading-snug text-muted">
-                  O agente nasce inativo e a lista mostra que falta conectar. Você conecta pela ficha
-                  dele, quando tiver em mãos: {CANAIS[dados.canal].exige.toLowerCase()}
+                  O agente nasce inativo. Você o conecta pela ficha dele, quando tiver em mãos:{" "}
+                  {CANAIS[dados.canal].exige}
                 </p>
               )}
             </Pergunta>
@@ -582,8 +587,8 @@ function Pergunta({
   return (
     <section>
       <h3 className="text-xl font-semibold leading-snug text-texto">{titulo}</h3>
-      <p className="mt-1 max-w-[60ch] text-sm text-muted">{ajuda}</p>
-      <div className="mt-6">{children}</div>
+      {ajuda && <p className="mt-1 max-w-[60ch] text-sm text-muted">{ajuda}</p>}
+      <div className="mt-5">{children}</div>
     </section>
   );
 }
@@ -603,12 +608,12 @@ function Escolha({
     <button
       onClick={aoMarcar}
       aria-pressed={marcada}
-      className={`flex items-start gap-3 border p-3 text-left transition-colors ${
+      className={`flex items-start gap-3 rounded-md border p-3 text-left transition-colors ${
         marcada ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
       }`}
     >
       <span
-        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border ${
+        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
           marcada ? "border-ciano" : "border-dim"
         }`}
       >

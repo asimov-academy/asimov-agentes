@@ -258,10 +258,10 @@ def _pasta_do_front() -> Path:
 
 SEM_BUILD = (
     "<!doctype html><meta charset=utf-8><title>Painel</title>"
-    "<body style='background:#000;color:#e5e5e5;font-family:monospace;padding:3rem'>"
-    "<h1>Front não construído</h1>"
-    "<p>Rode <code>npm ci &amp;&amp; npm run build</code> em <code>frontend/</code>, ou suba a imagem "
-    "de novo: o Dockerfile constrói sozinho.</p>"
+    "<body style='background:#000;color:#e5e5e5;font-family:Inter,system-ui,sans-serif;padding:3rem'>"
+    "<h1 style='font-weight:600'>Painel ainda não instalado</h1>"
+    "<p style='color:#a3a3a3'>Rode <code>asimov atualizar</code> na VPS: a atualização traz o painel "
+    "pronto.</p>"
 )
 
 

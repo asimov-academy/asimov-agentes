@@ -41,6 +41,39 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: O painel se afasta do design system em três pontos (v0.21.0)
+
+O operador pediu canto arredondado, Inter na estrutura e o logo das integrações. Os três contrariam
+o `designsystem/` original, que é de canto reto e rótulo em mono, e por isso ficam registrados aqui:
+quem abrir o design system e o painel vai ver diferença, e ela é de propósito.
+
+**Canto.** Escala curta no `tailwind.config.ts`, e nada fica reto. Saíram com o canto reto os dois
+cantos marcados do botão fantasma e do popup: eles eram o desenho de um canto em ângulo, e não sobra
+ângulo no painel. O campo deixou de ser só borda de baixo e virou moldura inteira; o interruptor
+deixou de ser retângulo e virou cápsula.
+
+**Canto e acento.** O operador reprovou a primeira tentativa: cartão arredondado com `border-l-2`
+na cor da situação. No canto, a borda de 2px encontra a de 1px e o raio transforma a junção numa
+cunha. Virou regra: canto arredondado nunca anda com borda mais grossa de um lado. O acento de cor
+passou a ser uma barra por dentro, afastada dos cantos, no `Aviso`, em Canais, na lista de Conversas
+e no aviso das telas de login.
+
+**Tipografia.** A mono era a fonte de todo rótulo, botão, selo e item de menu. Passou a ser só de
+dado técnico, na classe `.tecnico`: número de métrica, nome de modelo, endereço, código e
+identificador. O resto é Inter. Motivo: em rótulo curto e maiúsculo a mono custa legibilidade sem
+dar informação, e o painel é operação, não terminal.
+
+**Marcas.** `design/marcas.ts` e `design/Marca.tsx`, separados de `icones.ts`: marca é preenchida,
+tem cor própria e é de outra empresa, enquanto ícone é traçado e herda a cor do texto. As três cores
+de marca entraram como token para o teste que proíbe hexadecimal solto continuar valendo. Nenhuma
+biblioteca de fora, como manda o `AGENTS.md`.
+
+Junto vieram as correções de copy que a auditoria tinha deixado para decisão, o menu em dois grupos
+e os avisos de limitação que o painel escondia e o terminal contava (bloqueio do número na API não
+oficial, cobrança por mensagem da Meta).
+
+spec/frontend.md, seção 3.
+
 ## 2026-09-18: Auditoria de copy do produto inteiro (v0.20.4)
 
 Auditoria de todo texto que alguém lê: documentação, telas do terminal, painel, popups, páginas

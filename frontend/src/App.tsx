@@ -94,7 +94,7 @@ export function App() {
             path="/contatos"
             element={<Contatos empresas={empresas} empresa={empresa} aoTrocarEmpresa={setEmpresa} />}
           />
-          <Route path="/conhecimento" element={<EmBreve titulo="Base de conhecimento" etapa="Fase 6" />} />
+          <Route path="/conhecimento" element={<EmBreve titulo="Conhecimento" />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Routes>
       )}

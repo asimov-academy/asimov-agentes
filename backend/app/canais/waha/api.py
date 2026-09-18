@@ -17,9 +17,12 @@ Endpoints conferidos na documentação da WAHA (2026-09-17):
 from typing import Any
 
 import httpx
+import structlog
 
 from app.canais.base import CredencialInvalida
 from app.plataforma.config import config
+
+log = structlog.get_logger()
 
 TIMEOUT = httpx.Timeout(20.0, connect=5.0)
 TIMEOUT_DOWNLOAD = httpx.Timeout(60.0, connect=5.0)
@@ -65,7 +68,7 @@ def _http() -> httpx.AsyncClient:
 
 
 def _erro(acao: str, erro: Exception) -> CredencialInvalida:
-    return CredencialInvalida(f"não consegui {acao} na WAHA ({type(erro).__name__})")
+    return CredencialInvalida(f"não consegui {acao} na WAHA. Ela pode estar fora do ar: rode asimov diagnostico")
 
 
 def _corpo(resposta: httpx.Response) -> Any:
@@ -86,12 +89,13 @@ async def _chama(
     if resposta.status_code in aceita:
         return _corpo(resposta)
     if resposta.status_code == 401:
-        raise CredencialInvalida("a WAHA recusou a chave de acesso; rode o setup de novo")
+        raise CredencialInvalida("a WAHA recusou a chave de acesso; rode asimov atualizar na VPS")
     if resposta.status_code >= 400:
         detalhe = _corpo(resposta)
         mensagem = detalhe.get("message") if isinstance(detalhe, dict) else None
+        log.warning("waha_recusou", acao=acao, status=resposta.status_code, mensagem=mensagem)
         raise CredencialInvalida(
-            f"a WAHA recusou {acao}: HTTP {resposta.status_code}{f' ({mensagem})' if mensagem else ''}"
+            f"a WAHA recusou {acao}. Abra Canais no painel e reconecte o número"
         )
     return _corpo(resposta)
 

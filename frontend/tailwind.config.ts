@@ -24,16 +24,36 @@ export default {
         perigo: "#ff453a",
         // A régua do gráfico da AXIS (seção 2, `.grid-line`), mais clara que a borda do cartão.
         grade: "#262626",
+        // Marcas das integrações. Só o logo de cada serviço usa estas cores, nunca a interface:
+        // elas são da empresa dona da marca e não entram na escala de contraste do painel.
+        whatsapp: "#25d366",
+        chatwoot: "#1f93ff",
+        meta: "#0866ff",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
-      borderRadius: { none: "0" },
+      // Canto arredondado em toda peça. A escala é curta de propósito: `sm` para selo e campo,
+      // o padrão para botão e item de menu, `lg` para cartão e `xl` para o popup.
+      borderRadius: {
+        sm: "0.375rem",
+        DEFAULT: "0.625rem",
+        md: "0.5rem",
+        lg: "0.875rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+        full: "9999px",
+      },
       // O brilho do arco do medidor e do foco, no valor do design system. Fica aqui para nenhuma
       // tela precisar escrever a cor solta.
       dropShadow: { ciano: "0 0 5px rgba(41, 184, 219, 0.5)" },
-      boxShadow: { ativo: "0 0 10px rgba(229, 229, 229, 0.3)" },
+      boxShadow: {
+        ativo: "0 0 10px rgba(229, 229, 229, 0.3)",
+        // A elevação do popup e do menu sobre o conteúdo. Sem isso, canto arredondado sobre fundo
+        // escuro fica sem separação nenhuma.
+        alto: "0 24px 48px -12px rgba(0, 0, 0, 0.8)",
+      },
       // As três animações da AXIS e do KINETIC (seções 2 e 3): a linha que se desenha, a barra que
       // cresce de baixo para cima e o ponto que aparece depois dela. Duração e curva são as do
       // original; quem prefere menos movimento recebe o resultado final na hora, pelo `estilos.css`.

@@ -25,19 +25,16 @@ mostra_template_sugerido() {
   dica "Onde criar: WhatsApp Manager > Modelos de mensagem."
 }
 
-# aviso_oficial: o que muda em relação à WAHA. Devolve 1 se o operador desistir.
+# aviso_oficial: o que decide a escolha, em duas linhas. Devolve 1 se o operador desistir.
+# O resto (o que a Meta pede para publicar o app) só aparece depois do sim.
 aviso_oficial() {
   echo
-  info "O WhatsApp oficial é a $(destaque "Cloud API da Meta"): número homologado, sem risco de bloqueio por uso."
-  dica "A Meta cobra por mensagem, conforme a tabela dela, e a partir de 1º de outubro de 2026 a"
-  dica "resposta na janela de 24 h também conta (1.000 grátis por número por mês). Sem forma de"
-  dica "pagamento na conta, ela não entrega as respostas do agente."
-  dica "O número fica só com o agente: ele não roda no celular, então ninguém responde pelo"
-  dica "aparelho como acontece na WAHA."
-  dica "Você precisa ter, na Meta: um app, a conta de WhatsApp Business com o número, um token de"
-  dica "acesso permanente, a chave secreta do app e um template aprovado para o aviso de handoff."
+  info "Na Meta você precisa ter: app, número na conta de WhatsApp Business, token permanente,"
+  info "chave secreta do app e um modelo de mensagem aprovado para avisar quem vai atender."
+  dica "A Meta cobra por mensagem, com 1.000 grátis por número por mês, e sem forma de pagamento na conta ela não entrega as respostas."
+  echo
+  confirma "Tenho isso em mãos. Continuar?" || return 1
   dados_para_publicar_o_app
-  confirma "Tenho isso em mãos. Continuar?"
 }
 
 # dados_para_publicar_o_app: o que a Meta pede para o app sair do modo de desenvolvimento.
@@ -46,22 +43,18 @@ dados_para_publicar_o_app() {
   local sub
   sub=$(env_get SUBDOMINIO_BOT)
   echo
-  info "Para publicar o app (sair do modo de desenvolvimento), a Meta pede dois dados. Os dois"
-  info "estão no ar nesta instalação, para você abrir no navegador:"
+  info "Para publicar o app, a Meta pede dois endereços. Os dois já estão no ar aqui:"
   echo
   printf '    %s%s%s\n' "$NEGRITO" "https://$sub/privacidade" "$NORMAL"
-  dica "  Por agente, que é a que o app do número quer, aparece no fim desta tela e em Editar agente."
-  dica "  O texto fica em modelos/privacidade.html, para você ajustar ao seu caso."
+  dica "  A do agente, que é a que o app do número quer, aparece no fim desta tela."
   printf '    %s%s%s\n' "$NEGRITO" "https://$sub/icone-app.png" "$NORMAL"
   dica "  Abra e salve a imagem. Para trocar: modelos/icone-app.png, ou python3 modelos/gerar_icone.py."
   # Confere de fora, pelo domínio: é assim que a Meta vai abrir. Caminho público novo já respondeu
   # 404 por o Caddy estar com a configuração antiga em memória, e ninguém viu até tentar.
   if ! confere_publico "https://$sub/privacidade" && ! confere_publico "https://$sub/icone-app.png"; then
     echo
-    aviso "Os dois endereços não responderam. A Meta vai recusar a URL assim."
-    dica "Recarregue o servidor web e tente de novo:"
-    dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc restart caddy"
-    dica "Se continuar: asimov diagnostico"
+    aviso "Os dois endereços não responderam, e a Meta vai recusar a URL assim."
+    dica "Recarregue o servidor web: cd $RAIZ_PROJETO && source deploy/compose.sh && dc restart caddy"
   fi
   echo
 }
@@ -136,11 +129,8 @@ escolhe_conta_whatsapp() {
   if [ "$total" -eq 0 ]; then
     echo
     aviso "Esse token não enxerga nenhuma conta de WhatsApp Business."
-    dica "A causa mais comum: o token foi gerado antes de a conta ser atribuída ao usuário do"
-    dica "sistema. O token guarda os ativos de quando nasceu, então atribuir depois não vale para"
-    dica "ele. Gere o token de novo (Usuários do sistema > Gerar token) e rode isto outra vez."
-    dica "Também acontece quando o token não tem whatsapp_business_management, ou quando o usuário"
-    dica "do sistema não tem a conta como ativo (passo 7 do docs/whatsapp-oficial.md)."
+    dica "Quase sempre é token gerado antes de a conta virar ativo do usuário do sistema: gere outro"
+    dica "em Usuários do sistema > Gerar token. Detalhes em docs/whatsapp-oficial.md, passo 7."
     echo
     dica "Se o token estiver certo e você só quiser seguir, informe o ID da conta à mão: ele fica no"
     dica "Gerenciador de Negócios, em Configurações > Contas > Contas do WhatsApp, em Identificação,"

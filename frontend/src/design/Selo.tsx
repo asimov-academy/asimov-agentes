@@ -1,4 +1,4 @@
-/** Selo de situação. Mesmo formato do design system: retângulo reto, mono, 10px, maiúsculo. */
+/** Selo de situação: cápsula, Inter, 10px, maiúsculo. Era retângulo reto em mono até a v0.21.0. */
 type Tom = "ok" | "atencao" | "perigo" | "neutro" | "acento";
 
 const TONS: Record<Tom, string> = {
@@ -12,7 +12,7 @@ const TONS: Record<Tom, string> = {
 export function Selo({ tom = "neutro", children }: { tom?: Tom; children: string }) {
   return (
     <span
-      className={`inline-flex items-center border px-2 py-0.5 font-mono text-[0.625rem] font-bold uppercase tracking-[0.15em] ${TONS[tom]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] ${TONS[tom]}`}
     >
       {children}
     </span>

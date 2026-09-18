@@ -5,10 +5,11 @@ import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Carregando } from "../design/Carregando";
 import { Icone } from "../design/Icone";
+import { Marca } from "../design/Marca";
 import { Selo } from "../design/Selo";
 import { Vazio } from "../design/Vazio";
 import { Ficha } from "./agente/Ficha";
-import { ROTULO_DO_CANAL } from "./agente/canais";
+import { CANAIS, ROTULO_DO_CANAL } from "./agente/canais";
 import { Onboarding } from "./agente/Onboarding";
 
 /** A lista de agentes. O popup abre por cima dela, que fica embaçada atrás: é a regra do operador
@@ -62,13 +63,13 @@ export function Agentes({
           <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
             Agentes<span className="text-ciano">.</span>
           </h1>
-          <p className="mt-2 text-sm text-muted">
-            {agentes === null
-              ? "buscando"
-              : agentes.length === 0
-                ? "nenhum agente ainda"
-                : `${agentes.length} ${agentes.length === 1 ? "agente" : "agentes"}`}
-          </p>
+          {/* A contagem só aparece quando há o que contar: sem agente, quem diz isso é o estado
+              vazio, e quem está buscando já tem o carregando embaixo. */}
+          {agentes !== null && agentes.length > 0 && (
+            <p className="mt-2 text-sm text-muted">
+              {agentes.length} {agentes.length === 1 ? "agente" : "agentes"}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -77,7 +78,7 @@ export function Agentes({
               value={empresa}
               aria-label="Empresa"
               onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
+              className="rounded-md border border-borda bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
             >
               <option value="">Todas as empresas</option>
               {empresas.map((e) => (
@@ -88,13 +89,13 @@ export function Agentes({
             </select>
           )}
 
-          <div className="flex border border-borda" role="group" aria-label="Situação">
+          <div className="flex rounded-md border border-borda p-0.5" role="group" aria-label="Situação">
             {FILTROS.map((f) => (
               <button
                 key={f.rotulo}
                 onClick={() => setAtivo(f.valor)}
                 aria-pressed={ativo === f.valor}
-                className={`px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] transition-colors ${
+                className={`rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                   ativo === f.valor ? "bg-texto text-void" : "text-muted hover:text-texto"
                 }`}
               >
@@ -111,7 +112,7 @@ export function Agentes({
 
       {erro ? (
         <div className="mt-10">
-          <Aviso tom="erro" titulo="a lista não veio">
+          <Aviso tom="erro" titulo="não deu para carregar os agentes">
             <p>{erro}</p>
             <div className="mt-4">
               <Botao icone="sys-refresh" pequeno onClick={busca}>
@@ -131,34 +132,40 @@ export function Agentes({
           </Vazio>
         </div>
       ) : (
-        <ul className="mt-10 border-t border-borda">
-          {agentes.map((a) => (
-            <li key={a.id}>
-              <button
-                onClick={() => navega(`/agentes/${a.id}`)}
-                className="flex w-full items-center gap-4 border-b border-borda py-4 text-left transition-colors hover:bg-surface"
-              >
-                <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center border font-mono text-sm ${
-                    a.ativo ? "border-ciano/40 text-ciano" : "border-dim text-dim"
-                  }`}
+        <ul className="mt-8 flex flex-col gap-1">
+          {agentes.map((a) => {
+            const marca = CANAIS[a.canal]?.marca;
+            return (
+              <li key={a.id}>
+                <button
+                  onClick={() => navega(`/agentes/${a.id}`)}
+                  className="flex w-full items-center gap-4 rounded-md px-3 py-3 text-left transition-colors hover:bg-surface"
                 >
-                  {a.nome.slice(0, 1).toUpperCase()}
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-base text-texto">{a.nome}</span>
-                  <span className="mt-0.5 block truncate text-sm text-muted">
-                    {ROTULO_DO_CANAL(a.canal)}
-                    {empresa ? "" : `, em ${a.empresa}`}
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-sm font-semibold ${
+                      a.ativo ? "border-ciano/40 text-ciano" : "border-dim text-dim"
+                    }`}
+                  >
+                    {a.nome.slice(0, 1).toUpperCase()}
                   </span>
-                </span>
 
-                {!a.ativo && <Selo>inativo</Selo>}
-                <Icone nome="cont-link" className="text-dim" />
-              </button>
-            </li>
-          ))}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base text-texto">{a.nome}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                      {marca && <Marca nome={marca} tamanho={14} apagada={!a.ativo} />}
+                      <span className="truncate">
+                        {ROTULO_DO_CANAL(a.canal)}
+                        {empresa ? "" : `, em ${a.empresa}`}
+                      </span>
+                    </span>
+                  </span>
+
+                  {!a.ativo && <Selo>inativo</Selo>}
+                  <Icone nome="sys-chevron" className="text-dim" />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 

@@ -16,7 +16,7 @@ export function Cartao({
 }) {
   return (
     <section
-      className={`relative flex flex-col gap-6 border border-borda bg-surface p-8 transition-colors hover:border-dim ${className}`}
+      className={`relative flex flex-col gap-5 rounded-lg border border-borda bg-surface p-6 transition-colors hover:border-dim ${className}`}
     >
       {(titulo || acao) && (
         <header className="flex items-start justify-between gap-4">

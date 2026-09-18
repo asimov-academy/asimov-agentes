@@ -14,12 +14,12 @@ export function Vazio({
   children?: ReactNode;
 }) {
   return (
-    <div className="group flex w-full flex-col items-center justify-center gap-3 border border-dashed border-dim p-8 text-center transition-colors hover:border-ciano">
+    <div className="group flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-dim p-8 text-center transition-colors hover:border-ciano">
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-dim/20">
         <Icone nome={icone} tamanho={20} className="text-dim transition-colors group-hover:text-ciano" />
       </div>
-      <p className="rotulo">{titulo}</p>
-      {children && <div className="font-mono text-xs text-dim">{children}</div>}
+      <p className="text-sm font-medium text-texto">{titulo}</p>
+      {children && <div className="max-w-[46ch] text-sm text-muted">{children}</div>}
     </div>
   );
 }

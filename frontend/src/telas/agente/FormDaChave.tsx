@@ -10,7 +10,11 @@ export const NOME_DO_PROVEDOR: Record<string, string> = {
   groq: "Groq",
 };
 
-/** A chave de API de um provedor. Vai e nunca volta: o backend testa no provedor, guarda cifrada e
+/** O artigo de cada provedor, para o rótulo sair "da OpenAI" e "do Gemini". Provedor que não
+ *  estiver aqui entra com "da", que é o caso dos outros três. */
+const ARTIGO: Record<string, string> = { gemini: "do" };
+
+/** A chave de API de um provedor. Vai e nunca volta: o servidor testa no provedor, guarda cifrada e
  *  daí em diante o front só sabe que ela existe. */
 export function FormDaChave({ provedor, aoGuardar }: { provedor: string; aoGuardar: () => void }) {
   const [chave, setChave] = useState("");
@@ -35,7 +39,7 @@ export function FormDaChave({ provedor, aoGuardar }: { provedor: string; aoGuard
   return (
     <div>
       <Campo
-        rotulo={`Chave de API da ${nome}`}
+        rotulo={`Chave de API ${ARTIGO[provedor] ?? "da"} ${nome}`}
         type="password"
         autoComplete="off"
         value={chave}
@@ -43,7 +47,7 @@ export function FormDaChave({ provedor, aoGuardar }: { provedor: string; aoGuard
         erro={erro || undefined}
       />
       <p className="mt-2 text-sm text-dim">
-        Pedida uma vez: vale para todo agente que usar a {nome} e fica cifrada no servidor.
+        Pedida uma vez: vale para todos os agentes que usarem {nome} e fica cifrada no servidor.
       </p>
       <div className="mt-4">
         <Botao pequeno tom="solido" disabled={!chave.trim() || testando} onClick={guarda}>
