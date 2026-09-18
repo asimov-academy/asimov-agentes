@@ -289,5 +289,7 @@ def test_resposta_do_claude_e_do_codex_viram_texto():
 
 def test_erro_do_cli_vira_recado_em_portugues():
     assert "asimov ia" in servico._motivo("Error: 401 invalid credentials")
+    # O Claude Code sem credencial sai com código 1, stderr vazio e o recado no stdout.
+    assert "asimov ia" in servico._motivo("\nYou are not logged in. Run /login to continue.")
     assert "limite" in servico._motivo("429 rate_limit_exceeded")
     assert "não conseguiu" in servico._motivo("panic: algo estranho")

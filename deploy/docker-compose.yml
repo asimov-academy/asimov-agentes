@@ -99,6 +99,9 @@ services:
         AGENTE_CODIGO: ${AGENTE_CODIGO:-claude_code}
     image: asimov-copiloto:local
     command: ["arq", "app.copiloto.worker.Configuracao"]
+    # Com o dono da credencial, não com o usuário da imagem: o login do operador é 600 do dono
+    # dele (root, em quase toda VPS), e outro uid não conseguiria nem abrir o arquivo.
+    user: "${CREDENCIAL_IA_UID:-1000}:${CREDENCIAL_IA_GID:-1000}"
     volumes:
       - ../prompts:/app/prompts
       - ../modelos:/app/modelos:ro
@@ -106,6 +109,8 @@ services:
       # Os padrões existem só para o arquivo continuar válido em quem nunca vinculou conta: o
       # serviço nem entra no Compose sem o perfil, e o par de verdade vem do .env.
       - ${CREDENCIAL_IA_HOST:-../modelos}:${CREDENCIAL_IA_CONTAINER:-/tmp/sem-credencial}:rw
+      # O Claude Code guarda o estado do primeiro uso fora da pasta da credencial, num arquivo só.
+      - ${CONFIG_IA_HOST:-../modelos/AGENTS.md.tmpl}:${CONFIG_IA_CONTAINER:-/tmp/sem-config-ia}:rw
 
   # WhatsApp pela WAHA. Sobe só quando o primeiro agente WAHA é criado (setup/lib/waha.sh liga
   # WAHA_ATIVA=1 no .env e o `dc` passa a mandar --profile waha). Sem porta publicada: quem fala
