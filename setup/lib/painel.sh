@@ -122,11 +122,7 @@ painel_liga() {
   [ -n "$dominio" ] || erro_fatal "Sem domínio na instalação" "Rode o setup de novo."
 
   secao "Ligar o painel"
-  info "O painel administra empresas, agentes e consumo pelo navegador, também no celular."
-  dica "Quem prefere o terminal não perde nada: o comando asimov continua fazendo tudo."
-  echo
-  dica "O painel abre num subdomínio do seu domínio. Com $(destaque app)${CINZA}, o endereço fica $(destaque "app.$dominio")${CINZA}."
-  dica "Digite só a primeira parte (app, painel, admin) ou Enter para ficar com app."
+  dica "Subdomínio do painel. Com app, ele fica em app.$dominio; pode colar do jeito que estiver."
   while true; do
     pergunta nome "Subdomínio do painel" "app"
     # Aceita colado inteiro (https://app.dominio/): fica só o primeiro rótulo.
@@ -143,7 +139,6 @@ painel_liga() {
     fi
   done
   sub="$nome.$dominio"
-  ok "O painel vai ficar em $(destaque "https://$sub")"
   echo
 
   painel_espera_dns "$sub" "$dominio" || return 0
