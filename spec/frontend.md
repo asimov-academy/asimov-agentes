@@ -173,7 +173,8 @@ painel de antes do front e viraram desvio para `/painel/app`.
 
 ## 4. Casca e navegação
 
-Menu lateral fixo, recolhível, com a marca no topo e o operador no rodapé (sair). Fixo de verdade:
+Menu lateral fixo, recolhível, com a marca e o botão de recolher no topo, os itens em dois grupos
+(Operação e Atendimento) e a área da conta no rodapé. Fixo de verdade:
 **a página não rola, quem rola é o conteúdo da direita**. O menu é um bloco comum de uma linha que
 não rola, então ele não tem como se mexer; com `sticky` ele grudaria, mas ainda participaria da
 rolagem da página. A altura é `h-dvh`, não `h-screen`, porque no celular a barra do navegador some e
@@ -185,9 +186,15 @@ superior esquerdo. Itens, nesta ordem:
 | Visão geral | `/` | ativo |
 | Agentes | `/agentes` | ativo |
 | Canais | `/canais` | ativo |
-| Chat | `/chat` | ativo |
+| Conversas | `/chat` | ativo |
 | Contatos | `/contatos` | ativo |
-| Base de conhecimento | `/conhecimento` | em breve, item apagado com selo |
+| Conhecimento | `/conhecimento` | em breve, item apagado com selo |
+| Perfil e configurações | `/configuracoes` | ativo, no rodapé do menu, com avatar e o endereço da instalação |
+
+**O recolher fica no topo**, ao lado da marca, que é onde se procura por ele; no rodapé ele ficava
+solto embaixo do sair. **A área da conta fica no rodapé**: a situação da instalação, o avatar do
+operador e o endereço, levando a `/configuracoes`. O sair mora lá dentro, como em todo painel com
+área de conta.
 
 **Não existe barra do topo.** A tela começa no conteúdo. Uma faixa fixa atravessando a página só se
 justifica se carregar algo que a pessoa usa o tempo todo, e não era o caso: ela tinha uma busca e um
@@ -213,6 +220,13 @@ aconteceu e o botão de tentar de novo. Tela sem os três não passa na revisão
 
 ## 5. Telas
 
+### 5.0 Configurações
+
+Conta (operador, quando o acesso nasceu, último acesso e sair), Instalação (endereço do painel e dos
+agentes, quantas empresas e agentes) e **Chaves de IA**: uma por provedor, com o estado de cada uma e
+o formulário para guardar ou trocar. A chave é da instalação, não do agente, e antes só existia
+dentro da ficha de um agente, na hora de escolher um modelo.
+
 ### 5.1 Visão geral
 
 **Quem abre esta tela já vive no terminal.** Ele vem por uma pergunta só: está tudo de pé e onde eu
@@ -222,7 +236,7 @@ preciso agir. Por isso a tela é de triagem, não de relatório, e a ordem é a 
 |---|---|---|
 | 1 | O veredito: uma frase que responde a pergunta ("Tudo no ar", "2 conversas passaram do prazo", "Um canal saiu do ar") | título grande em Inter, com a régua de 4px do `Aviso` na cor do estado à esquerda |
 | 2 | Esperando você: handoff aberto, com o tempo parado e o `/retomar <código>` | lista com régua vermelha no que passou do prazo. **Some inteira quando não há nada**, em vez de virar cartão dizendo que está tudo bem |
-| 3 | O ritmo: turnos, custo e quanto o agente fechou sozinho, e a curva do período | três números soltos sobre o fundo, sem moldura, com a curva da AXIS atravessando a largura |
+| 3 | O ritmo: respostas, custo e quanto o agente fechou sozinho, e a curva do período | três cartões de indicador lado a lado, rótulo em cima, número no meio e a comparação embaixo, com a curva da AXIS atravessando a largura. Eram três números soltos sobre o fundo, em mono e no tamanho de título |
 | 4 | Quem respondeu, e onde travou | dois cartões, que é onde cartão serve: separar duas coisas diferentes |
 | 5 | Para onde foi o dinheiro | um cartão largo, rosca à esquerda e a fatia de cada modelo à direita. Por último porque é o que menos pede ação |
 

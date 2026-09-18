@@ -238,19 +238,20 @@ export function VisaoGeral({
             </section>
           )}
 
-          {/* O ritmo. Três números soltos sobre o fundo, sem moldura, e a curva atravessando a
-              largura embaixo deles. */}
-          <section className="mt-16">
-            <div className="grid gap-8 border-t border-borda pt-8 sm:grid-cols-3">
-              <Destaque
+          {/* Os três indicadores do período, cada um no próprio cartão: rótulo em cima, número no
+              meio e a comparação embaixo. Eram três números soltos sobre o fundo, em mono e no
+              tamanho de título, e a explicação do terceiro não cabia na coluna. */}
+          <section className="mt-10">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Indicador
+                rotulo="Respostas dadas"
                 valor={numero(dados.totais.turnos)}
-                explicacao="respostas dadas"
                 variacao={dados.variacao.turnos}
                 dias={dias}
               />
-              <Destaque
+              <Indicador
+                rotulo="Gasto com modelos"
                 valor={dinheiro(dados.totais.custo)}
-                explicacao="gasto com modelos"
                 variacao={dados.variacao.custo}
                 dias={dias}
                 subirEBom={false}
@@ -260,12 +261,13 @@ export function VisaoGeral({
                     : undefined
                 }
               />
-              <Destaque
+              <Indicador
+                rotulo="Resolvidas sem pessoa"
                 valor={dados.resolucao.porcento === null ? "0%" : `${dados.resolucao.porcento}%`}
-                explicacao={
+                rodape={
                   dados.resolucao.porcento === null
                     ? "nenhuma conversa começou neste período"
-                    : `das ${numero(dados.resolucao.conversas)} conversas terminaram sem chamar uma pessoa`
+                    : `de ${numero(dados.resolucao.conversas)} conversas`
                 }
               />
             </div>
@@ -411,33 +413,34 @@ function Espera({ handoff, mostrarEmpresa }: { handoff: HandoffAberto; mostrarEm
   );
 }
 
-/** Um dos três números do ritmo: o valor em mono, o que ele quer dizer em frase, e a comparação
- *  com o período anterior. Sem rótulo em caixa alta por cima. */
-function Destaque({
+/** Um dos três indicadores do período: rótulo em cima, número no meio, comparação embaixo. É o
+ *  formato de cartão de indicador que todo painel usa, e foi o que substituiu os números soltos. */
+function Indicador({
+  rotulo,
   valor,
-  explicacao,
   variacao,
   dias,
   subirEBom = true,
   rodape,
 }: {
+  rotulo: string;
   valor: string;
-  explicacao: string;
   variacao?: number | null;
   dias?: Periodo;
   subirEBom?: boolean;
   rodape?: string;
 }) {
   return (
-    <div>
-      {/* A escala sobe com a largura: em mono, "US$ 1.234,56" em 5xl não cabe numa coluna de um
-          terço de tela média, e passa por cima do número do lado. */}
-      <p className="font-mono text-3xl leading-none text-texto md:text-4xl lg:text-5xl">{valor}</p>
-      <p className="mt-3 max-w-[28ch] text-sm leading-snug text-muted">{explicacao}</p>
+    <div className="rounded-lg border border-borda bg-surface p-5">
+      <p className="rotulo">{rotulo}</p>
+      {/* `tabular-nums` para os três números alinharem a vírgula entre os cartões. */}
+      <p className="mt-2 text-3xl font-semibold tabular-nums leading-none tracking-tight text-texto">
+        {valor}
+      </p>
       {variacao !== undefined && dias !== undefined && (
         <Comparacao valor={variacao} dias={dias} subirEBom={subirEBom} />
       )}
-      {rodape && <p className="mt-1 max-w-[30ch] text-sm leading-snug text-dim">{rodape}</p>}
+      {rodape && <p className="mt-2 text-sm leading-snug text-dim">{rodape}</p>}
     </div>
   );
 }
@@ -452,7 +455,7 @@ function Comparacao({
   subirEBom: boolean;
 }) {
   if (valor === null) {
-    return <p className="mt-2 text-sm text-dim">sem período anterior para comparar</p>;
+    return <p className="mt-2 text-sm text-dim">sem período anterior</p>;
   }
   const parado = Math.abs(valor) < 0.5;
   const bom = valor > 0 === subirEBom;

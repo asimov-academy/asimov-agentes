@@ -11,6 +11,7 @@ import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
 import { Carregando } from "../design/Carregando";
+import { Icone } from "../design/Icone";
 import { Marca } from "../design/Marca";
 import { Selo } from "../design/Selo";
 import { Vazio } from "../design/Vazio";
@@ -228,8 +229,11 @@ export function Chat({
           {abrindo ? (
             <Carregando tipo="anel" o_que="abrindo a conversa" />
           ) : !aberta ? (
-            <div className="p-8">
-              <Vazio titulo="escolha uma conversa na lista" icone="comm-chat" />
+            <div className="flex flex-col items-center justify-center gap-3 p-16 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-dim/20">
+                <Icone nome="comm-chat" tamanho={20} className="text-dim" />
+              </span>
+              <p className="text-sm text-muted">escolha uma conversa na lista</p>
             </div>
           ) : (
             <>
