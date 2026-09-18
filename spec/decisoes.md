@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Painel novo da Meta e as duas mudanças de 2026 no documento (v0.15.1)
+
+- **O painel da Meta trocou "Produtos" por "Casos de uso"** (o operador mandou a tela): a configuração do WhatsApp virou um fluxo guiado em **Casos de uso > Personalizar**, com **Etapa 1. Experimente**, **Etapa 2. Configuração da produção** e **Etapa 3. Verificação da empresa**, e uma escolha entre "Integrar com API" e "Torne-se um parceiro". A documentação da Meta ainda fala em "Produtos" e "Configuração da API" em várias páginas: o painel andou na frente dos docs. `docs/whatsapp-oficial.md` passou a seguir os nomes do painel, na ordem das etapas, e a dar link direto sempre que existe um, que é o que não muda de lugar quando a interface muda. Os docs da Meta também migraram de `/docs/whatsapp/cloud-api/` para `/documentation/business-messaging/whatsapp/`.
+- **Desde 1º de outubro de 2026 a mensagem de serviço é cobrada**: a resposta em texto livre dentro da janela de 24 horas, que é justamente o que o agente manda, deixou de ser gratuita. Tarifa de utilidade do país, depois de 1.000 grátis por número por mês, sem acumular. **Conta sem forma de pagamento não tem mensagem de serviço entregue**, o que torna o meio de pagamento pré-requisito para testar, não detalhe de produção. Substitui "cobrança por conversa" nos textos do setup e em spec/arquitetura.md.
+- **Desde 15 de janeiro de 2026 a Meta proíbe assistente de IA de propósito geral no WhatsApp.** Não afeta este projeto: agente de atendimento de uma empresa continua permitido, é o caso de uso da plataforma. Ficou registrado no documento como limite a respeitar no prompt, para ninguém transformar o agente em assistente geral.
+- Atualizados `docs/whatsapp-oficial.md`, os textos de `setup/lib/whatsapp.sh` e o rótulo do canal, e spec/arquitetura.md (custo).
+
 ## 2026-09-18: WhatsApp oficial, parte 3 da fase 5 (v0.15.0)
 
 - **Três camadas de webhook, todas pela API**: o app assina o campo `messages` do objeto `whatsapp_business_account` (`POST /{app_id}/subscriptions`, com o token do app `{app_id}|{app_secret}`), a conta passa a entregar a este app (`POST /{waba_id}/subscribed_apps`) e o número ganha o endereço deste agente (`POST /{phone_number_id}` com `webhook_configuration`). A primeira é o alicerce: sem ela a Meta não entrega nada, nem para um endereço apontado no número. Por isso o setup pede também o **ID do app**.

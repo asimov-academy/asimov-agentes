@@ -226,7 +226,7 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 - **Script do setup:** o `install.sh` em `setup.<dominio>` é hospedado como página estática gratuita (GitHub Pages ou Cloudflare Pages) e baixa a release marcada do repositório da Asimov Academy.
 - **DNS:** o setup compara o IP público da VPS com o `dig +short bot.<dominio>`. Se o IP for de faixa da Cloudflare, avisa para desligar o proxy (nuvem laranja) desse registro, porque o certificado é emitido na VPS.
 - **Execução do setup:** idempotente. Cada passo checa se já está feito antes de fazer. Espera a trava do `apt` com `DPkg::Lock::Timeout`, repete falha passageira até 3 vezes com espera de 5, 15 e 45 s, e grava o passo concluído em `$HOME/.asimov/estado`.
-- **Custo mensal estimado:** VPS de 4 GB nos provedores comuns, na faixa de R$ 30 a R$ 80 (estimativa, varia por provedor). Hospedagem do `install.sh`: gratuita. IA: por uso, visível no menu "Ver consumo e falhas". WhatsApp oficial: cobrança da Meta por conversa, conforme a tabela dela.
+- **Custo mensal estimado:** VPS de 4 GB nos provedores comuns, na faixa de R$ 30 a R$ 80 (estimativa, varia por provedor). Hospedagem do `install.sh`: gratuita. IA: por uso, visível no menu "Ver consumo e falhas". WhatsApp oficial: cobrança da Meta por mensagem, conforme a tabela dela. Desde 1º de outubro de 2026 a resposta dentro da janela de 24 horas (mensagem de serviço, que é o que o agente manda) também é cobrada, depois de 1.000 grátis por número por mês; conta sem forma de pagamento não tem essas mensagens entregues. Ver `docs/whatsapp-oficial.md`.
 
 ## 10. Testes mínimos
 

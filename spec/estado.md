@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.15.0` em `asimov-academy/asimov-agentes` (público): **WhatsApp oficial (Cloud API da Meta)**, terceira parte da fase 5. Cada agente tem o próprio endereço de webhook, apontado no número pela API; o aviso de handoff sai em texto livre ou pelo template aprovado, e a conversa volta com 👍 no aviso, `/retomar` ou o prazo do agente.
+- `v0.15.1` em `asimov-academy/asimov-agentes` (público): `docs/whatsapp-oficial.md` refeito com o painel novo da Meta ("Produtos" virou "Casos de uso", com as três etapas guiadas), a cobrança por mensagem de serviço que começou em 1º de outubro de 2026 (e que exige forma de pagamento para o agente conseguir responder) e a política de IA de propósito geral de janeiro de 2026.
+- `v0.15.0`: **WhatsApp oficial (Cloud API da Meta)**, terceira parte da fase 5. Cada agente tem o próprio endereço de webhook, apontado no número pela API; o aviso de handoff sai em texto livre ou pelo template aprovado, e a conversa volta com 👍 no aviso, `/retomar` ou o prazo do agente.
 - `v0.14.2`: o texto das mensagens saiu do log (conversa pessoal de quem emprestou o número ao agente passava por lá) e mexer no contêiner da WAHA deixou de disparar alarme de número fora do ar.
 - `v0.14.1`: a transcrição leva o idioma configurado (`IDIOMA_AUDIO`, padrão `pt`), depois de um "Boa noite" voltar em russo.
 - `v0.14.0`: `/retomar` sem código devolve a conversa em que foi escrito, ou a única em atendimento; com várias, o destino recebe a lista para escolher.

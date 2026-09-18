@@ -183,7 +183,7 @@ conecta_canal() {
   echo
   escolha op "Canal" \
     "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
-    "WhatsApp oficial  ${CINZA}Cloud API da Meta: número homologado, cobrado por conversa${NORMAL}" \
+    "WhatsApp oficial  ${CINZA}Cloud API da Meta: número homologado, cobrado por mensagem${NORMAL}" \
     "WhatsApp pela WAHA  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}"
   case "$op" in
     1) conecta_chatwoot "$nome" ;;
