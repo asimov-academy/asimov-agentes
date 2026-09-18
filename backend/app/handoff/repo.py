@@ -98,3 +98,20 @@ async def vencidos(sessao: AsyncSession, limite: datetime, maximo: int = 100) ->
             .limit(maximo)
         )
     )
+
+
+async def abertos_do_agente(
+    sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID
+) -> list[Handoff]:
+    """Conversas em atendimento agora. Uma só dispensa o código no `/retomar`."""
+    return list(
+        await sessao.scalars(
+            select(Handoff)
+            .where(
+                Handoff.cliente_id == cliente_id,
+                Handoff.agente_id == agente_id,
+                Handoff.retomado_em.is_(None),
+            )
+            .order_by(Handoff.iniciado_em)
+        )
+    )
