@@ -203,25 +203,24 @@ Dá para desenvolver e testar antes.
 Enquanto o app está em **modo de desenvolvimento**, ele só fala com os números de teste. Para
 atender gente de verdade, o app precisa ficar **Ativo**, e a Meta pede duas coisas antes:
 
-**URL da política de privacidade.** Esta instalação já serve uma, no seu domínio:
+**URL da política de privacidade.** Esta instalação serve uma, no seu domínio, em três níveis.
+Na Meta existe **um app por número**, e cada app quer a própria URL, então o nível mais útil é o do
+agente:
 
 ```
-https://bot.<seu-dominio>/privacidade
+https://bot.<seu-dominio>/privacidade/<empresa>/<agente>   ← use esta no app do número
+https://bot.<seu-dominio>/privacidade/<empresa>            ← a empresa, sem citar agente
+https://bot.<seu-dominio>/privacidade                      ← a instalação
 ```
 
-Para nomear a empresa na página (útil quando cada empresa cliente tem o próprio app da Meta):
-
-```
-https://bot.<seu-dominio>/privacidade/<slug-da-empresa>
-```
-
-O slug é o nome da empresa em minúsculas com hífens: `Loja Exemplo` fica `loja-exemplo`. Aparece em
-`asimov agentes`, na pasta do prompt do agente.
+A URL do agente aparece pronta no fim da criação e em **Editar agente > WhatsApp**, linha
+Privacidade. Não precisa montar à mão. Os slugs são o nome em minúsculas com hífens: `Loja Exemplo`
+com a agente `Ana` dá `/privacidade/loja-exemplo/ana`.
 
 O texto é um modelo em `modelos/privacidade.html`, no projeto: ele cobre o que um agente de
 atendimento trata (mensagens, nome e telefone, arquivos, uso de provedores de IA, prazo e
 contato), e **você deve revisar** para bater com o seu caso. É a sua política, não a nossa. Depois
-de editar, `docker compose restart api` não é necessário: a página é lida a cada visita.
+de editar, não precisa reiniciar nada: a página é lida a cada visita.
 
 **Ícone quadrado do app.** Tem um pronto no projeto, 1024x1024 PNG:
 
@@ -319,6 +318,7 @@ dizer que a mensagem chegou.
 | `business_management` não aparece para marcar | app do caso de uso do WhatsApp só oferece as permissões dele | não precisa: marque as duas `whatsapp_*` |
 | `(#100) The App_id in the input_token did not match the Viewing App` | o ID do app informado não é o do app que gerou o token | use o ID e a chave secreta do **mesmo** app que você escolheu em "Gerar token" |
 | A Meta pede política de privacidade para publicar o app | é obrigatório para sair do modo de desenvolvimento | [passo 10](#10-publicar-o-app): a instalação serve a página |
+| A URL da política responde 404 | o Caddy está com a configuração antiga em memória | `asimov atualizar`, ou na hora: `source deploy/compose.sh && dc restart caddy` |
 | A Meta recusa apontar o webhook | o usuário do sistema não tem o app ou a conta como ativo | passo 7, item 3 |
 | O agente recebe mas nada chega ao contato | conta sem forma de pagamento | passo 5 |
 | O agente não recebe nada | alguém mexeu na configuração do webhook pelo painel da Meta | `asimov editar`, opção **WhatsApp**, **Refazer o webhook na Meta** |

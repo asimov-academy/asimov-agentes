@@ -71,6 +71,7 @@ Fale com o operador em português, curto e direto.
 - WAHA: o contêiner tem perfil no Compose e só sobe no primeiro agente WhatsApp (`WAHA_ATIVA=1` no `.env`, lido pelo `dc`). A `WAHA_API_KEY` nasce na instalação: gerá-la depois obrigaria a reiniciar a API. A imagem é atualizada por timer do systemd no host (`deploy/atualiza_waha.sh`), nunca pelo worker: contêiner com socket do Docker é a VPS inteira.
 - WhatsApp oficial: cada agente aponta o webhook no próprio número (`webhook_configuration`), e a Meta confere o endereço na hora, antes de o agente existir no banco. Por isso o `GET` de verificação responde pelo token da URL, sem olhar o banco.
 - App da Meta criado pelo caso de uso do WhatsApp só oferece `whatsapp_business_management` e `whatsapp_business_messaging`, e é só do que o agente precisa. `business_management` (que nem aparece para marcar) serve apenas à descoberta da conta por `/me/businesses`: sem ela vale o `debug_token` e, falhando, a pergunta à mão.
+- O Caddyfile é montado no contêiner: mudar o arquivo não muda o que o Caddy já carregou. `sobe_servicos` roda `caddy reload` depois do `dc up`, senão caminho público novo responde 404 até alguém reiniciar o contêiner.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.
 - Chatwoot: conversa Aberta é humano conduzindo, o agente fica calado; só Pendente gera turno.

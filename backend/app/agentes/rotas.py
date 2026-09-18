@@ -108,6 +108,7 @@ class AgenteSaida(BaseModel):
     slug: str
     canal: str
     url_webhook: str
+    url_privacidade: str
     credenciais: dict[str, Any]
     arquivo_prompt: str
     modelo_conversa: str
@@ -129,6 +130,7 @@ class AgenteSaida(BaseModel):
 def _saida(agente: Agente) -> AgenteSaida:
     dados = {c: getattr(agente, c) for c in AgenteSaida.model_fields if hasattr(agente, c)}
     dados["url_webhook"] = servico.url_webhook(agente)
+    dados["url_privacidade"] = servico.url_privacidade(agente)
     dados["credenciais"] = credenciais_visiveis(
         obter_canal(agente.canal), servico.credenciais(agente)
     )

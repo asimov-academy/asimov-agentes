@@ -43,3 +43,26 @@ async def test_empresa_removida_sai_do_ar(http: httpx.AsyncClient) -> None:
     )
 
     assert (await http.get("/privacidade/saiu")).status_code == 404
+
+
+async def test_privacidade_do_agente_leva_empresa_e_agente(http, canal) -> None:  # type: ignore[no-untyped-def]
+    """Na Meta é um app por número, e cada app quer a própria URL."""
+    from testes.conftest import cria_cliente_e_agente
+
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+
+    resp = await http.get("/privacidade/loja-exemplo/ana")
+
+    assert resp.status_code == 200
+    assert "Loja Exemplo" in resp.text and "atendimento de Ana" in resp.text
+    # A API diz a URL, para o menu mostrar sem ter de montar o endereço.
+    assert agente["url_privacidade"] == "https://bot.teste.local/privacidade/loja-exemplo/ana"
+
+
+async def test_agente_de_outra_empresa_nao_aparece_na_url_dela(http, canal) -> None:  # type: ignore[no-untyped-def]
+    from testes.conftest import cria_cliente_e_agente
+
+    await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    await http.post("/admin/clientes", json={"nome": "Outra"}, headers=ADMIN)
+
+    assert (await http.get("/privacidade/outra/ana")).status_code == 404

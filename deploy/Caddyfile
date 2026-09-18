@@ -5,7 +5,7 @@
 {$SUBDOMINIO_BOT} {
 	# Só webhooks, health e a política de privacidade ficam públicos (a Meta exige a URL da
 	# política para publicar o app). /admin responde apenas em 127.0.0.1:8000.
-	@publico path /health /webhook/* /privacidade /privacidade/*
+	@publico path /health /webhook/* /privacidade*
 	handle @publico {
 		reverse_proxy api:8000
 	}
