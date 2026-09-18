@@ -28,6 +28,7 @@ from app.painel.api import router as api
 from app.painel.api_agentes import router as api_agentes
 from app.painel.api_oportunidades import router as api_oportunidades
 from app.painel.api_conversas import router as api_conversas
+from app.painel.api_copiloto import router as api_copiloto
 from app.plataforma.banco import sessao
 from app.plataforma.config import config
 
@@ -302,3 +303,4 @@ router.include_router(api)
 router.include_router(api_agentes)
 router.include_router(api_conversas)
 router.include_router(api_oportunidades)
+router.include_router(api_copiloto)

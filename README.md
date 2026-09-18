@@ -15,6 +15,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 - **Modelo por função**: resposta, fallback, visão e transcrição, cada um com seu provedor (OpenAI, Anthropic, Gemini ou Groq). Se o modelo principal cair, o fallback responde.
 - **Uma empresa ou várias**: use só para a sua empresa ou revenda agentes para empresas clientes, com os dados de cada uma isolados.
 - **Painel no navegador, se você quiser**: em `app.<seu-domínio>`, com visão geral, agentes, canais, conversas e contatos. Criar e configurar agente acontece num popup guiado, com prévia do jeito que ele vai falar e uma conversa de teste no fim. Nasce desligado: quem prefere o terminal continua com a API exatamente como sempre foi.
+- **Copiloto no painel**: com a sua conta do Claude Code ou do Codex vinculada na instalação, o painel ganha um assistente que cria agente, reescreve prompt e liga ferramenta conversando com você, em português. Ele roda pela assinatura que você já paga (Claude Pro ou Max, ChatGPT Plus ou Pro), sem chave de API e sem custo por token, e nunca muda nada sozinho: tudo o que ele propõe espera o seu Confirmar.
 - **Pronto para vibecoding**: projeto com testes, `AGENTS.md` e `CLAUDE.md` para o agente de código entender e evoluir.
 
 ## Antes de começar
@@ -25,6 +26,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 - Para agentes no **WhatsApp oficial** (Cloud API da Meta), um app e um número preparados na Meta: passo a passo com links em [docs/whatsapp-oficial.md](docs/whatsapp-oficial.md)
 - Para agentes no **WhatsApp pela WAHA** (API não oficial), um **número de WhatsApp** só para o agente (o WhatsApp pode bloquear número que responde demais)
 - Chave de API de pelo menos um provedor: OpenAI, Anthropic, Gemini ou Groq
+- Para o copiloto do painel, uma assinatura Claude Pro ou Max, ou ChatGPT Plus ou Pro (é a mesma conta do Claude Code ou do Codex)
 
 ## Instalação
 
@@ -40,8 +42,9 @@ O setup pergunta, nesta ordem:
 2. Domínio e e-mail para o certificado SSL
 3. Claude Code ou Codex
 4. O registro DNS `bot.<seu-domínio>` (ele mostra o IP e espera propagar)
-5. Se quer o painel no navegador, em `app.<seu-domínio>` (pede um registro DNS novo e mostra o código do primeiro acesso). Com o painel ligado, o primeiro agente pode nascer por lá
-6. Canal do primeiro agente (Chatwoot, WhatsApp oficial, WhatsApp pela WAHA ou nativo). Todo canal pergunta a IA que responde: provedor, modelo e, na primeira vez daquele provedor, a chave de API, testada na hora e guardada cifrada no banco. No Chatwoot: URL e token de administrador (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente. No WhatsApp oficial: os dados do app da Meta, o número da conta e o template do aviso de handoff ([como preparar](docs/whatsapp-oficial.md)). Na WAHA: nome, ferramentas, o QR code para parear o número e quem recebe o handoff
+5. Se quer entrar na sua conta do assistente escolhido, que é o que liga o copiloto do painel. Dá para pular e fazer depois com `asimov ia`
+6. Se quer o painel no navegador, em `app.<seu-domínio>` (pede um registro DNS novo e mostra o código do primeiro acesso). Com o painel ligado, o primeiro agente pode nascer por lá
+7. Canal do primeiro agente (Chatwoot, WhatsApp oficial, WhatsApp pela WAHA ou nativo). Todo canal pergunta a IA que responde: provedor, modelo e, na primeira vez daquele provedor, a chave de API, testada na hora e guardada cifrada no banco. No Chatwoot: URL e token de administrador (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente. No WhatsApp oficial: os dados do app da Meta, o número da conta e o template do aviso de handoff ([como preparar](docs/whatsapp-oficial.md)). Na WAHA: nome, ferramentas, o QR code para parear o número e quem recebe o handoff
 
 Se algo falhar, ele mostra o motivo. Rode o mesmo comando de novo e ele continua de onde parou.
 
@@ -60,6 +63,7 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde. Com um a
 | `asimov consumo` | Turnos, tokens, custo estimado e falhas dos últimos 7 e 30 dias |
 | `asimov handoff` | Troca quem recebe a conversa passada pelo agente |
 | `asimov painel` | Liga ou desliga o painel no navegador e gera o código do primeiro acesso |
+| `asimov ia` | Entra na sua conta do Claude Code ou do Codex, que é o que liga o copiloto do painel |
 | `asimov diagnostico` | Diz a versão instalada e se cada endereço está respondendo |
 | `asimov atualizar` | Baixa a versão nova e republica |
 

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034  # variáveis usadas pelas telas e pelo comando asimov
 # Caminhos, versão, sudo e bibliotecas. Carregado por setup/instalar.sh e setup/asimov.sh.
 
-VERSAO="0.24.1"
+VERSAO="0.25.0"
 # O instalador da main aponta sempre para a última versão marcada.
 URL_INSTALL="https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh"
 
@@ -37,6 +37,8 @@ source "$DIR_LIB/dados.sh"
 source "$DIR_LIB/dns.sh"
 # shellcheck source=setup/lib/instalacao.sh
 source "$DIR_LIB/instalacao.sh"
+# shellcheck source=setup/lib/vinculo.sh
+source "$DIR_LIB/vinculo.sh"
 # shellcheck source=setup/lib/agente.sh
 source "$DIR_LIB/agente.sh"
 # shellcheck source=setup/lib/waha.sh

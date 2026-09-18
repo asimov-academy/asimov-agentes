@@ -493,8 +493,8 @@ menu_operador() {
       rotulos+=("WhatsApp (WAHA)")
       acoes+=("com_pausa fluxo_waha")
     fi
-    rotulos+=("Painel no navegador" "Token do Chatwoot" "Diagnóstico" "Sair")
-    acoes+=("com_pausa fluxo_painel" "com_pausa fluxo_token_chatwoot" "com_pausa fluxo_diagnostico")
+    rotulos+=("Painel no navegador" "Conta de IA" "Token do Chatwoot" "Diagnóstico" "Sair")
+    acoes+=("com_pausa fluxo_painel" "com_pausa fluxo_vinculo" "com_pausa fluxo_token_chatwoot" "com_pausa fluxo_diagnostico")
     ESC_ESCOLHE=${#rotulos[@]} escolha op "O que fazer?" "${rotulos[@]}"
     [ "$op" -lt "${#rotulos[@]}" ] || return 0
     # shellcheck disable=SC2086  # a ação pode vir com `com_pausa` na frente

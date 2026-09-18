@@ -17,6 +17,7 @@ ajuda() {
   printf '    %sconsumo%s       turnos, tokens, custo e falhas em 7 e 30 dias\n' "$CIANO" "$NORMAL"
   printf '    %shandoff%s       troca quem recebe a conversa passada pelo agente\n' "$CIANO" "$NORMAL"
   printf '    %spainel%s        liga ou desliga o painel no navegador e gera o código de acesso\n' "$CIANO" "$NORMAL"
+  printf '    %sia%s            entra na conta do Claude Code ou do Codex e liga o copiloto do painel\n' "$CIANO" "$NORMAL"
   printf '    %sdiagnostico%s   mostra versão e o que está respondendo\n' "$CIANO" "$NORMAL"
   printf '    %satualizar%s     baixa a versão nova e republica\n' "$CIANO" "$NORMAL"
   echo
@@ -47,6 +48,7 @@ case "${1:-menu}" in
   consumo) roda mostra_consumo ;;
   handoff) roda fluxo_handoff ;;
   painel) roda fluxo_painel ;;
+  ia) roda fluxo_vinculo ;;
   diagnostico | diagnóstico) roda fluxo_diagnostico ;;
   atualizar)
     # O install.sh local tem fixa a versão já instalada: baixa o da main.

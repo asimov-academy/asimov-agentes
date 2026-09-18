@@ -92,8 +92,7 @@ tela_instalacao() {
   passo firewall "Firewall (SSH, 80 e 443)" "Confira com: ufw status" firewall
   passo node "Node.js" "Veja o log." instala_node
   passo uv "uv" "Veja o log." instala_uv
-  passo agente_codigo "$( [ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo 'Claude Code')" \
-    "Veja o log." instala_agente_codigo
+  passo agente_codigo "$(ia_nome)" "Veja o log." instala_agente_codigo
   passo segredos "Senhas e chaves" "Veja o log." --sem-repetir gera_segredos
   passo build "Plataforma" \
     "Confira o espaço em disco: df -h" dc build api worker

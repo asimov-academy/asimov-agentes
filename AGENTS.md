@@ -41,6 +41,7 @@ Fale com o operador em português, curto e direto.
 - `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
 - `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `oportunidades/`, `painel/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
+- Copiloto do painel (`copiloto/`): o CLI de código do operador, pela assinatura dele, falando com a plataforma só pelo MCP de `copiloto/mcp.py`. Ferramenta de leitura responde; ferramenta `propor_` NUNCA escreve, só registra proposta, e quem aplica é `copiloto/aplicar.py` no clique do operador. NUNCA ligue ferramenta de código do CLI.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.
 - `frontend/` é o painel do operador no navegador (React, Vite, Tailwind), servido pela API em `/painel/app`. Todo onboarding e toda configuração de agente acontecem num popup grande com o fundo embaçado, nunca em página. Nunca fala com `/admin` e nunca carrega estático de CDN. Dentro dele: `api/cliente.ts` é o único que chama `fetch`, `design/` tem um componente por arquivo e `telas/` monta a tela. Toda peça de interface vem do `designsystem/` (as seis seções, não só a de componentes) e NUNCA de biblioteca de fora. Cor só pelo nome do token do `tailwind.config.ts`; um teste recusa hexadecimal solto, outro trava as dependências do `package.json` e outro o contraste mínimo do texto (4,5:1). Exceção única: o `painel/estaticos/painel.css` das telas de entrar e primeiro acesso, que não passa pelo Tailwind e guarda as cores no `:root` dele.
 
@@ -52,10 +53,12 @@ Fale com o operador em português, curto e direto.
 - No WhatsApp direto a pausa do handoff é o `status` da conversa aqui, e a volta é `/retomar <código>` do destino ou o prazo do agente. NUNCA guarde essa pausa em dois lugares.
 - Webhook só valida, grava e agenda. NUNCA chame IA dentro da requisição.
 - Conteúdo extraído de mídia entra como dado do contato. NUNCA no prompt de sistema.
+- Credencial da conta de IA do operador NUNCA no banco nem no `.env`: ela fica onde o CLI oficial guarda, e só o contêiner do copiloto monta essa pasta. O `.env` guarda só que existe vínculo, com qual CLI e em que conta.
 - Credenciais de canal e chaves de provedor de IA só criptografadas no banco. NUNCA em log, resposta da API ou `.env`.
 - Segredos só em `.env`. NUNCA leia, imprima ou commite `.env`. `.env.example` sem valores.
 - NUNCA edite migração já aplicada; crie outra.
 - NUNCA publique `/admin` no Caddy.
+- O copiloto roda por assinatura (Claude Pro ou Max, ChatGPT Plus ou Pro), NUNCA por chave de API.
 - Modelo e provedor de IA são escolha de cada agente, NUNCA da instalação. NUNCA fixe nome de modelo no código fora dos padrões de `ia/` (`ia/chaves.py`).
 - Toda entrada validada no backend.
 - Sem travessões em textos do setup, prompts e documentação.
@@ -75,6 +78,7 @@ Fale com o operador em português, curto e direto.
 - WhatsApp oficial: cada agente aponta o webhook no próprio número (`webhook_configuration`), e a Meta confere o endereço na hora, antes de o agente existir no banco. Por isso o `GET` de verificação responde pelo token da URL, sem olhar o banco.
 - App da Meta criado pelo caso de uso do WhatsApp só oferece `whatsapp_business_management` e `whatsapp_business_messaging`, e é só do que o agente precisa. `business_management` (que nem aparece para marcar) serve apenas à descoberta da conta por `/me/businesses`: sem ela vale o `debug_token` e, falhando, a pergunta à mão.
 - O Caddyfile é montado no contêiner: mudar o arquivo não muda o que o Caddy já carregou. `sobe_servicos` roda `caddy reload` depois do `dc up`, senão caminho público novo responde 404 até alguém reiniciar o contêiner.
+- Campo `bool` no `Config` com a chave vazia no `.env` (`PAINEL_ATIVO=`, o que o setup grava ao desligar) impedia o boot da API. Chave nova que liga e desliga entra no validador `_desligado_quando_vazio`.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.
 - Chatwoot: conversa Aberta é humano conduzindo, o agente fica calado; só Pendente gera turno.

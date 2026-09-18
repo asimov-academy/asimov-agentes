@@ -83,6 +83,30 @@ services:
       - api
     restart: unless-stopped
 
+  # Copiloto do painel. Sobe só depois de `asimov ia` vincular a conta (perfil `copiloto`,
+  # COPILOTO_ATIVO=1 no .env, lido pelo `dc`). Sem porta publicada: quem fala com ele é a API,
+  # pela fila do Redis. A pasta de credencial do CLI vem do host, com escrita, porque o CLI
+  # renova o próprio login sozinho; nenhum segredo dela passa pelo .env nem pelo banco.
+  copiloto:
+    <<: *backend
+    profiles: ["copiloto"]
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+      target: copiloto
+      args:
+        PROVEDORES: ${PROVEDORES}
+        AGENTE_CODIGO: ${AGENTE_CODIGO:-claude_code}
+    image: asimov-copiloto:local
+    command: ["arq", "app.copiloto.worker.Configuracao"]
+    volumes:
+      - ../prompts:/app/prompts
+      - ../modelos:/app/modelos:ro
+      - midia:/var/lib/asimov/midia
+      # Os padrões existem só para o arquivo continuar válido em quem nunca vinculou conta: o
+      # serviço nem entra no Compose sem o perfil, e o par de verdade vem do .env.
+      - ${CREDENCIAL_IA_HOST:-../modelos}:${CREDENCIAL_IA_CONTAINER:-/tmp/sem-credencial}:rw
+
   # WhatsApp pela WAHA. Sobe só quando o primeiro agente WAHA é criado (setup/lib/waha.sh liga
   # WAHA_ATIVA=1 no .env e o `dc` passa a mandar --profile waha). Sem porta publicada: quem fala
   # com ela é a API, pela rede do Compose. O volume guarda o pareamento do número.

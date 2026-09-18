@@ -55,8 +55,9 @@ asimov-agentes/
 | Logs | structlog em JSON | `cliente_id`, `agente_id` e `conversa_id` em todo evento |
 | Proxy e HTTPS | Caddy | certificado Let's Encrypt e renovação automáticos, configuração de poucas linhas |
 | WhatsApp não oficial | WAHA (`devlikeapro/waha`, Apache 2.0) com motor GOWS (whatsmeow), versão fixada, container `waha` subido só quando o primeiro agente WAHA é criado | leve, várias sessões numa instância, QR code e webhook assinado; manutenção do protocolo é do projeto WAHA; licença sem condições (Evolution e Baileys direto descartados, spec/decisoes.md) |
-| Execução | Docker Compose (`caddy`, `api`, `worker`, `postgres`, `redis` e, quando houver agente WAHA, `waha`) | sobe e reinicia tudo com um comando; nada de Swarm numa VPS dedicada |
-| Agente de código | Claude Code (instalador oficial) ou Codex (npm, com Node LTS) | escolha do operador |
+| Execução | Docker Compose (`caddy`, `api`, `worker`, `postgres`, `redis` e, sob demanda, `waha` e `copiloto`) | sobe e reinicia tudo com um comando; nada de Swarm numa VPS dedicada |
+| Agente de código | Claude Code (instalador oficial) ou Codex (npm, com Node LTS) | escolha do operador; a mesma escolha move o copiloto do painel |
+| Copiloto do painel | O CLI escolhido, em modo não interativo, num container `copiloto` com perfil, falando com a plataforma por um servidor MCP nosso (SDK `mcp`) | roda pela assinatura do operador, sem chave de API e sem custo por token; o CLI é o único motor que já sabe usar ferramenta e manter fio de conversa |
 | Painel web | React 19 + TypeScript + Vite + Tailwind CSS, em `frontend/`, construído num estágio `node` do `backend/Dockerfile` e servido pela API em `/painel/app` | telas com abas e histórico de conversa pedem estado no cliente; sem container novo, sem node na VPS e sem estático de CDN |
 | Testes | pytest + pytest-asyncio; `shellcheck` no Bash; vitest no `frontend/` | cobre regras e isolamento; pega erro comum de script |
 
@@ -138,6 +139,11 @@ backend/app/
 │                   de cada canal), rotas.py (entrar, primeiro acesso, sair e o front),
 │                   api.py + api_agentes.py + api_conversas.py (o JSON que o front consome),
 │                   paginas/ (entrar e primeiro acesso em Jinja2), estaticos/ (painel.css, fontes/)
+├── copiloto/       copiloto do painel: vinculo.py (a conta de IA que o setup registrou),
+│                   sessao.py (conversa e propostas no Redis), servico.py (monta e roda o CLI),
+│                   mcp.py (servidor MCP por stdio), aplicar.py (a escrita, no clique do operador),
+│                   worker.py (fila e worker próprios)
+│   └── ferramentas/ uma por arquivo, ficha em base.py, catálogo em registro.py
 ├── conhecimento/   ingestão, divisão em trechos, embeddings, busca, tool de busca
 ├── handoff/        tool de transferência, aviso, comando de retomada, retomada automática
 ├── consumo/        turnos, falhas, relatório por cliente
@@ -152,6 +158,7 @@ prompts/<cliente>/<agente>/resumo_handoff.md
 - Em cada assunto: `rotas.py` só recebe e valida, `servico.py` tem a regra, `repo.py` fala com o banco. Rota nunca chama banco direto.
 - Cada canal implementa a mesma interface de `canais/base.py`; o resto do sistema não sabe qual canal está atendendo. O que muda entre canais vira atributo ou método do contrato, nunca `if canal ==` fora de `canais/`: `webhook_interno` (WAHA chama a API pela rede do Compose), `agente_pode_falar(credenciais, conversa, status)` (o Chatwoot pergunta ao Chatwoot; o canal direto vale-se do status da conversa), `interpretar(payload, credenciais, destino)` (o destino do handoff é de onde vem o `/retomar`), `interpretar_todos` (um envelope pode trazer várias mensagens; o padrão devolve uma), `transferir(..., codigo)`, `avisa_destino` e `rotulo_da_conversa`.
 - Ferramenta nova que o operador liga por agente é um arquivo próprio em `ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar, se vem ligada), listada em `ia/ferramentas/registro.py`. Um teste falha se houver arquivo fora do registro. Tool que todo agente tem é registrada em `ia/agente.py`.
+- O copiloto tem o mesmo desenho de ferramenta: um arquivo por ferramenta em `copiloto/ferramentas/`, ficha em `base.py`, catálogo em `registro.py`, com teste que recusa arquivo solto. A diferença é a regra dele: ferramenta de leitura responde na hora, ferramenta `propor_` só registra uma proposta, e a escrita acontece em `copiloto/aplicar.py`, chamado pela rota que o operador clica. O CLI roda sem as ferramentas de código dele, então o MCP é tudo o que ele alcança.
 - Por que assim: para mudar como a WAHA envia mensagem, mexe-se só em `canais/waha/`; para trocar o provedor de IA, só em `ia/`. Nenhuma mudança num assunto obriga mexer em outro.
 
 ## 6. Contrato da API
@@ -224,6 +231,7 @@ Worker arq, mesmo código do backend, container `worker`:
 | `ingerir_documento` | envio de documento | extrai texto, divide em trechos de cerca de 800 tokens com sobreposição de 100, gera embeddings em lote, marca `pronto` ou `erro` |
 | `confere_whatsapp` | cron a cada dez minutos | confere se os números dos agentes WAHA continuam pareados; fora do ar vira Falha, uma por agente por hora |
 | `retomada_automatica` | cron a cada minuto | fecha handoffs com `retomar_em` vencido e avisa no destino que o agente voltou |
+| `turno_do_copiloto` | pedido do operador no painel | executa o CLI no container `copiloto`, que lê a plataforma pelas ferramentas MCP e registra propostas; a resposta e o andamento ficam no Redis, e o painel acompanha por polling. Fila e worker próprios (`app/copiloto/worker.py`): um turno de atendimento precisa ser rápido, um turno de copiloto pensa por minutos |
 | `limpar_midia` | cron diário, de madrugada | apaga do disco o arquivo de mídia com mais de `midia_horas_no_disco` (24); com a varredura diária ele dura de um a dois dias. O texto lido fica, e o hash mantém o cache valendo |
 
 Fora do worker, no host: `asimov-waha.timer` (systemd, domingo de madrugada) roda `deploy/atualiza_waha.sh`, que atualiza a imagem da WAHA e volta para a anterior se algum número não reconectar. Fica no host porque atualizar contêiner pede o Docker, e dar o socket do Docker a um contêiner é dar a VPS inteira.
@@ -235,8 +243,9 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 ## 8. Segredos
 
 - Tudo em `.env`, gerado pelo setup. O repositório tem só `.env.example` com as chaves e nenhum valor.
-- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `IDIOMA_AUDIO` (desde a v0.14.1), `OPENAI_RACIOCINIO` (desde a v0.8.5), `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`, `WAHA_API_KEY` (gerada na instalação mesmo sem a WAHA, para ligar o WhatsApp depois não reiniciar a API) e, quando o WhatsApp é ligado, `WAHA_ATIVA=1` e `VERSAO_WAHA`. Entra depois: `MODELO_EMBEDDINGS` (fase 6).
+- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `IA_VINCULADA`, `IA_CLI`, `IA_CONTA`, `CREDENCIAL_IA_HOST`, `CREDENCIAL_IA_CONTAINER`, `COPILOTO_ATIVO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `IDIOMA_AUDIO` (desde a v0.14.1), `OPENAI_RACIOCINIO` (desde a v0.8.5), `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`, `WAHA_API_KEY` (gerada na instalação mesmo sem a WAHA, para ligar o WhatsApp depois não reiniciar a API) e, quando o WhatsApp é ligado, `WAHA_ATIVA=1` e `VERSAO_WAHA`. Entra depois: `MODELO_EMBEDDINGS` (fase 6).
 - Senha do Postgres, `CHAVE_API_ADMIN` e `CHAVE_CRIPTOGRAFIA` são geradas pelo setup com `openssl rand`, nunca pedidas ao operador.
+- A credencial da conta de IA do operador não entra nem no `.env` nem no banco: ela fica onde o CLI oficial guarda (`~/.claude/.credentials.json` ou `~/.codex/auth.json`, com a permissão dele), e só o container do copiloto monta essa pasta. O `.env` registra apenas que existe vínculo, com qual CLI, em que conta e onde fica a pasta.
 - Credenciais de canal não ficam no `.env`: ficam criptografadas no banco, por agente. Chave de provedor de IA também fica no banco, cifrada, uma por provedor (v0.20.0); `MODELO_*` e `*_API_KEY` só aparecem preenchidos em instalação feita até a v0.19. O token de administrador do Chatwoot também fica no banco, cifrado, em `acessos/`.
 - Nunca no repositório: `.env`, dumps, backups, mídia, documentos de clientes, `.venv`. O `.gitignore` do projeto gerado já cobre tudo isso.
 - Perder `CHAVE_CRIPTOGRAFIA` torna as credenciais ilegíveis: ela entra no backup e o resumo final avisa isso.

@@ -9,7 +9,7 @@ gera_arquivos_de_contexto() {
     return 0
   fi
   local agente_codigo modelos
-  agente_codigo=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo "Claude Code")
+  agente_codigo=$(ia_nome)
   modelos="escolhidos por agente (asimov editar > Modelos, ou a ficha do agente no painel)"
 
   sed -e "s|{{AGENTE_CODIGO}}|$agente_codigo|g" \
@@ -52,7 +52,7 @@ resumo_acesso_ao_painel() {
 mostra_resumo() {
   local sub comando
   sub=$(env_get SUBDOMINIO_BOT)
-  comando=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo codex || echo claude)
+  comando=$(ia_comando)
 
   secao "Pronto"
   if [ "$(estado_get agente_canal)" = nativo ]; then
@@ -74,6 +74,9 @@ mostra_resumo() {
   if painel_ligado; then
     campo "Painel" "$(painel_endereco)"
   fi
+  if vinculo_ligado; then
+    campo "Copiloto" "$(ia_nome)$([ -n "$(env_get IA_CONTA)" ] && printf ' · %s' "$(env_get IA_CONTA)")"
+  fi
   campo "Projeto" "$RAIZ_PROJETO"
   campo "Uso" "$([ "$(env_get MODO_INSTALACAO)" = revenda ] && echo 'revenda para empresas clientes' || echo 'só a minha empresa')"
   echo
@@ -86,6 +89,8 @@ mostra_resumo() {
   printf '    %sasimov conversar%s     %sconversa de teste com um agente aqui no terminal%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov painel%s        %s%s%s\n' "$CIANO" "$NORMAL" "$CINZA" \
     "$(painel_ligado && echo 'código de acesso ao painel no navegador' || echo 'administrar pelo navegador, em app.<domínio>')" "$NORMAL"
+  printf '    %sasimov ia%s            %s%s%s\n' "$CIANO" "$NORMAL" "$CINZA" \
+    "$(vinculo_ligado && echo 'trocar a conta de IA que move o copiloto do painel' || echo "entrar na conta de $(ia_nome) e ligar o copiloto do painel")" "$NORMAL"
   printf '    %sasimov ajuda%s         %stodos os comandos%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
   echo

@@ -156,6 +156,9 @@ painel_liga() {
   painel_recarrega_caddy
   printf '\r\033[K'
 
+  # Com conta de IA vinculada, o painel nasce com o copiloto.
+  copiloto_acerta || true
+
   if espera_url "https://$sub/painel/entrar" 24 >/dev/null 2>&1 ||
     espera_url "https://$sub/painel/primeiro-acesso" 6 >/dev/null 2>&1; then
     ok "Painel no ar em $(destaque "https://$sub")"
@@ -169,6 +172,7 @@ painel_desliga() {
   confirma "Desligar o painel? O endereço para de responder e a conta continua guardada." || return 0
   env_set PAINEL_ATIVO ""
   painel_escreve_caddy ""
+  copiloto_desce
   printf '  %sAplicando…%s' "$CINZA" "$NORMAL"
   painel_reinicia_api
   painel_recarrega_caddy

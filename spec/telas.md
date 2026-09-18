@@ -50,6 +50,14 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Mostra: passos numerados `N/T - [ OK ] - descrição` (firewall, Node, Python e uv, agente de código escolhido, SDK do provedor de IA escolhido, banco, proxy com SSL, projeto base, serviços no ar, health check da API em `https://bot.<dominio>`).
 - Ações: nenhuma; só acompanhar.
 
+### 5a. Conta de IA (vínculo)
+
+- Objetivo: com a plataforma no ar, entrar na conta do assistente escolhido na tela 3, que é o que liga o copiloto do painel.
+- Mostra: o ganho em duas linhas (o copiloto cria e ajusta agente conversando no painel) e que ele roda pela assinatura do operador (Claude Pro ou Max, ChatGPT Plus ou Pro), sem chave de API e sem custo por token.
+- Ações: Sim roda o login do CLI no próprio terminal (Codex por device code, Claude Code pelo endereço que ele mostra) e confere no fim. Não deixa `asimov ia` para depois, e a instalação segue inteira, só sem copiloto. Perguntada uma vez.
+- O segredo do login fica onde o CLI oficial guarda; o `.env` só registra que existe vínculo, com qual CLI e em que conta.
+- `asimov ia` depois: vincular, trocar de assistente, ver a situação e desvincular. Também é item do menu ("Conta de IA").
+
 ### 5b. Painel no navegador (oferta)
 
 - Objetivo: com o essencial no ar, oferecer o painel antes do primeiro agente, para o operador poder criá-lo por lá.
