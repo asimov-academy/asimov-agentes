@@ -36,7 +36,9 @@ from app.canais.waha import api
 from app.canais.waha.assinatura import assinatura_confere
 from app.plataforma.textos import mesmo_telefone, slug
 
-COMANDO_RETOMAR = re.compile(r"^\s*/retomar\s+([A-Za-z0-9]{4,12})\s*$", re.IGNORECASE)
+COMANDO_RETOMAR = re.compile(r"^\s*/retomar(?:\s+([A-Za-z0-9]{4,12}))?\s*$", re.IGNORECASE)
+"""O código é opcional: na conversa do contato ela já está identificada, e no chat de quem recebeu
+o aviso ele só é preciso quando há mais de uma conversa em atendimento."""
 SUFIXOS_DE_PESSOA = ("@c.us", "@lid", "@s.whatsapp.net")
 SUFIXOS_DE_TELEFONE = ("@c.us", "@s.whatsapp.net")
 SUFIXO_DE_GRUPO = "@g.us"
@@ -318,10 +320,11 @@ class Waha:
         texto = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
         comando = COMANDO_RETOMAR.match(texto or "")
         if comando and e_o_destino(mensagem, chat, destino):
+            codigo = comando.group(1)
             return Evento(
                 Acao.RETOMAR_POR_CODIGO,
                 "quem recebeu o handoff mandou /retomar",
-                codigo=comando.group(1).upper(),
+                codigo=codigo.upper() if codigo else None,
             )
         if chat.endswith(SUFIXO_DE_GRUPO):
             return Evento(Acao.IGNORAR, "mensagem de grupo", chat)
@@ -373,10 +376,16 @@ class Waha:
         texto_saindo = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
         comando = COMANDO_RETOMAR.match(texto_saindo or "")
         if comando:
+            codigo = comando.group(1)
+            if codigo is None and not chat.endswith(SUFIXO_DE_GRUPO):
+                # Sem código, na conversa em que foi escrito: é esta que volta para o agente.
+                return Evento(
+                    Acao.RETOMAR, "/retomar escrito na conversa", chat, por="comando"
+                )
             return Evento(
                 Acao.RETOMAR_POR_CODIGO,
                 "/retomar escrito do número do agente",
-                codigo=comando.group(1).upper(),
+                codigo=codigo.upper() if codigo else None,
             )
         if chat.endswith(SUFIXO_DE_GRUPO):
             return Evento(Acao.IGNORAR, "mensagem de grupo", chat)
@@ -440,7 +449,7 @@ class Waha:
             f"{nota}\n\n"
             f"Quando terminar, devolva ao agente de um destes jeitos:\n"
             f"1) reaja com {JOINHA} em qualquer mensagem da conversa com o contato;\n"
-            f"2) responda aqui com /retomar {codigo}."
+            f"2) responda /retomar aqui (com mais de uma conversa em atendimento: /retomar {codigo})."
         )
         try:
             await api.envia_texto(credenciais["sessao"], chat, aviso)

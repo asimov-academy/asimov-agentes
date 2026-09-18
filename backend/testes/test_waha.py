@@ -858,3 +858,39 @@ async def test_conversa_comum_do_aparelho_continua_pausando(http, fila, waha, se
 
     async with sessao() as s:
         assert (await s.scalars(select(Handoff))).one().motivo == handoff.MOTIVO_PESSOA_RESPONDEU
+
+
+async def test_retomar_sem_codigo_na_conversa_do_contato(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """Na conversa do contato não há dúvida sobre qual devolver: pedir código seria atrito à toa."""
+    agente = await cria_waha(http)
+    await transfere(http, fila, redis, waha, agente)
+
+    await manda(http, agente, waha, payload_waha("/retomar", de=CONTATO, minha=True, id_mensagem="true_s_PPP"))
+
+    async with sessao() as s:
+        assert (await s.scalars(select(Handoff))).one().retomado_em is not None
+
+
+async def test_retomar_sem_codigo_com_uma_conversa_em_atendimento(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http)
+    await transfere(http, fila, redis, waha, agente)
+
+    await manda(http, agente, waha, payload_waha("/retomar", de=CHAT_DO_DESTINO, id_mensagem="false_s_QQQ"))
+
+    async with sessao() as s:
+        assert (await s.scalars(select(Handoff))).one().retomado_em is not None
+
+
+async def test_retomar_sem_codigo_com_duas_conversas_pede_para_escolher(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http)
+    await transfere(http, fila, redis, waha, agente)
+    await manda(http, agente, waha, payload_waha("quero uma pessoa", de="5511922223333@c.us", id_mensagem="false_2_RRR"))
+    assert await roda_turno(fila, redis) == "transferido"
+
+    await manda(http, agente, waha, payload_waha("/retomar", de=CHAT_DO_DESTINO, id_mensagem="false_s_SSS"))
+
+    async with sessao() as s:
+        abertos = [h for h in await s.scalars(select(Handoff)) if h.retomado_em is None]
+    assert len(abertos) == 2, "com duas em atendimento, o comando sem código não escolhe sozinho"
+    pedidos = [t for _, t in waha.enviadas if "mais de uma conversa em atendimento" in t]
+    assert pedidos and all(f"/retomar {h.codigo}" in pedidos[-1] for h in abertos)

@@ -69,7 +69,8 @@ class Evento:
     motivo: str
     conversa_externa: str | None = None
     codigo: str | None = None
-    """Código do handoff em RETOMAR_POR_CODIGO: a conversa a retomar é achada por ele."""
+    """Código do handoff em RETOMAR_POR_CODIGO: a conversa a retomar é achada por ele. Vazio
+    quando o comando veio sem código, e aí vale a única conversa em atendimento."""
     por: str | None = None
     """Quem devolveu a conversa ao agente, para o histórico do handoff. Vazio vale o canal."""
     autor_externo: str | None = None

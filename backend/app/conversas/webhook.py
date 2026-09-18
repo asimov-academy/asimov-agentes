@@ -118,7 +118,6 @@ async def receber(
         return Response(status_code=200)
 
     if evento.acao is Acao.RETOMAR_POR_CODIGO:
-        assert evento.codigo is not None
         return await _retoma_por_codigo(s, agente, evento.codigo)
 
     if not _contato_permitido(agente, evento):
@@ -235,7 +234,7 @@ def _contato_permitido(agente: Any, evento: Evento) -> bool:
     return any(mesmo_telefone(p, do_canal) for p in permitidos)
 
 
-async def _retoma_por_codigo(s: AsyncSession, agente: Any, codigo: str) -> Response:
+async def _retoma_por_codigo(s: AsyncSession, agente: Any, codigo: str | None) -> Response:
     """Canais diretos: quem recebeu o handoff mandou `/retomar <código>` na conversa dele.
 
     Código que não existe (ou de um handoff já fechado) responde 200 sem fazer nada: o destino

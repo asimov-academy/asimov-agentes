@@ -186,21 +186,35 @@ AVISO_DE_RETOMADA_POR_TEMPO = (
 )
 
 
-async def retomar_por_codigo(sessao: AsyncSession, agente: "Agente", codigo: str) -> bool:
-    """`/retomar <código>` mandado por quem recebeu o handoff. False quando o código não vale.
+async def retomar_por_codigo(
+    sessao: AsyncSession, agente: "Agente", codigo: str | None
+) -> bool:
+    """`/retomar [código]` de quem recebeu o handoff. False quando não dá para saber qual conversa.
 
-    O canal já conferiu que o comando veio do destino do agente; aqui confere o código e devolve a
-    conversa. O destino recebe a confirmação, para não ficar na dúvida.
+    O canal já conferiu de onde veio o comando; aqui se descobre qual conversa devolver. Sem
+    código, vale a única conversa em atendimento: pedir um código quando não há dúvida é atrito à
+    toa. Com mais de uma, o destino recebe a lista e escolhe.
     """
-    aberto = await repo.aberto_por_codigo(sessao, agente.cliente_id, agente.id, codigo)
     canal, credenciais = _canal_do_agente(agente)
+    if codigo:
+        aberto = await repo.aberto_por_codigo(sessao, agente.cliente_id, agente.id, codigo)
+    else:
+        abertos = await repo.abertos_do_agente(sessao, agente.cliente_id, agente.id)
+        if len(abertos) > 1:
+            await _avisa(
+                canal, credenciais, agente.handoff_destino, await _lista_para_escolher(sessao, canal, abertos)
+            )
+            return False
+        aberto = abertos[0] if abertos else None
     if aberto is None:
         await _avisa(
             canal,
             credenciais,
             agente.handoff_destino,
-            f"Não achei conversa em atendimento com o código {codigo.upper()}. "
-            "Confira o código no aviso que você recebeu.",
+            f"Não achei conversa em atendimento com o código {codigo.upper()}."
+            " Confira o código no aviso que você recebeu."
+            if codigo
+            else "Nenhuma conversa em atendimento agora: o agente já está respondendo todas.",
         )
         return False
     conversa = await conversas_repo.obter_conversa(sessao, agente.cliente_id, aberto.conversa_id)
@@ -281,6 +295,17 @@ async def retomada_automatica(sessao: AsyncSession) -> int:
     if retomadas:
         log.info("retomada_automatica", conversas=retomadas)
     return retomadas
+
+
+async def _lista_para_escolher(
+    sessao: AsyncSession, canal: "Canal", abertos: list[Handoff]
+) -> str:
+    """Com várias conversas em atendimento, só o código diz qual devolver."""
+    linhas = []
+    for aberto in abertos:
+        conversa = await conversas_repo.obter_conversa(sessao, aberto.cliente_id, aberto.conversa_id)
+        linhas.append(f"/retomar {aberto.codigo} para {await como_chamar_o_contato(sessao, canal, conversa)}")
+    return "Tem mais de uma conversa em atendimento. Responda com o código da que você terminou:\n" + "\n".join(linhas)
 
 
 async def _devolve_no_canal(

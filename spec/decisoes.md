@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O código do handoff virou opcional (v0.14.0)
+
+- **Pergunta do operador**: "precisa do código?". Na maior parte das vezes não: na conversa do contato ela já está identificada, e no chat de quem recebeu o aviso o código só resolve quando há mais de uma conversa em atendimento.
+- **`/retomar` sozinho** passou a valer: na conversa do contato devolve aquela; no chat do destino devolve a única em atendimento. Com duas ou mais, o destino recebe a lista com um código por conversa e o nome de quem está do outro lado, e escolhe. Sem nenhuma, ouve que o agente já está respondendo todas.
+- **`/retomar <código>`** continua valendo em qualquer situação, que é o caminho de quem só tem o aviso na mão.
+- Pedir um código quando não há dúvida é atrito à toa, ainda mais para quem está com o celular na mão no meio de um atendimento.
+
 ## 2026-09-18: `/retomar` do número do agente vale em qualquer conversa (v0.13.5)
 
 - **O log fechou o caso**: `acao: pausar, de: 1151135133847@lid`. O operador escreveu o `/retomar` pelo WhatsApp Web do número do agente, dentro da conversa do contato, e aquilo era lido como ele assumindo a conversa.
