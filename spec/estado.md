@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.15.2` em `asimov-academy/asimov-agentes` (público, com `docs/whatsapp-oficial.md` corrigido depois: o token do agente precisa de duas permissões, `whatsapp_business_messaging` e `whatsapp_business_management`; `business_management` não aparece em app do caso de uso do WhatsApp e não é necessária): o setup não pede mais o ID da conta de WhatsApp Business: com app, token e chave secreta ele pergunta à Meta quais contas o token alcança e lista para escolher. O ID era o dado mais escondido do painel novo.
+- `v0.16.0` em `asimov-academy/asimov-agentes` (público): a instalação serve a política de privacidade que a Meta exige para publicar o app (`https://bot.<dominio>/privacidade`, e por empresa com o slug), e o projeto traz um ícone quadrado pronto para o app. Erro de app trocado no token virou mensagem que diz o que fazer.
+- `v0.15.2` (com `docs/whatsapp-oficial.md` corrigido depois: o token do agente precisa de duas permissões, `whatsapp_business_messaging` e `whatsapp_business_management`; `business_management` não aparece em app do caso de uso do WhatsApp e não é necessária): o setup não pede mais o ID da conta de WhatsApp Business: com app, token e chave secreta ele pergunta à Meta quais contas o token alcança e lista para escolher. O ID era o dado mais escondido do painel novo.
 - `v0.15.1`: `docs/whatsapp-oficial.md` refeito com o painel novo da Meta ("Produtos" virou "Casos de uso", com as três etapas guiadas), a cobrança por mensagem de serviço que começou em 1º de outubro de 2026 (e que exige forma de pagamento para o agente conseguir responder) e a política de IA de propósito geral de janeiro de 2026.
 - `v0.15.0`: **WhatsApp oficial (Cloud API da Meta)**, terceira parte da fase 5. Cada agente tem o próprio endereço de webhook, apontado no número pela API; o aviso de handoff sai em texto livre ou pelo template aprovado, e a conversa volta com 👍 no aviso, `/retomar` ou o prazo do agente.
 - `v0.14.2`: o texto das mensagens saiu do log (conversa pessoal de quem emprestou o número ao agente passava por lá) e mexer no contêiner da WAHA deixou de disparar alarme de número fora do ar.
@@ -30,7 +31,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 - `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 257 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 261 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
 
 ## Fases
 

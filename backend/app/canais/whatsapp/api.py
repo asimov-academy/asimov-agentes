@@ -83,6 +83,14 @@ def _detalhe(corpo: Any) -> tuple[int | None, str]:
 
 def _levanta(acao: str, resposta: httpx.Response) -> None:
     codigo, texto = _detalhe(_corpo(resposta))
+    if codigo == 100 and "Viewing App" in texto:
+        # Mensagem crua da Meta ("The App_id in the input_token did not match the Viewing App")
+        # não diz o que fazer, e o erro é sempre o mesmo: o ID do app informado não é o do app
+        # escolhido em "Gerar token".
+        raise CredencialInvalida(
+            "o token foi gerado para outro app: use o ID e a chave secreta do mesmo app que você"
+            " escolheu em Gerar token, no usuário do sistema"
+        )
     if codigo in CODIGOS_FORA_DA_JANELA:
         raise ForaDaJanela(texto or "passaram-se mais de 24 horas desde a última mensagem")
     if codigo in CODIGOS_DE_TOKEN or resposta.status_code == 401:

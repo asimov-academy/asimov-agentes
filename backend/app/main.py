@@ -19,6 +19,7 @@ from app.handoff.rotas import router as handoff
 from app.plataforma.banco import fabrica_sessao
 from app.plataforma.config import config
 from app.plataforma.log import configura_log
+from app.plataforma.publico import router as publico
 
 
 @asynccontextmanager
@@ -50,6 +51,7 @@ app.include_router(terminal)
 app.include_router(waha)
 app.include_router(whatsapp)
 app.include_router(webhook)
+app.include_router(publico)
 
 
 @app.get("/health")

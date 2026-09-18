@@ -24,6 +24,9 @@ Com esses três, o setup pergunta à própria Meta quais contas de WhatsApp Busi
 lista para você escolher, junto com os números e os templates da conta. Se precisar do ID da conta
 à mão, veja [onde fica o ID da conta](#onde-fica-o-id-da-conta-de-whatsapp-business).
 
+Para o app sair do modo de desenvolvimento, a Meta pede política de privacidade e ícone: os dois
+estão prontos no [passo 10](#10-publicar-o-app).
+
 ## Duas coisas que o painel pede e você pode pular
 
 **O webhook.** A primeira coisa que o fluxo guiado pede é configurar o webhook, com URL de retorno
@@ -113,7 +116,7 @@ Na **Etapa 2. Configuração da produção**:
 3. Confirme o código que chegar.
 
 O número da Cloud API não roda no celular. Ninguém responde pelo aparelho: quem atende usa o
-Chatwoot, ou recebe o aviso de handoff no próprio WhatsApp (passo 9).
+Chatwoot, ou recebe o aviso de handoff no próprio WhatsApp (passo 11).
 
 Os números da conta também ficam em
 [WhatsApp Manager > Números de telefone](https://business.facebook.com/wa/manage/phone-numbers/),
@@ -184,7 +187,57 @@ resposta da API nem no `.env`.
 A chave secreta é o que prova que o webhook veio da Meta: cada corpo chega assinado com ela
 (`X-Hub-Signature-256`) e a plataforma recusa o que não confere.
 
-## 9. Template do aviso de handoff
+## 9. Etapa 3: Verificação da empresa
+
+1. Na **Etapa 3. Verificação da empresa**, ou direto no
+   [Centro de Segurança](https://business.facebook.com/settings/security), clique em **Iniciar
+   verificação**.
+2. Envie documento da empresa (contrato social, CNPJ ou equivalente) e comprovação de endereço ou
+   telefone.
+
+Sem verificar, o número fica com limites baixos de mensagens e o nome de exibição não é aprovado.
+Dá para desenvolver e testar antes.
+
+## 10. Publicar o app
+
+Enquanto o app está em **modo de desenvolvimento**, ele só fala com os números de teste. Para
+atender gente de verdade, o app precisa ficar **Ativo**, e a Meta pede duas coisas antes:
+
+**URL da política de privacidade.** Esta instalação já serve uma, no seu domínio:
+
+```
+https://bot.<seu-dominio>/privacidade
+```
+
+Para nomear a empresa na página (útil quando cada empresa cliente tem o próprio app da Meta):
+
+```
+https://bot.<seu-dominio>/privacidade/<slug-da-empresa>
+```
+
+O slug é o nome da empresa em minúsculas com hífens: `Loja Exemplo` fica `loja-exemplo`. Aparece em
+`asimov agentes`, na pasta do prompt do agente.
+
+O texto é um modelo em `modelos/privacidade.html`, no projeto: ele cobre o que um agente de
+atendimento trata (mensagens, nome e telefone, arquivos, uso de provedores de IA, prazo e
+contato), e **você deve revisar** para bater com o seu caso. É a sua política, não a nossa. Depois
+de editar, `docker compose restart api` não é necessário: a página é lida a cada visita.
+
+**Ícone quadrado do app.** Tem um pronto no projeto, 1024x1024 PNG:
+
+```
+docs/imagens/icone-app.png
+```
+
+Baixe da VPS com `scp`, ou pegue direto no
+[repositório](https://github.com/asimov-academy/asimov-agentes/blob/main/docs/imagens/icone-app.png).
+Para gerar outro, `python3 docs/imagens/gerar_icone.py` (as cores e a letra estão no começo do
+arquivo).
+
+Com os dois preenchidos em **Configurações do app > Básico**, e a empresa verificada
+([passo 9](#9-etapa-3-verificação-da-empresa)), o botão de publicar libera.
+
+## 11. Template do aviso de handoff
 
 Quando o agente passa a conversa para uma pessoa, ele manda um aviso com o resumo para o número que
 você escolher. Esse número normalmente nunca falou com o agente, e a Meta só entrega mensagem para
@@ -212,18 +265,7 @@ Sem template o handoff continua funcionando, mas o aviso só chega se quem receb
 agente nas últimas 24 horas. Referência:
 [modelos de mensagem](https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates).
 
-## 10. Etapa 3: Verificação da empresa
-
-1. Na **Etapa 3. Verificação da empresa**, ou direto no
-   [Centro de Segurança](https://business.facebook.com/settings/security), clique em **Iniciar
-   verificação**.
-2. Envie documento da empresa (contrato social, CNPJ ou equivalente) e comprovação de endereço ou
-   telefone.
-
-Sem verificar, o número fica com limites baixos de mensagens e o nome de exibição não é aprovado.
-Dá para desenvolver e testar antes.
-
-## 11. Criar o agente
+## 12. Criar o agente
 
 Na VPS:
 
@@ -234,7 +276,7 @@ asimov novo-agente
 Escolha **WhatsApp oficial** e responda: conta de WhatsApp Business, ID do app, token de acesso,
 chave secreta, número (o setup lista os da conta), nome do agente, empresa, ferramentas, horas até
 o agente voltar sozinho, quem o agente atende e, por fim, o número que recebe o handoff e o
-template do passo 9.
+template do passo 11.
 
 No fim, mande uma mensagem para o número e o agente responde.
 
@@ -275,10 +317,12 @@ dizer que a mensagem chegou.
 |---|---|---|
 | A Meta recusa o token de acesso | token de 24 h da Etapa 1, ou sem as permissões | refaça o passo 7, com as duas permissões e "Nunca expira" |
 | `business_management` não aparece para marcar | app do caso de uso do WhatsApp só oferece as permissões dele | não precisa: marque as duas `whatsapp_*` |
+| `(#100) The App_id in the input_token did not match the Viewing App` | o ID do app informado não é o do app que gerou o token | use o ID e a chave secreta do **mesmo** app que você escolheu em "Gerar token" |
+| A Meta pede política de privacidade para publicar o app | é obrigatório para sair do modo de desenvolvimento | [passo 10](#10-publicar-o-app): a instalação serve a página |
 | A Meta recusa apontar o webhook | o usuário do sistema não tem o app ou a conta como ativo | passo 7, item 3 |
 | O agente recebe mas nada chega ao contato | conta sem forma de pagamento | passo 5 |
 | O agente não recebe nada | alguém mexeu na configuração do webhook pelo painel da Meta | `asimov editar`, opção **WhatsApp**, **Refazer o webhook na Meta** |
-| Aviso de handoff não chega | fora da janela de 24 h e sem template aprovado | passo 9; `asimov consumo` mostra a falha `handoff_incompleto` |
+| Aviso de handoff não chega | fora da janela de 24 h e sem template aprovado | passo 11; `asimov consumo` mostra a falha `handoff_incompleto` |
 | Só alguns números recebem resposta | número de teste com destinatários cadastrados | passo 4, use um número de produção |
 | Não consigo adicionar o número | ele está em uso no app do WhatsApp | apague a conta do WhatsApp naquele número e tente de novo |
 | Não acho "Produtos" no painel | virou **Casos de uso** em 2026 | Casos de uso > Personalizar |
@@ -289,7 +333,8 @@ dizer que a mensagem chegou.
 
 Para testar a plataforma antes de resolver verificação, pagamento e nome de exibição:
 
-1. Faça os passos 1, 2, 3 (ficando no número de teste da Etapa 1), 7 e 8.
+1. Faça os passos 1, 2, 3 (ficando no número de teste da Etapa 1), 7 e 8. Publicar o app e
+   verificar a empresa podem esperar.
 2. Na Etapa 1, cadastre em **Para** até 5 números que vão conversar com o agente. O número de teste
    só fala com esses.
 3. Crie o agente sem template (o setup deixa seguir sem). Para testar o handoff, mande primeiro uma

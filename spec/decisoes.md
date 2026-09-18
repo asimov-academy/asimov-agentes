@@ -2,6 +2,14 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: A instalação serve a política de privacidade, e um ícone para o app (v0.16.0)
+
+- **O app precisa ser publicado** para atender número de produção, e a Meta pede política de privacidade e ícone antes. Mandar o operador hospedar uma página em outro lugar é atrito à toa: a instalação já tem domínio com HTTPS. `GET /privacidade` e `GET /privacidade/{slug}` devolvem HTML de `modelos/privacidade.html`, com o nome da empresa, o domínio, o contato (o e-mail do SSL) e a data. É a única rota que devolve HTML, e o Caddy passou a publicar esses dois caminhos. Slug inexistente responde 404 e não há listagem: quem não sabe o slug não descobre os clientes da instalação.
+- **O texto é modelo, e a responsabilidade é do operador**: o arquivo cobre o que um agente de atendimento trata (mensagens, nome e telefone, arquivos, envio a provedores de IA, prazo e contato) e o documento diz, em letras claras, que ele deve revisar. É a política dele, não nossa.
+- **Ícone pronto em `docs/imagens/icone-app.png`** (1024x1024, A claro sobre fundo escuro), gerado por `docs/imagens/gerar_icone.py`: PNG escrito com `zlib` da biblioteca padrão e borda suave pela distância aos traços, sem dependência nova só para desenhar uma letra.
+- **`(#100) The App_id in the input_token did not match the Viewing App`** virou mensagem em português dizendo o que fazer: o ID do app informado não é o do app escolhido em "Gerar token". A mensagem crua da Meta não dizia, e o operador leu como "falta publicar o app", que é outra coisa.
+- Atualizados `docs/whatsapp-oficial.md` (passo 9 verificação, passo 10 publicar o app, renumerado até 12), spec/arquitetura.md (rota pública) e o aviso do setup, que mostra a URL da política e o caminho do ícone antes de o operador ir ao painel.
+
 ## 2026-09-18: O token precisa de duas permissões, não três
 
 - **O operador mostrou a tela de gerar token**: app criado pelo caso de uso "Conectar-se com clientes pelo WhatsApp" oferece `manage_app_solution`, `whatsapp_business_manage_events`, `whatsapp_business_management` e `whatsapp_business_messaging`. Não oferece `business_management`, que o documento mandava marcar.
