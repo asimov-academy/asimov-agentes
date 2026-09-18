@@ -51,6 +51,14 @@ class Agente(ComId, ComCriacao, Base):
     """Telefones que o agente atende, só dígitos. Lista vazia é o normal: atende quem mandar mensagem.
     Serve para testar um número novo sem responder a qualquer pessoa que escreva para ele."""
 
+    perfil: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    """O que a aba Trabalho perguntou: `funcao`, `publico`, `site` e `sobre_empresa`. É daqui que
+    sai o `persona.md` gerado. Fica no agente, nunca na empresa: é o que impede um prompt de
+    atravessar de uma empresa para outra. Vazio no agente criado antes da aba existir."""
+
+    assina_nome: Mapped[bool] = mapped_column(default=False, server_default="false")
+    """O agente acrescenta o próprio nome no fim da resposta."""
+
     handoff_destino: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     retomada_automatica_horas: Mapped[int | None]
 

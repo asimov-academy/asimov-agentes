@@ -41,7 +41,7 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 - `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 266 testes passando, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 409 testes do backend passando, 28 do painel no navegador, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
 
 ## Fases
 
@@ -54,6 +54,7 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 | 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Parte 1 (agente nativo) validada em VPS real (v0.8.11). **Parte 2 (WAHA) validada em VPS real em 2026-09-18 (v0.14.2)**: instalação, pareamento, texto, áudio, imagem, PDF, lista de quem atende, handoff com aviso e código, `/retomar`, joinha, pausa por resposta pelo aparelho, retomada por tempo e remoção tirando o aparelho do celular. **WhatsApp oficial (v0.15.0 a v0.17.0), em validação na VPS**: número de produção respondendo texto e áudio, com o digitando da Cloud API convincente (confirmado pelo operador em 2026-09-18). Faltam handoff com aviso por template e retomada por tempo. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
+| 8. Painel web do operador | **Construída inteira e na `main`, nada validado em VPS.** Parte 8.1 (acesso, sessão e as duas telas de login em Jinja2) e as **onze etapas** do front em `frontend/` (React, Vite, Tailwind): visão geral, agentes com onboarding e ficha em popup, canais, chat, contatos e polimento. Plano e decisões em `spec/frontend.md`. Fora da versão publicada até existir uma tag |
 
 ## Ambiente do operador
 
@@ -74,6 +75,25 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 - Tela: escolhas com setas e Enter (números como atalho), Sim/Não com setas, lista de marcar com Espaço, cada seção limpa a tela e redesenha o banner, Esc volta à tela anterior (cada ação do menu roda em `com_voltar`), pausa com Enter antes de o menu limpar o que precisa ser lido.
 - Token de administrador do Chatwoot pedido uma vez por URL e guardado cifrado (`acessos/`); a API responde 428 quando falta ou foi recusado e o menu pergunta (`api_com_token` em `setup/lib/agente.sh`).
 
+### Painel web do operador
+
+Desligado por padrão. `asimov painel` liga, pede o DNS de `app.<dominio>` e mostra o código de uso
+único do primeiro acesso.
+
+- **Entrar e primeiro acesso**: Jinja2, com o design system (o `painel.css` é o único lugar do
+  projeto com cor em hexadecimal). Senha em scrypt, sessão no Redis, cookie `HttpOnly`, `Secure` e
+  `SameSite=Strict`, origem conferida e freio de tentativa por IP. Uma conta só.
+- **O painel em si** é o front em `frontend/`, servido em `/painel/app`: visão geral (veredito,
+  handoffs esperando, ritmo, custo, resolução, quem respondeu, onde travou), agentes, canais, chat e
+  contatos. Menu lateral fixo, gaveta no celular.
+- **Agente sempre em popup**, com o fundo embaçado: criar em sete passos com prévia viva do jeito de
+  falar, terminando na conversa de teste; e a ficha em seis abas (perfil, comunicação, trabalho,
+  ferramentas, configurações, conversar), cada seção com o próprio salvar.
+- **Contrato** em `/painel/api/*`, com sessão por cookie e `X-Painel-CSRF` em toda escrita. Chama os
+  mesmos `servico.py` do menu. Credencial sai mascarada, falha sai como resumo curto, e o
+  `cliente_id` nunca vem do corpo.
+- **Nada de CDN**: front, CSS e as duas fontes saem da VPS.
+
 ### Plataforma
 
 - Canal WhatsApp oficial (`canais/whatsapp/`, v0.15.0): um número da Cloud API por agente, com a conta de WhatsApp Business, o ID do app, o token permanente e o segredo do app guardados cifrados. A criação liga os webhooks do app (campo `messages`, com o token do app), inscreve o app nos webhooks da conta e aponta o webhook daquele número para o endereço do agente (webhook override); a verificação da Meta é respondida pelo token da URL e o corpo é conferido por `X-Hub-Signature-256`. Webhook de outro número e recibo de entrega são ignorados. Digitando e leitura vão juntos, presos à mensagem que chegou. Handoff: pausa pelo status da conversa, aviso ao número do destino em texto livre e, fora da janela de 24 horas, pelo template aprovado (contato, resumo e código); volta com 👍 no aviso, `/retomar` do destino ou o prazo do agente. Remover o agente devolve o webhook do número para a URL do app.
@@ -87,7 +107,7 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 - Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), escolhidas na criação (nenhuma por padrão desde a v0.8.11). OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
-- Migrações até `0013` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji).
+- Migrações até `0014` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji; **perfil e assinatura do agente, que escrevem o `persona.md` pelo painel**).
 
 ## Pendências conhecidas
 

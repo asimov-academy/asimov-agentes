@@ -4,21 +4,23 @@
 {% block titulo %}Primeiro acesso{% endblock %}
 
 {% block conteudo %}
-<div class="marca" style="justify-content:center;margin-bottom:22px">
+<div class="marca" style="margin-bottom:32px">
   <span class="ponto">A</span>
-  <span>Asimov Agentes<small>primeiro acesso</small></span>
+  <span>Asimov<small>primeiro acesso</small></span>
 </div>
 
 <div class="carta">
-  <h2>Código do terminal</h2>
-  <p class="rotulo" style="margin-top:-6px;margin-bottom:16px">
-    Rode <span class="mono">asimov painel</span> na VPS. Ele mostra um código de uso único, válido
-    por 15 minutos.
+  <h2>Criar o acesso</h2>
+  <p style="margin:0;color:var(--muted);font-size:14px">
+    Rode <span class="mono" style="color:var(--texto)">asimov painel</span> na VPS. Ele mostra um
+    código de uso único, que vale por 15 minutos.
   </p>
-  {% if erro %}<p class="aviso erro">{{ erro }}</p>{% endif %}
+
+  {% if erro %}<p class="aviso erro" style="margin-top:20px">{{ erro }}</p>{% endif %}
+
   <form method="post" action="/painel/primeiro-acesso">
     <div class="campo">
-      <label for="codigo">Código</label>
+      <label for="codigo">Código do terminal</label>
       <input type="text" id="codigo" name="codigo" class="mono" placeholder="XXXX-XXXX" autocomplete="off" autofocus>
     </div>
     <div class="campo">

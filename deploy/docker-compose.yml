@@ -4,7 +4,10 @@
 
 x-backend: &backend
   build:
-    context: ../backend
+    # Contexto na raiz: a imagem leva o backend e o painel web de `frontend/`, construído num
+    # estágio `node` do próprio Dockerfile. O `.dockerignore` da raiz diz o que não vai junto.
+    context: ..
+    dockerfile: backend/Dockerfile
     target: producao
     args:
       PROVEDORES: ${PROVEDORES}
@@ -112,7 +115,8 @@ services:
   teste:
     profiles: ["teste"]
     build:
-      context: ../backend
+      context: ..
+      dockerfile: backend/Dockerfile
       target: teste
     image: asimov-backend:teste
     environment:

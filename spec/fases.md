@@ -207,24 +207,32 @@ Commit: `chore: distribuição pública, backup e polimento da primeira versão`
 
 ## Fase 8: Painel web do operador (opcional)
 
-Situação: em construção fora da versão publicada. Estudo, score e estado: `docs/painel-web.md`.
+Situação: **construída inteira, nada validado em VPS**. Estudo e score: `docs/painel-web.md`; telas,
+design system, contrato e etapas: `spec/frontend.md`.
 
 Objetivo: quem não quer terminal administra a instalação pelo navegador, em `app.<dominio>`, e o
 primeiro acesso conduz a configuração como o setup conduz hoje.
 
 O que entra:
-- Parte 8.1 (construída, sem validar em VPS): `PAINEL_ATIVO` desligado por padrão, bloco do Caddy
-  escrito pelo setup, `asimov painel` para ligar, desligar e gerar o código de acesso, entrar,
-  primeiro acesso, sessão, freio de tentativa, início e lista de agentes.
-- Parte 8.2: ficha do agente, ferramentas, prompt, conversas em andamento, handoff e consumo, com
-  as rotas de leitura que faltam (`/admin/conversas`, `/admin/handoffs`, prompt do agente).
-- Parte 8.3: assistente de criação de agente no navegador (nativo e Chatwoot primeiro).
+- Parte 8.1 (construída): `PAINEL_ATIVO` desligado por padrão, bloco do Caddy escrito pelo setup,
+  `asimov painel` para ligar, desligar e gerar o código de acesso, entrar, primeiro acesso, sessão e
+  freio de tentativa. As telas de início e de agentes em Jinja2 que essa parte trouxe foram
+  substituídas pelo front e viraram desvio para `/painel/app`.
+- Parte 8.2 (construída, onze etapas): o front em `frontend/` (React, Vite, Tailwind), servido pela
+  API em `/painel/app`. Menu lateral fixo, visão geral, agentes com **onboarding e ficha num popup
+  grande com o fundo embaçado**, canais, chat, contatos e a base de conhecimento com o que ela vai
+  fazer. Telas, design system, contrato `/painel/api` e as etapas estão em `spec/frontend.md`, que é
+  o que se lê antes de codar.
+- Parte 8.3 (feita junto da 8.2): o assistente de criação de agente no navegador, em sete passos com
+  prévia viva, terminando na conversa de teste com o agente recém-criado.
 
 Dependências: Fase 4. Não depende da 6 nem da 7.
 
 Critério de aceite:
 - Numa VPS com a plataforma no ar, escolho o painel, aponto `app.<dominio>`, recebo o código no
   terminal, crio a senha e vejo agentes e consumo reais.
+- Crio e edito um agente inteiro pelo navegador (perfil, comunicação, trabalho, ferramentas e
+  modelos) e ele responde do jeito configurado, sem eu abrir SSH.
 - `app.<dominio>/admin/agentes` e `/webhook/...` respondem 404.
 - Escolher o terminal na instalação não cria rota nem host novo: a API fica como sempre foi.
 

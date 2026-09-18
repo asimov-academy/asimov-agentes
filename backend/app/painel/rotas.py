@@ -12,10 +12,9 @@ continua exatamente como sempre foi, e `painel_ativo` nasce desligado.
 import uuid
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +23,10 @@ from app.agentes import repo as agentes_repo
 from app.clientes import repo as clientes_repo
 from app.consumo import servico as consumo_servico
 from app.painel import repo, servico
+from app.painel.acesso import COOKIE, exige_sessao, mesma_origem, poe_cookie, quem_chama
+from app.painel.api import router as api
+from app.painel.api_agentes import router as api_agentes
+from app.painel.api_conversas import router as api_conversas
 from app.plataforma.banco import sessao
 from app.plataforma.config import config
 
@@ -31,6 +34,9 @@ AQUI = Path(__file__).parent
 ESTATICOS = AQUI / "estaticos"
 
 router = APIRouter(prefix="/painel")
+
+# Onde o operador cai depois de entrar: o front em React, construído de `frontend/`.
+PAINEL = "/painel/app"
 paginas = Jinja2Templates(directory=str(AQUI / "paginas"))
 
 LIMITE_RESUMO_DA_FALHA = 90
@@ -53,7 +59,6 @@ def hora_curta(quando: Any) -> str:
 paginas.env.filters["resumo_da_falha"] = resumo_da_falha
 paginas.env.filters["hora_curta"] = hora_curta
 
-COOKIE = "asimov_painel"
 CANAIS = {
     "chatwoot": "Chatwoot",
     "whatsapp": "WhatsApp oficial",
@@ -62,65 +67,64 @@ CANAIS = {
 }
 
 
-def _cookie(resposta: RedirectResponse, token: str) -> RedirectResponse:
-    resposta.set_cookie(
-        COOKIE,
-        token,
-        max_age=servico.DURACAO_SESSAO_SEGUNDOS,
-        httponly=True,
-        secure=True,
-        samesite="strict",
-        path="/painel",
-    )
-    return resposta
+def versao_da_folha() -> int:
+    """A hora em que o `painel.css` mudou, para o endereço dele mudar junto.
 
-
-def _de_onde(request: Request) -> str:
-    return request.client.host if request.client else "desconhecido"
-
-
-def _hospedeiro(endereco: str) -> str:
-    """Host e porta em minúsculas, sem a porta padrão do esquema."""
-    partes = urlsplit(endereco if "//" in endereco else "//" + endereco)
-    hospedeiro = (partes.hostname or "").lower()
-    porta = partes.port
-    if porta and porta not in (80, 443):
-        return f"{hospedeiro}:{porta}"
-    return hospedeiro
-
-
-def _mesma_origem(request: Request) -> bool:
-    """Defesa de CSRF. O cookie já é `SameSite=Strict`; a origem confere o resto.
-
-    A comparação é por host, nunca por prefixo de texto: `painel.exemplo.com.br.outracoisa.com`
-    começa com o endereço certo e não é ele. Pedido sem `Origin` nem `Referer` passa, que é o que
-    um formulário do próprio painel manda em navegador antigo, e aí o cookie estrito é quem segura.
+    Sem isso o nome do arquivo é sempre o mesmo, o navegador guarda a folha e o operador continua
+    vendo o estilo da versão passada depois de um `asimov atualizar`. Com a versão no endereço, o
+    navegador pode guardar à vontade e ainda assim pegar a nova na hora.
     """
-    bruto = request.headers.get("origin") or request.headers.get("referer") or ""
-    if not bruto:
-        return True
-    de_onde = _hospedeiro(bruto)
-    if not de_onde:
-        return False
-    daqui = {_hospedeiro(str(request.base_url)), _hospedeiro(request.headers.get("host", ""))}
-    if config().subdominio_app:
-        daqui.add(_hospedeiro(config().subdominio_app))
-    return de_onde in {h for h in daqui if h}
-
-
-async def exige_sessao(request: Request) -> None:
-    if not await servico.sessao_vale(request.cookies.get(COOKIE, "")):
-        raise HTTPException(status_code=401, detail="entre no painel")
+    try:
+        return int((ESTATICOS / "painel.css").stat().st_mtime)
+    except OSError:
+        return 0
 
 
 def _tela(request: Request, nome: str, **dados: Any) -> HTMLResponse:
-    return paginas.TemplateResponse(request, nome, {"cfg": config(), "canais": CANAIS, **dados})
+    return paginas.TemplateResponse(
+        request,
+        nome,
+        {"cfg": config(), "canais": CANAIS, "css_versao": versao_da_folha(), **dados},
+    )
 
 
 @router.get("/painel.css", include_in_schema=False)
 async def folha_de_estilo() -> FileResponse:
-    """Um arquivo, servido daqui mesmo. Nada de CDN: o painel é da VPS do operador."""
-    return FileResponse(ESTATICOS / "painel.css", media_type="text/css")
+    """Um arquivo, servido daqui mesmo. Nada de CDN: o painel é da VPS do operador.
+
+    Sem cache: o nome do arquivo não muda entre versões, então o navegador guardava a folha antiga e
+    o operador via o estilo da versão passada depois de um `asimov atualizar`. As fontes, essas sim,
+    têm nome estável de verdade e podem ficar guardadas para sempre.
+    """
+    return FileResponse(
+        ESTATICOS / "painel.css",
+        media_type="text/css",
+        # O endereço carrega a versão (`?v=`), então guardar à vontade é seguro: folha nova vem com
+        # endereço novo.
+        headers={"Cache-Control": "public, max-age=31536000"},
+    )
+
+
+FONTES = {
+    "inter-latin-400-normal.woff2",
+    "inter-latin-600-normal.woff2",
+    "jetbrains-mono-latin-400-normal.woff2",
+}
+
+
+@router.get("/fontes/{arquivo}", include_in_schema=False)
+async def fonte(arquivo: str) -> FileResponse:
+    """As duas fontes do design system, servidas da VPS como todo o resto. Nada de CDN.
+
+    A lista é fechada: nome fora dela não vira leitura de arquivo, mesmo com `..` no meio.
+    """
+    if arquivo not in FONTES:
+        raise HTTPException(status_code=404, detail="fonte não encontrada")
+    return FileResponse(
+        ESTATICOS / "fontes" / arquivo,
+        media_type="font/woff2",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 
 @router.get("", include_in_schema=False)
@@ -131,7 +135,7 @@ async def raiz(request: Request, s: AsyncSession = Depends(sessao)) -> RedirectR
         return RedirectResponse("/painel/primeiro-acesso", status_code=303)
     if not await servico.sessao_vale(request.cookies.get(COOKIE, "")):
         return RedirectResponse("/painel/entrar", status_code=303)
-    return RedirectResponse("/painel/inicio", status_code=303)
+    return RedirectResponse(PAINEL, status_code=303)
 
 
 # Entrar
@@ -148,9 +152,9 @@ async def tela_entrar(request: Request, s: AsyncSession = Depends(sessao)) -> An
 async def entrar(
     request: Request, senha: str = Form(default=""), s: AsyncSession = Depends(sessao)
 ) -> Any:
-    if not _mesma_origem(request):
+    if not mesma_origem(request):
         raise HTTPException(status_code=403, detail="pedido de outra origem")
-    de_onde = _de_onde(request)
+    de_onde = quem_chama(request)
     if await servico.em_espera(de_onde):
         return _tela(request, "entrar.html", erro="Tentativas demais. Espere 15 minutos.")
 
@@ -168,7 +172,7 @@ async def entrar(
     await servico.limpa_erros(de_onde)
     await repo.marca_acesso(s, usuario)
     await s.commit()
-    return _cookie(RedirectResponse("/painel/inicio", status_code=303), await servico.abre_sessao())
+    return poe_cookie(RedirectResponse(PAINEL, status_code=303), await servico.abre_sessao())
 
 
 @router.post("/sair", include_in_schema=False)
@@ -197,12 +201,12 @@ async def primeiro_acesso(
     senha2: str = Form(default=""),
     s: AsyncSession = Depends(sessao),
 ) -> Any:
-    if not _mesma_origem(request):
+    if not mesma_origem(request):
         raise HTTPException(status_code=403, detail="pedido de outra origem")
     if await repo.operador(s) is not None:
         return RedirectResponse("/painel/entrar", status_code=303)
 
-    de_onde = _de_onde(request)
+    de_onde = quem_chama(request)
     if await servico.em_espera(de_onde):
         return _tela(request, "primeiro_acesso.html", erro="Tentativas demais. Espere 15 minutos.")
     if senha != senha2:
@@ -228,47 +232,71 @@ async def primeiro_acesso(
     # operador sem código e sem conta.
     await servico.gasta_codigo(codigo)
     await servico.limpa_erros(de_onde)
-    return _cookie(RedirectResponse("/painel/inicio", status_code=303), await servico.abre_sessao())
+    return poe_cookie(RedirectResponse(PAINEL, status_code=303), await servico.abre_sessao())
 
 
-# Painel
+# As duas telas que o painel em React substituiu
+#
+# `inicio` e `agentes` eram as telas do painel em Jinja2, de antes de o front existir. Agora o
+# mesmo dado está em `/painel/app`, com muito mais coisa, e manter as duas versões significaria
+# manter dois painéis. Elas viram desvio, para endereço guardado nos favoritos não virar 404.
 
 
-@router.get(
-    "/inicio", response_class=HTMLResponse, include_in_schema=False, dependencies=[Depends(exige_sessao)]
+@router.get("/inicio", include_in_schema=False, dependencies=[Depends(exige_sessao)])
+@router.get("/agentes", include_in_schema=False, dependencies=[Depends(exige_sessao)])
+async def telas_antigas() -> RedirectResponse:
+    return RedirectResponse(PAINEL, status_code=303)
+
+
+# Front
+
+
+def _pasta_do_front() -> Path:
+    caminho = Path(config().diretorio_painel_app)
+    return caminho if caminho.is_absolute() else AQUI.parent / caminho
+
+
+SEM_BUILD = (
+    "<!doctype html><meta charset=utf-8><title>Painel</title>"
+    "<body style='background:#000;color:#e5e5e5;font-family:monospace;padding:3rem'>"
+    "<h1>Front não construído</h1>"
+    "<p>Rode <code>npm ci &amp;&amp; npm run build</code> em <code>frontend/</code>, ou suba a imagem "
+    "de novo: o Dockerfile constrói sozinho.</p>"
 )
-async def inicio(request: Request, s: AsyncSession = Depends(sessao)) -> HTMLResponse:
-    agentes = await agentes_repo.listar_de_todos_os_clientes(s)
-    clientes = {c.id: c.nome for c in await clientes_repo.listar(s)}
-    consumo = await consumo_servico.relatorio(s, dias=7)
-    return _tela(
-        request,
-        "inicio.html",
-        agentes=agentes,
-        clientes=clientes,
-        consumo=consumo,
-        custo=sum(a.get("custo", 0) or 0 for a in consumo["agentes"]),
-        turnos=sum(a.get("turnos", 0) or 0 for a in consumo["agentes"]),
-    )
 
 
-@router.get(
-    "/agentes", response_class=HTMLResponse, include_in_schema=False, dependencies=[Depends(exige_sessao)]
-)
-async def lista_agentes(
-    request: Request, cliente_id: uuid.UUID | None = None, s: AsyncSession = Depends(sessao)
-) -> HTMLResponse:
-    agentes = (
-        await agentes_repo.listar(s, cliente_id)
-        if cliente_id
-        else await agentes_repo.listar_de_todos_os_clientes(s)
-    )
-    clientes = await clientes_repo.listar(s)
-    return _tela(
-        request,
-        "agentes.html",
-        agentes=agentes,
-        clientes=clientes,
-        nomes={c.id: c.nome for c in clientes},
-        escolhido=cliente_id,
-    )
+@router.get("/app", include_in_schema=False)
+@router.get("/app/{caminho:path}", include_in_schema=False)
+async def front(request: Request, caminho: str = "") -> Response:
+    """Serve o front construído, com a sessão exigida inclusive nos arquivos.
+
+    Quem chega sem sessão vai para o login, não para um 401: aqui quem bate é navegador de gente,
+    diferente de `/painel/api`, que responde JSON para o próprio front tratar.
+
+    Duas coisas que o front precisa e que uma pasta estática comum não dá:
+
+    - **Rota interna recarregada devolve o `index.html`.** `/painel/app/agentes/<id>` não é arquivo
+      nenhum; quem sabe dessa rota é o React Router. Sem isto, recarregar a página dá 404.
+    - **Nada é servido de fora da pasta.** O caminho é resolvido e conferido contra ela, senão
+      `..%2F..%2F.env` viraria leitura de arquivo da VPS.
+    """
+    if not await servico.sessao_vale(request.cookies.get(COOKIE, "")):
+        return RedirectResponse("/painel/entrar", status_code=303)
+
+    pasta = _pasta_do_front()
+    indice = pasta / "index.html"
+    if not indice.is_file():
+        return HTMLResponse(SEM_BUILD, status_code=503)
+
+    if caminho:
+        alvo = (pasta / caminho).resolve()
+        if alvo.is_file() and alvo.is_relative_to(pasta.resolve()):
+            # O nome do arquivo construído leva o hash do conteúdo: mudou o conteúdo, mudou o nome.
+            return FileResponse(alvo, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+    return FileResponse(indice, headers={"Cache-Control": "no-store"})
+
+
+router.include_router(api)
+router.include_router(api_agentes)
+router.include_router(api_conversas)

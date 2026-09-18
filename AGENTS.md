@@ -14,6 +14,7 @@ Fale com o operador em português, curto e direto.
 - `spec/telas.md`: telas do setup e do menu, fluxos. Antes de construir tela ou operação da API.
 - `spec/dados.md`: entidades, atributos, agente de exemplo. Antes de tocar em banco ou modelos.
 - `spec/arquitetura.md`: stack, pastas, contrato da API, segurança, hospedagem, regras do `AGENTS.md` gerado. Antes de criar estrutura ou adicionar dependência.
+- `spec/frontend.md`: telas do painel web, design system, contrato `/painel/api` e etapas. Antes de tocar em `frontend/` ou `backend/app/painel/`.
 - `spec/fases.md`: ordem e critério de aceite. No início de cada fase.
 - `spec/decisoes.md`: log de mudanças. Antes de assumir que a spec está atual; escreva sempre que mudar algo.
 
@@ -29,6 +30,7 @@ Fale com o operador em português, curto e direto.
 
 - Testes locais do backend (Postgres com banco `asimov_teste` e Redis em `localhost:6390`): `redis-server --port 6390 --daemonize yes --save "" && cd backend && uv run pytest -q`. Outros endereços: `TESTE_DATABASE_URL` e `TESTE_REDIS_URL`.
 - Shellcheck: `uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR setup/instalar.sh setup/asimov.sh setup/install.sh setup/lib/*.sh deploy/*.sh`
+- Painel web: `cd frontend && npm ci` uma vez; depois `npm run build`, `npm run teste` e `npm run checa`. Para ver no navegador sem Docker, construa e copie: `npm run build && rm -rf ../backend/app/painel/estaticos/app && cp -R dist ../backend/app/painel/estaticos/app`.
 - Simular o onboarding sem VPS: `ASIMOV_TTY=setup/testes/respostas.txt bash setup/testes/simula_onboarding.sh`
 - Migração nova sem Docker: `cd backend && DATABASE_URL=postgresql+asyncpg:///asimov_dev?host=/tmp REDIS_URL=redis://localhost:6390/0 SUBDOMINIO_BOT=x CHAVE_API_ADMIN=x CHAVE_CRIPTOGRAFIA=x MODELO_CONVERSA=openai:x MODELO_VISAO=openai:x MODELO_TRANSCRICAO=openai:x uv run alembic revision --autogenerate -m "descricao"`
 - O setup só roda de verdade numa VPS Ubuntu 24.04. NUNCA rode `setup/instalar.sh` nesta máquina.
@@ -40,7 +42,7 @@ Fale com o operador em português, curto e direto.
 - `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `painel/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.
-- Não existe `frontend/` na primeira versão.
+- `frontend/` é o painel do operador no navegador (React, Vite, Tailwind), servido pela API em `/painel/app`. Todo onboarding e toda configuração de agente acontecem num popup grande com o fundo embaçado, nunca em página. Nunca fala com `/admin` e nunca carrega estático de CDN. Dentro dele: `api/cliente.ts` é o único que chama `fetch`, `design/` tem um componente por arquivo e `telas/` monta a tela. Toda peça de interface vem do `designsystem/` (as seis seções, não só a de componentes) e NUNCA de biblioteca de fora. Cor só pelo nome do token do `tailwind.config.ts`; um teste recusa hexadecimal solto e outro trava as dependências do `package.json`. Exceção única: o `painel/estaticos/painel.css` das telas de entrar e primeiro acesso, que não passa pelo Tailwind e guarda as cores no `:root` dele.
 
 ## Regras que não mudam
 

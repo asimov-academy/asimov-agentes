@@ -1,0 +1,52 @@
+/* Só o subconjunto latino: é o que o português usa, e evita levar cirílico e grego para a VPS. */
+@import "@fontsource/inter/latin-300.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* As fontes vêm do pacote e entram no build: são servidas pela VPS, nunca por CDN. */
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-void text-texto font-sans antialiased;
+  }
+  :focus-visible {
+    @apply outline-none ring-1 ring-lime ring-offset-0;
+  }
+  ::selection {
+    @apply bg-lime text-void;
+  }
+}
+
+@layer components {
+  /* `.comp-label` do design system: mono, 0.65rem, `dim`, maiúsculo, espaçado em 0.1em. */
+  .rotulo {
+    @apply font-mono text-[0.65rem] uppercase tracking-[0.1em] text-dim;
+  }
+
+  /* `.section-title`: o título de seção em lime, com a régua embaixo. */
+  .titulo-secao {
+    @apply mb-8 block border-b border-borda pb-4 font-mono text-xs uppercase tracking-[0.2em] text-lime;
+  }
+}
+
+/* Quem pede menos movimento no sistema recebe o resultado final na hora: a linha do gráfico já
+ * desenhada, a barra já crescida, o ponto já visível. Nada some, só para de se mover. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -11,28 +11,9 @@ import httpx
 import pytest
 
 from app.painel import servico
-from testes.conftest import ADMIN, cria_cliente_e_agente
+from testes.conftest import ADMIN, cria_cliente_e_agente, limpa_o_redis_do_painel
 
 SENHA = "senha-boa-do-operador"
-
-
-async def limpa_o_redis_do_painel() -> None:
-    """Sessão, código e contador de erro vivem no Redis, que o `banco_limpo` não alcança."""
-    async with servico.conexao() as r:
-        chaves = await r.keys("painel:*")
-        if chaves:
-            await r.delete(*chaves)
-
-
-@pytest.fixture
-async def painel(http: httpx.AsyncClient) -> httpx.AsyncClient:
-    """Cliente próprio em https: o cookie da sessão é `Secure` e não viaja em http."""
-    await limpa_o_redis_do_painel()
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=http._transport.app),  # type: ignore[attr-defined]
-        base_url="https://painel.teste",
-    ) as c:
-        yield c
 
 
 async def codigo_novo() -> str:
@@ -114,7 +95,7 @@ async def test_senhas_diferentes_nao_criam_conta(painel: httpx.AsyncClient):
 async def test_primeiro_acesso_cria_a_conta_e_ja_entra(painel: httpx.AsyncClient):
     await entra(painel)
     assert painel.cookies.get("asimov_painel")
-    assert (await painel.get("/painel/inicio")).status_code == 200
+    assert (await painel.get("/painel/api/eu")).status_code == 200
 
 
 async def test_segunda_conta_nao_e_criada(painel: httpx.AsyncClient):
@@ -144,7 +125,7 @@ async def test_senha_certa_entra(painel: httpx.AsyncClient):
     painel.cookies.clear()
     resposta = await painel.post("/painel/entrar", data={"senha": SENHA})
     assert resposta.status_code == 303
-    assert resposta.headers["location"] == "/painel/inicio"
+    assert resposta.headers["location"] == "/painel/app"
     assert painel.cookies.get("asimov_painel")
 
 
@@ -177,15 +158,17 @@ async def test_erros_seguidos_seguram_a_porta(painel: httpx.AsyncClient):
 async def test_painel_fechado_para_quem_nao_entrou(painel: httpx.AsyncClient):
     await entra(painel)
     painel.cookies.clear()
-    for caminho in ("/painel/inicio", "/painel/agentes"):
+    for caminho in ("/painel/api/eu", "/painel/api/agentes", "/painel/api/visao-geral"):
         assert (await painel.get(caminho)).status_code == 401
 
 
-async def test_inicio_mostra_o_agente(painel: httpx.AsyncClient, http: httpx.AsyncClient, canal):
-    await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+async def test_as_telas_antigas_levam_ao_painel_novo(painel: httpx.AsyncClient):
+    """`inicio` e `agentes` eram o painel em Jinja2, que o front substituiu. Viraram desvio."""
     await entra(painel)
-    pagina = (await painel.get("/painel/inicio")).text
-    assert "Ana" in pagina and "Loja Exemplo" in pagina and "Chatwoot" in pagina
+    for caminho in ("/painel/inicio", "/painel/agentes"):
+        resposta = await painel.get(caminho)
+        assert resposta.status_code == 303
+        assert resposta.headers["location"] == "/painel/app"
 
 
 async def test_agentes_filtra_por_empresa(painel: httpx.AsyncClient, http: httpx.AsyncClient, canal):
@@ -193,19 +176,22 @@ async def test_agentes_filtra_por_empresa(painel: httpx.AsyncClient, http: httpx
     await cria_cliente_e_agente(http, "Clínica Exemplo", "Caio")
     await entra(painel)
 
-    todas = (await painel.get("/painel/agentes")).text
+    todas = (await painel.get("/painel/api/agentes")).text
     assert "Ana" in todas and "Caio" in todas
 
-    so_uma = (await painel.get(f"/painel/agentes?cliente_id={uma['cliente_id']}")).text
+    so_uma = (await painel.get(f"/painel/api/agentes?cliente_id={uma['cliente_id']}")).text
     assert "Ana" in so_uma and "Caio" not in so_uma
 
 
 async def test_painel_nao_mostra_credencial(painel: httpx.AsyncClient, http: httpx.AsyncClient, canal):
     await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     await entra(painel)
-    for pagina in ((await painel.get("/painel/inicio")).text, (await painel.get("/painel/agentes")).text):
-        assert "token" not in pagina.lower()
+    for pagina in (
+        (await painel.get("/painel/api/agentes")).text,
+        (await painel.get("/painel/api/visao-geral")).text,
+    ):
         assert "chave-admin-de-teste" not in pagina
+        assert "token_webhook" not in pagina
 
 
 async def test_admin_continua_exigindo_a_chave(painel: httpx.AsyncClient):
@@ -243,9 +229,9 @@ async def test_esquecer_operador_derruba_a_sessao(
     http: httpx.AsyncClient, painel: httpx.AsyncClient
 ):
     await entra(painel)
-    assert (await painel.get("/painel/inicio")).status_code == 200
+    assert (await painel.get("/painel/api/eu")).status_code == 200
     assert (await http.delete("/admin/painel/operador", headers=ADMIN)).status_code == 204
-    assert (await painel.get("/painel/inicio")).status_code == 401
+    assert (await painel.get("/painel/api/eu")).status_code == 401
     assert (await painel.get("/painel/")).headers["location"] == "/painel/primeiro-acesso"
 
 
@@ -321,7 +307,7 @@ async def test_tela_nao_mostra_o_detalhe_cru_da_falha(
         agente_id=uuid.UUID(agente["id"]),
     )
     await entra(painel)
-    pagina = (await painel.get("/painel/inicio")).text
+    pagina = (await painel.get("/painel/api/visao-geral")).text
     assert "tempo esgotado" in pagina
     assert "sk-nunca-na-tela" not in pagina
     assert "api_key" not in pagina
@@ -344,7 +330,7 @@ async def test_duas_criacoes_ao_mesmo_tempo_deixam_uma_conta(painel: httpx.Async
     ])
     assert all(r.status_code == 303 for r in respostas)
     # Uma virou sessão, a outra foi mandada para o login. Nunca duas contas.
-    assert sorted(r.headers["location"] for r in respostas) == ["/painel/entrar", "/painel/inicio"]
+    assert sorted(r.headers["location"] for r in respostas) == ["/painel/app", "/painel/entrar"]
 
 
 async def test_codigo_so_e_gasto_com_a_conta_criada(painel: httpx.AsyncClient, monkeypatch):
@@ -365,7 +351,7 @@ async def test_codigo_so_e_gasto_com_a_conta_criada(painel: httpx.AsyncClient, m
         "/painel/primeiro-acesso", data={"codigo": codigo, "senha": SENHA, "senha2": SENHA}
     )
     assert resposta.status_code == 303
-    assert resposta.headers["location"] == "/painel/inicio"
+    assert resposta.headers["location"] == "/painel/app"
 
 
 async def test_codigo_usado_nao_serve_de_novo(painel: httpx.AsyncClient):

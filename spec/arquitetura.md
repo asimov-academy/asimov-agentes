@@ -26,11 +26,13 @@ asimov-agentes/
 ├── backend/      API, worker e regras de negócio
 ├── prompts/      prompts de cada agente, versionados
 ├── deploy/       docker-compose, Caddyfile, backup
-└── modelos/      modelos de CLAUDE.md, AGENTS.md e .env usados pelo setup
+├── modelos/      modelos de CLAUDE.md, AGENTS.md e .env usados pelo setup
+└── frontend/     painel do operador no navegador (spec/frontend.md)
 ```
 
 - O setup, antes da API existir, instala a VPS. Depois que ela sobe, toda criação, edição e consulta passa pela API. Ele nunca lê nem escreve no banco.
 - O backend é uma API. Webhooks dos canais e o menu são só chamadas a ela.
+- O `frontend/` é o segundo cliente da API, pelas rotas `/painel/api`, com sessão de operador. Não conhece a `CHAVE_API_ADMIN` e não fala com `/admin`. Toda operação que ele faz existe também no menu do terminal: a regra é nascer na API e ser consumida pelos dois.
 - Justificativa: quando o front de CRM chegar, ele usa exatamente as operações que o menu usa hoje, sem reescrever nada.
 
 ## 2. Stack
@@ -55,7 +57,8 @@ asimov-agentes/
 | WhatsApp não oficial | WAHA (`devlikeapro/waha`, Apache 2.0) com motor GOWS (whatsmeow), versão fixada, container `waha` subido só quando o primeiro agente WAHA é criado | leve, várias sessões numa instância, QR code e webhook assinado; manutenção do protocolo é do projeto WAHA; licença sem condições (Evolution e Baileys direto descartados, spec/decisoes.md) |
 | Execução | Docker Compose (`caddy`, `api`, `worker`, `postgres`, `redis` e, quando houver agente WAHA, `waha`) | sobe e reinicia tudo com um comando; nada de Swarm numa VPS dedicada |
 | Agente de código | Claude Code (instalador oficial) ou Codex (npm, com Node LTS) | escolha do operador |
-| Testes | pytest + pytest-asyncio; `shellcheck` no Bash | cobre regras e isolamento; pega erro comum de script |
+| Painel web | React 19 + TypeScript + Vite + Tailwind CSS, em `frontend/`, construído num estágio `node` do `backend/Dockerfile` e servido pela API em `/painel/app` | telas com abas e histórico de conversa pedem estado no cliente; sem container novo, sem node na VPS e sem estático de CDN |
+| Testes | pytest + pytest-asyncio; `shellcheck` no Bash; vitest no `frontend/` | cobre regras e isolamento; pega erro comum de script |
 
 Modelos de IA:
 
@@ -68,6 +71,18 @@ Modelos de IA:
 ## 3. Autenticação e autorização
 
 - **Operador:** entra por SSH. As rotas administrativas (`/admin/*`) exigem o header `X-Admin-Key` com a `chave_api_admin` gerada pelo setup, comparada em tempo constante. O Caddy não publica `/admin/*`; a API escuta em `127.0.0.1:8000` e só o menu, na própria VPS, chega nela.
+- **O painel é o segundo cliente da API, nunca do `/admin`.** As rotas `/painel/api/*` exigem a
+  sessão do operador e, em toda escrita, o cabeçalho `X-Painel-CSRF`. Elas chamam os mesmos
+  `servico.py` que o menu do terminal chama, então painel e terminal nunca divergem no que fazem.
+  Nas rotas de um agente (`/painel/api/agentes/{id}`), o `cliente_id` sai da própria linha lida do
+  banco, nunca do corpo; as rotas que criam recebem a empresa na URL, conferida antes de virar
+  filtro. Nada que esteja cifrado no banco vira JSON: credencial de canal sai mascarada, o endereço
+  do webhook só na ficha, e a falha sai como resumo curto, nunca com o corpo que o provedor
+  respondeu (que já veio com chave de API dentro).
+- **Estático do painel, tudo da VPS.** O front construído é servido em `/painel/app`, com o
+  `index.html` sem cache e os arquivos com hash no nome guardados para sempre. O `painel.css` das
+  telas de login leva a versão no endereço, e as fontes saem de `/painel/fontes/<arquivo>`, de uma
+  lista fechada de nomes. Nenhum CDN, em lugar nenhum.
 - **Operador no painel (fase 8, opcional e desligado por padrão):** com `PAINEL_ATIVO`, o Caddy publica `app.<dominio>` e só o caminho `/painel/*`; `/admin*` e `/webhook*` respondem 404 nesse host. O painel não é cliente do `/admin` com a chave no navegador: é um caminho próprio que chama os mesmos serviços, então a regra de não publicar `/admin` continua valendo. Uma conta só (`usuario_painel`, com unicidade no banco), criada no primeiro acesso com um código de uso único que o `asimov painel` mostra no terminal; senha em scrypt, sessão no Redis com cookie `HttpOnly`, `Secure` e `SameSite=Strict`, origem conferida por host e freio de tentativa por IP. Trocar chave de provedor e modelo padrão continua no terminal: são do `.env`, e o contêiner não mexe nele.
 - **Canais:** cada webhook entra por `https://bot.<dominio>/webhook/{canal}/{token_webhook}`. O `token_webhook` identifica o agente e, por ele, o cliente. Depois disso, a assinatura do canal é verificada com a credencial daquele agente:
   - WhatsApp oficial: a API liga os webhooks do app (campo `messages`, com o token do app), inscreve a conta e aponta o endereço deste agente no número (`webhook_configuration`, o webhook override da Meta), em vez de usar a URL do app. O `GET` de verificação devolve `hub.challenge` quando `hub.verify_token` é igual ao `token_webhook` da URL: a Meta confere o endereço antes de o agente existir no banco, e quem sabe o token já sabe o segredo do webhook. O `POST` vem com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`), e corpo de outro `phone_number_id` é ignorado.
@@ -116,7 +131,12 @@ backend/app/
 ├── ia/             fábrica de modelos por provedor (provedores.py), agente PydanticAI (agente.py)
 │   └── ferramentas/ uma ferramenta por arquivo (calculadora.py, busca_web.py), ficha em base.py, catálogo em registro.py
 ├── midia/          download, cache por hash, transcrição, visão
-├── painel/         painel web do operador (fase 8): acesso, sessão, páginas e templates
+├── painel/         painel web do operador (fase 8)
+│                   acesso.py (sessão, origem e CSRF), servico.py (senha, código, sessão e a
+│                   composição da visão geral), repo.py (leituras do painel), canais.py (situação
+│                   de cada canal), rotas.py (entrar, primeiro acesso, sair e o front),
+│                   api.py + api_agentes.py + api_conversas.py (o JSON que o front consome),
+│                   paginas/ (entrar e primeiro acesso em Jinja2), estaticos/ (painel.css, fontes/)
 ├── conhecimento/   ingestão, divisão em trechos, embeddings, busca, tool de busca
 ├── handoff/        tool de transferência, aviso, comando de retomada, retomada automática
 ├── consumo/        turnos, falhas, relatório por cliente

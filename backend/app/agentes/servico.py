@@ -408,3 +408,82 @@ def canal_da_conversa(agente: Agente, conversa: "Conversa") -> tuple[Canal, dict
     """
     canal = obter_canal(conversa.canal)
     return canal, credenciais(agente) if conversa.canal == agente.canal else {}
+
+
+# Perfil e prompt
+#
+# A aba Trabalho do painel pergunta em português o que o agente faz, para quem e sobre qual empresa,
+# e daqui sai o `persona.md`. O arquivo continua sendo a fonte do prompt de sistema: o formulário só
+# escreve nele. Editar à mão continua valendo, e salvar o formulário reescreve o texto (o painel
+# avisa antes).
+
+FUNCOES = {
+    "suporte": "resolve problemas de quem já é cliente",
+    "vendas": "ajuda quem está decidindo a comprar",
+    "atendimento": "atende quem chega, tira dúvidas e encaminha",
+}
+
+
+def monta_persona(agente: Agente, empresa: str) -> str:
+    """Escreve o `persona.md` a partir do perfil. Sem perfil, devolve a linha do modelo.
+
+    Texto curto de propósito: prompt grande custa token em todo turno, e a v0.8.11 mostrou a
+    diferença (uns 550 tokens por turno no agente cru contra uns 5.600 com tudo ligado).
+    """
+    perfil = agente.perfil or {}
+    if not perfil.get("funcao"):
+        return f"Você é {agente.nome}, do atendimento de {empresa}.\n"
+
+    linhas = [f"Você é {agente.nome}, de {empresa}, e {FUNCOES[perfil['funcao']]}."]
+    if perfil.get("publico"):
+        linhas.append(f"Quem fala com você: {perfil['publico']}.")
+    if perfil.get("sobre_empresa"):
+        linhas += ["", f"Sobre {empresa}:", perfil["sobre_empresa"].strip()]
+    if perfil.get("site"):
+        linhas.append(f"Site: {perfil['site']}")
+    if agente.assina_nome:
+        linhas += ["", f"Assine as respostas com o seu nome, {agente.nome}."]
+    return "\n".join(linhas) + "\n"
+
+
+def caminho_do_prompt(agente: Agente) -> Path:
+    return config().diretorio_prompts / agente.arquivo_prompt
+
+
+def le_prompt_do_agente(agente: Agente) -> str:
+    """O texto que o modelo recebe hoje. Arquivo sumido não derruba a tela do painel."""
+    caminho = caminho_do_prompt(agente)
+    return caminho.read_text(encoding="utf-8") if caminho.exists() else ""
+
+
+def escreve_prompt_do_agente(agente: Agente, texto: str) -> None:
+    caminho = caminho_do_prompt(agente)
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    caminho.write_text(texto, encoding="utf-8")
+    log.info("prompt_escrito", agente_id=str(agente.id))
+
+
+async def grava_perfil(
+    sessao: AsyncSession,
+    cliente_id: uuid.UUID,
+    agente_id: uuid.UUID,
+    perfil: dict[str, Any],
+    assina_nome: bool | None = None,
+) -> tuple[Agente, str]:
+    """Guarda o perfil e reescreve o `persona.md`. Devolve o agente e o prompt que ficou no disco."""
+    agente = await repo.obter(sessao, cliente_id, agente_id)
+    if agente is None:
+        raise NaoEncontrado("agente não encontrado")
+    funcao = perfil.get("funcao")
+    if funcao is not None and funcao not in FUNCOES:
+        raise CampoInvalido(f"função desconhecida: {funcao}")
+
+    cliente = await clientes_repo.obter(sessao, cliente_id)
+    agente.perfil = {**(agente.perfil or {}), **perfil}
+    if assina_nome is not None:
+        agente.assina_nome = assina_nome
+    texto = monta_persona(agente, cliente.nome if cliente else "")
+    escreve_prompt_do_agente(agente, texto)
+    await sessao.commit()
+    await sessao.refresh(agente)
+    return agente, texto
