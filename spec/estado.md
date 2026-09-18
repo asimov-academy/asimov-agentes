@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.13.2` em `asimov-academy/asimov-agentes` (público): o aviso de handoff passa a chamar o contato por nome e telefone de verdade (antes mostrava o id oculto como se fosse número), e o `/retomar` funciona quando o destino escreve por trás de um `@lid`.
+- `v0.13.3` em `asimov-academy/asimov-agentes` (público): o log do webhook passa a dizer de qual conversa é cada mensagem aceita ou ignorada.
+- `v0.13.2`: o aviso de handoff passa a chamar o contato por nome e telefone de verdade (antes mostrava o id oculto como se fosse número), e o `/retomar` funciona quando o destino escreve por trás de um `@lid`.
 - `v0.13.1`: o arquivo de áudio, imagem e documento sai do disco na limpeza diária (um a dois dias depois de lido); o texto lido dele fica.
 - `v0.12.3`: áudio, imagem e PDF voltam a ser lidos (o arquivo era anunciado em `localhost`, que no contêiner do worker é o próprio worker), e pedir QR code novo deixou de disparar alarme de número fora do ar.
 - `v0.12.2`: o aparelho conectado aparece no celular como `Agente (Empresa)`, em vez de "Ubuntu Firefox".

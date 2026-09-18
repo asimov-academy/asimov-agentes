@@ -324,9 +324,9 @@ class Waha:
                 codigo=comando.group(1).upper(),
             )
         if chat.endswith(SUFIXO_DE_GRUPO):
-            return Evento(Acao.IGNORAR, "mensagem de grupo")
+            return Evento(Acao.IGNORAR, "mensagem de grupo", chat)
         if not chat.endswith(SUFIXOS_DE_PESSOA):
-            return Evento(Acao.IGNORAR, f"conversa que o agente não atende: {chat!r}")
+            return Evento(Acao.IGNORAR, f"conversa que o agente não atende: {chat!r}", chat)
 
         base: dict[str, Any] = {
             "conversa_externa": chat,
