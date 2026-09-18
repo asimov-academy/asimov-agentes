@@ -52,6 +52,17 @@ cantos marcados do botão fantasma e do popup: eles eram o desenho de um canto e
 ângulo no painel. O campo deixou de ser só borda de baixo e virou moldura inteira; o interruptor
 deixou de ser retângulo e virou cápsula.
 
+**Indicador em cartão.** Os três números do ritmo eram soltos sobre o fundo, em mono e no tamanho de
+título. O operador chamou de "negócio atirado com número": sem moldura eles não se leem como grupo,
+e a explicação do terceiro não cabia na coluna e cortava. Viraram três cartões no formato que todo
+painel usa, com o rótulo em cima e a comparação embaixo.
+
+**Recolher no topo e área de conta no rodapé.** O recolher ficava solto embaixo do sair, no fim do
+menu. Subiu para o lado da marca, que é onde se procura por ele. O rodapé virou a área da conta:
+situação da instalação, avatar, endereço e a tela `Configurações`, que nasceu junto e é onde as
+chaves de IA passaram a se administrar. Elas só existiam dentro da ficha de um agente, e chave é da
+instalação.
+
 **Marca na paleta do painel.** A primeira tentativa usou a cor de cada marca (verde do WhatsApp,
 azul do Chatwoot e da Meta) como token. O operador reprovou: logo de terceiro segue a paleta do
 produto, não a identidade própria. Os três tokens saíram e a `Marca` passou a herdar a cor do texto,

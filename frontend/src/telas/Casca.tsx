@@ -82,16 +82,29 @@ export function Casca({
           gaveta ? "translate-x-0 shadow-alto" : "-translate-x-full"
         } ${recolhido ? "w-[4.5rem]" : "w-64"}`}
       >
-        <div className={`flex items-center gap-3 px-4 py-5 ${recolhido ? "justify-center" : ""}`}>
+        <div className={`flex items-center gap-2 px-3 py-4 ${recolhido ? "justify-center" : ""}`}>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-ciano text-sm font-bold text-void">
             A
           </span>
           {!recolhido && (
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold tracking-[0.08em] text-texto">ASIMOV</span>
-              <span className="block truncate text-xs text-dim">{endereco}</span>
+            <span className="min-w-0 flex-1 text-sm font-semibold tracking-[0.08em] text-texto">
+              ASIMOV
             </span>
           )}
+          {/* O recolher mora aqui, ao lado da marca, que é onde se procura por ele. No rodapé ele
+              ficava solto embaixo do sair. */}
+          <button
+            onClick={() => setRecolhido((antes) => !antes)}
+            aria-label={recolhido ? "Abrir o menu" : "Recolher o menu"}
+            title={recolhido ? "Abrir o menu" : "Recolher o menu"}
+            className="hidden rounded-md p-1.5 text-dim transition-colors hover:bg-surface hover:text-texto md:block"
+          >
+            <Icone
+              nome="sys-chevron"
+              tamanho={16}
+              className={`transition-transform ${recolhido ? "" : "rotate-180"}`}
+            />
+          </button>
           <button
             onClick={() => setGaveta(false)}
             aria-label="Fechar o menu"
@@ -153,12 +166,12 @@ export function Casca({
           ))}
         </nav>
 
+        {/* A área da conta: a situação da instalação, quem está dentro e para onde ir mexer nela.
+            Recolhido, sobra o ponto colorido e o avatar. */}
         <div className="border-t border-borda p-3">
-          {/* A situação da instalação mora aqui, junto do sair: é informação da instalação, não de
-              uma tela. Recolhido, sobra o ponto colorido. */}
           {situacao && (
             <div
-              className={`flex items-center gap-2.5 rounded-md px-3 py-2 ${recolhido ? "justify-center" : ""}`}
+              className={`mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 ${recolhido ? "justify-center" : ""}`}
               title={situacao.texto}
               aria-label={`Situação da instalação: ${situacao.texto}`}
             >
@@ -170,34 +183,27 @@ export function Casca({
             </div>
           )}
 
-          <form method="post" action="/painel/sair">
-            <button
-              type="submit"
-              title="Sair"
-              aria-label="Sair"
-              className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-surface hover:text-perigo ${
+          <NavLink
+            to="/configuracoes"
+            title={recolhido ? "Perfil e configurações" : undefined}
+            aria-label={recolhido ? "Perfil e configurações" : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-md px-2 py-2 transition-colors ${
                 recolhido ? "justify-center" : ""
-              }`}
-            >
-              <Icone nome="sys-logout" tamanho={18} />
-              {!recolhido && <span>Sair</span>}
-            </button>
-          </form>
-
-          <button
-            onClick={() => setRecolhido((antes) => !antes)}
-            aria-label={recolhido ? "Abrir o menu" : "Recolher o menu"}
-            className={`mt-1 hidden w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-dim transition-colors hover:bg-surface hover:text-texto md:flex ${
-              recolhido ? "justify-center" : ""
-            }`}
+              } ${isActive ? "bg-ciano/10 text-ciano" : "text-muted hover:bg-surface hover:text-texto"}`
+            }
           >
-            <Icone
-              nome="sys-chevron"
-              tamanho={18}
-              className={`transition-transform ${recolhido ? "" : "rotate-180"}`}
-            />
-            {!recolhido && <span>Recolher</span>}
-          </button>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-borda">
+              <Icone nome="nav-user" tamanho={16} />
+            </span>
+            {!recolhido && (
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm">Operador</span>
+                <span className="block truncate text-xs text-dim">{endereco}</span>
+              </span>
+            )}
+            {!recolhido && <Icone nome="sys-chevron" tamanho={14} className="text-dim" />}
+          </NavLink>
         </div>
       </aside>
 

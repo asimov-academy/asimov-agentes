@@ -7,6 +7,7 @@ import { Casca, type Situacao } from "./telas/Casca";
 import { Agentes } from "./telas/Agentes";
 import { Canais } from "./telas/Canais";
 import { Chat } from "./telas/Chat";
+import { Configuracoes } from "./telas/Configuracoes";
 import { Contatos } from "./telas/Contatos";
 import { EmBreve, NaoEncontrada } from "./telas/EmBreve";
 import { VisaoGeral } from "./telas/VisaoGeral";
@@ -95,6 +96,7 @@ export function App() {
             element={<Contatos empresas={empresas} empresa={empresa} aoTrocarEmpresa={setEmpresa} />}
           />
           <Route path="/conhecimento" element={<EmBreve titulo="Conhecimento" />} />
+          <Route path="/configuracoes" element={<Configuracoes eu={eu} />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Routes>
       )}
