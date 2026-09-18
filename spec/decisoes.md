@@ -2,6 +2,40 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O jeito do agente vira escolha, e o treinamento ganha lugar (v0.26.0)
+
+Primeiro refino depois do copiloto no ar, com o operador usando o painel e apontando o que faltava.
+
+**"Melhorar com IA" passa a rodar pela assinatura.** O botão do passo "Sobre" morria com "nenhum
+provedor de IA tem chave nesta instalação" numa instalação que tinha conta de IA vinculada e nenhuma
+chave de provedor, que é exatamente o que a v0.25.0 tornou comum. Agora, com vínculo, quem reescreve
+é o CLI do operador; sem vínculo, segue a chave. A API não executa o CLI: ela enfileira no worker do
+copiloto, que é quem tem o binário e a credencial, e espera o resultado.
+
+**O agente ganha tom, e a transferência para humano vira opcional** (migração `0020`, aditiva):
+
+- **tom**: formal, normal ou descontraído. Muda o jeito, nunca o conteúdo.
+- **transfere_para_humano**: desligado, a tool nem é oferecida ao modelo, e nenhum caminho
+  automático transfere (falha no turno, arquivo grande). Quem vende sem equipe de atendimento não
+  quer o agente prometendo uma pessoa que não existe. Antes, o onboarding dizia "sempre ligada".
+- **restringe_temas**: o agente só fala do que é da empresa e devolve o resto ao atendimento.
+
+As três escolhas ficam no mesmo lugar no painel (passo "Jeito" da criação e aba Comunicação da
+ficha) e no terminal (`asimov editar` > Jeito de falar), que é a regra de nascer na API e ser
+consumido pelos dois.
+
+**Ferramenta sai da criação.** O agente nasce cru, o operador vê como ele fala, e ferramenta e
+material entram depois. Escolher calculadora e busca antes de existir uma conversa é pedir uma
+decisão sem nenhuma informação.
+
+**O treinamento ganha lugar antes de existir.** Aba nova na ficha, desenhada e vazia, com as cinco
+formas de ensinar: texto, site, vídeo, documento e base de conhecimento compartilhada. É onde a
+fase 6 vai morar, e é para lá que o fim do onboarding aponta. Sem um lugar combinado, cada tipo de
+material nasceria num canto diferente do painel. Referência trazida pelo operador: a tela de
+treinamentos do GPT Maker.
+
+Atualizados: spec/dados.md, spec/frontend.md, spec/telas.md, spec/fases.md e spec/estado.md.
+
 ## 2026-09-18: Fase 9 validada em VPS, e a spec inteira revisada
 
 O operador percorreu a instalação numa VPS real: atualização para a v0.25.x, login do Claude Code na

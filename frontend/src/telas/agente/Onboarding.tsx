@@ -4,8 +4,8 @@ import {
   ErroDaApi,
   type Agente,
   type Empresa,
-  type Ferramenta,
   type NivelDeEmoji,
+  type TomDeVoz,
 } from "../../api/cliente";
 import { Aviso } from "../../design/Aviso";
 import { Botao } from "../../design/Botao";
@@ -32,7 +32,7 @@ import { Teste } from "./Teste";
  */
 const RASCUNHO = "asimov:onboarding";
 
-const PASSOS = ["Nome", "Objetivo", "Empresa", "Sobre", "Ajustes"];
+const PASSOS = ["Nome", "Objetivo", "Empresa", "Sobre", "Jeito"];
 
 type NomeDeIconeDaFuncao = "comm-chat" | "stat-info" | "nav-reports";
 
@@ -64,6 +64,12 @@ const EMOJIS: { valor: NivelDeEmoji; rotulo: string }[] = [
   { valor: "muito", rotulo: "Muito" },
 ];
 
+const TONS: { valor: TomDeVoz; rotulo: string; explica: string }[] = [
+  { valor: "formal", rotulo: "Formal", explica: "Português correto, sem gíria." },
+  { valor: "normal", rotulo: "Normal", explica: "Como alguém da empresa no WhatsApp." },
+  { valor: "descontraido", rotulo: "Descontraído", explica: "Leve e próximo, sem perder o profissional." },
+];
+
 type Rascunho = {
   nome: string;
   funcao: string;
@@ -72,9 +78,11 @@ type Rascunho = {
   site: string;
   sobre: string;
   emojis: NivelDeEmoji;
+  tom: TomDeVoz;
+  humano: boolean;
+  soDaEmpresa: boolean;
   partes: number;
   buffer: number;
-  ferramentas: string[];
   modelo: string;
 };
 
@@ -86,9 +94,11 @@ const VAZIO: Rascunho = {
   site: "",
   sobre: "",
   emojis: "nenhum",
+  tom: "normal",
+  humano: true,
+  soDaEmpresa: false,
   partes: 3,
   buffer: 8,
-  ferramentas: [],
   modelo: "",
 };
 
@@ -108,22 +118,15 @@ export function Onboarding({
 }: {
   empresas: Empresa[];
   aoFechar: () => void;
-  aoCriar: (agente: Agente) => void;
+  /** A aba em que a ficha abre: o operador acabou de escolher o que quer fazer agora. */
+  aoCriar: (agente: Agente, aba?: string) => void;
 }) {
   const [passo, setPasso] = useState(0);
   const [dados, setDados] = useState<Rascunho>(leRascunho);
-  const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [listaDeEmpresas, setListaDeEmpresas] = useState(empresas);
   const [criado, setCriado] = useState<Agente | null>(null);
-
-  useEffect(() => {
-    api
-      .ferramentas()
-      .then(setFerramentas)
-      .catch(() => setFerramentas([]));
-  }, []);
 
   useEffect(() => {
     try {
@@ -175,9 +178,13 @@ export function Onboarding({
         // Todo agente nasce no painel e no terminal. Canal externo vem depois, na ficha.
         canal: "nativo",
         emojis: dados.emojis,
+        tom: dados.tom,
+        transfere_para_humano: dados.humano,
+        restringe_temas: dados.soDaEmpresa,
         max_mensagens_por_resposta: dados.partes,
         buffer_segundos: dados.buffer,
-        ferramentas: dados.ferramentas,
+        // Ferramenta não se escolhe aqui: o agente nasce cru e ganha ferramenta no treinamento,
+        // depois de o operador ver como ele fala.
         modelo_conversa: dados.modelo,
       });
       await api.gravaPerfil(agente.id, {
@@ -197,7 +204,7 @@ export function Onboarding({
   }
 
   // O fim não é um "pronto": é escolher o próximo passo, e falar com ele é o primeiro deles.
-  if (criado) return <Pronto agente={criado} aoFechar={() => aoCriar(criado)} />;
+  if (criado) return <Pronto agente={criado} aoIr={(aba) => aoCriar(criado, aba)} />;
 
   return (
     <Modal
@@ -339,31 +346,32 @@ export function Onboarding({
           )}
 
           {passo === 4 && (
-            <Pergunta titulo="Ajustes do agente" ajuda="">
-              <div className="flex flex-col">
-                <Interruptor
-                  ligado
-                  desligado
-                  aoMudar={() => {}}
-                  rotulo="Passar a conversa para uma pessoa"
-                  descricao="Sempre ligada. Ele chama gente quando o contato pede ou quando trava."
-                />
-                {ferramentas.map((f) => (
-                  <Interruptor
-                    key={f.nome}
-                    ligado={dados.ferramentas.includes(f.nome)}
-                    aoMudar={(ligado) =>
-                      muda(
-                        "ferramentas",
-                        ligado
-                          ? [...dados.ferramentas, f.nome]
-                          : dados.ferramentas.filter((n) => n !== f.nome),
-                      )
-                    }
-                    rotulo={f.rotulo}
-                    descricao={f.descricao}
-                  />
-                ))}
+            <Pergunta titulo={`Como ${dados.nome.trim() || "ele"} fala`} ajuda="">
+              <div>
+                <p className="rotulo">Tom</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {TONS.map((t) => (
+                    <button
+                      key={t.valor}
+                      onClick={() => muda("tom", t.valor)}
+                      aria-pressed={dados.tom === t.valor}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        dados.tom === t.valor
+                          ? "border-ciano bg-ciano/5"
+                          : "border-borda hover:border-dim"
+                      }`}
+                    >
+                      <span
+                        className={`block text-sm font-semibold ${
+                          dados.tom === t.valor ? "text-ciano" : "text-texto"
+                        }`}
+                      >
+                        {t.rotulo}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted">{t.explica}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -401,6 +409,21 @@ export function Onboarding({
                     ))}
                   </select>
                 </label>
+              </div>
+
+              <div className="mt-6 flex flex-col border-t border-borda pt-5">
+                <Interruptor
+                  ligado={dados.humano}
+                  aoMudar={(ligado) => muda("humano", ligado)}
+                  rotulo="Passar a conversa para uma pessoa"
+                  descricao="Desligado, ele nunca promete atendimento humano e atende até o fim sozinho."
+                />
+                <Interruptor
+                  ligado={dados.soDaEmpresa}
+                  aoMudar={(ligado) => muda("soDaEmpresa", ligado)}
+                  rotulo="Falar só de assuntos da empresa"
+                  descricao="Puxou outro assunto, ele volta ao atendimento em uma frase."
+                />
               </div>
 
               <div className="mt-6 border-t border-borda pt-5">
@@ -490,7 +513,8 @@ function Sobre({
 }
 
 /** A tela do fim: três caminhos, e falar com o agente é o primeiro deles. */
-function Pronto({ agente, aoFechar }: { agente: Agente; aoFechar: () => void }) {
+function Pronto({ agente, aoIr }: { agente: Agente; aoIr: (aba?: string) => void }) {
+  const aoFechar = () => aoIr();
   const [conversando, setConversando] = useState(false);
 
   return (
@@ -522,10 +546,16 @@ function Pronto({ agente, aoFechar }: { agente: Agente; aoFechar: () => void }) 
             aoIr={() => setConversando(true)}
           />
           <Caminho
+            icone="nav-projects"
+            titulo="Fazer treinamentos"
+            explica="Ensinar o que ele precisa saber: frase, site, vídeo, documento ou uma base."
+            aoIr={() => aoIr("treinamento")}
+          />
+          <Caminho
             icone="cont-link"
             titulo="Conectar a um canal"
             explica="WhatsApp ou Chatwoot. Até lá, ele atende só aqui."
-            aoIr={aoFechar}
+            aoIr={() => aoIr("configuracoes")}
           />
           <Caminho
             icone="nav-settings"
@@ -545,7 +575,7 @@ function Caminho({
   explica,
   aoIr,
 }: {
-  icone: "comm-chat" | "cont-link" | "nav-settings";
+  icone: "comm-chat" | "cont-link" | "nav-settings" | "nav-projects";
   titulo: string;
   explica: string;
   aoIr: () => void;

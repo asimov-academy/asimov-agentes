@@ -7,6 +7,7 @@ import {
   type Ferramenta,
   type Modelos,
   type NivelDeEmoji,
+  type TomDeVoz,
   type Prompt,
 } from "../../api/cliente";
 import { Aviso } from "../../design/Aviso";
@@ -21,6 +22,7 @@ import { Selo } from "../../design/Selo";
 import { EscolheIA } from "./EscolheIA";
 import { CANAIS, ROTULO_DO_CANAL } from "./canais";
 import { Teste } from "./Teste";
+import { Treinamento } from "./Treinamento";
 
 /** A ficha do agente, no mesmo popup do onboarding: a lista fica embaçada atrás.
  *
@@ -35,6 +37,7 @@ const ABAS = [
   "perfil",
   "comunicacao",
   "trabalho",
+  "treinamento",
   "ferramentas",
   "configuracoes",
   "conversar",
@@ -45,10 +48,17 @@ const NOME_DA_ABA: Record<Aba, string> = {
   perfil: "Perfil",
   comunicacao: "Comunicação",
   trabalho: "Trabalho",
+  treinamento: "Treinamento",
   ferramentas: "Ferramentas e integrações",
   configuracoes: "Configurações",
   conversar: "Conversar",
 };
+
+const TONS: { valor: TomDeVoz; rotulo: string; explica: string }[] = [
+  { valor: "formal", rotulo: "Formal", explica: "Português correto, sem gíria." },
+  { valor: "normal", rotulo: "Normal", explica: "Como alguém da empresa no WhatsApp." },
+  { valor: "descontraido", rotulo: "Descontraído", explica: "Leve e próximo, sem perder o profissional." },
+];
 
 const EMOJIS: { valor: NivelDeEmoji; rotulo: string }[] = [
   { valor: "nenhum", rotulo: "Nenhum" },
@@ -87,13 +97,16 @@ export function Ficha({
   agenteId,
   aoFechar,
   aoMudar,
+  abaInicial = "perfil",
 }: {
   agenteId: string;
   aoFechar: () => void;
   aoMudar: () => void;
+  /** Quem vem do fim do onboarding cai direto no que escolheu fazer, não no começo da ficha. */
+  abaInicial?: Aba;
 }) {
   const [agente, setAgente] = useState<Agente | null>(null);
-  const [aba, setAba] = useState<Aba>("perfil");
+  const [aba, setAba] = useState<Aba>(abaInicial);
   const [erro, setErro] = useState("");
   // Erro de rede não é fim de linha: mudar isto refaz a busca sem fechar e reabrir o popup.
   const [tentativa, setTentativa] = useState(0);
@@ -165,6 +178,7 @@ export function Ficha({
             )}
             {aba === "comunicacao" && <Comunicacao agente={agente} atualiza={atualiza} />}
             {aba === "trabalho" && <Trabalho agente={agente} atualiza={atualiza} />}
+            {aba === "treinamento" && <Treinamento agente={agente} />}
             {aba === "ferramentas" && <Ferramentas agente={agente} atualiza={atualiza} />}
             {aba === "configuracoes" && <Configuracoes agente={agente} atualiza={atualiza} />}
             {aba === "conversar" && (
@@ -364,6 +378,9 @@ function Perfil({
 
 function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) => void }) {
   const [emojis, setEmojis] = useState<NivelDeEmoji>(agente.emojis as NivelDeEmoji);
+  const [tom, setTom] = useState<TomDeVoz>(agente.tom);
+  const [humano, setHumano] = useState(agente.transfere_para_humano);
+  const [soDaEmpresa, setSoDaEmpresa] = useState(agente.restringe_temas);
   const [partes, setPartes] = useState(agente.max_mensagens_por_resposta);
   const [buffer, setBuffer] = useState(agente.buffer_segundos);
   const [velocidade, setVelocidade] = useState(agente.digitacao_caracteres_por_segundo);
@@ -372,7 +389,28 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
 
   return (
     <section>
-      <p className="rotulo">Emoji</p>
+      <p className="rotulo">Tom</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        {TONS.map((t) => (
+          <button
+            key={t.valor}
+            onClick={() => setTom(t.valor)}
+            aria-pressed={tom === t.valor}
+            className={`rounded-md border px-3 py-2 text-left transition-colors ${
+              tom === t.valor ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
+            }`}
+          >
+            <span
+              className={`block text-sm font-semibold ${tom === t.valor ? "text-ciano" : "text-texto"}`}
+            >
+              {t.rotulo}
+            </span>
+            <span className="mt-0.5 block text-xs text-muted">{t.explica}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="rotulo mt-8">Emoji</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {EMOJIS.map((e) => (
           <button
@@ -429,6 +467,21 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
         />
       </div>
 
+      <div className="mt-8 flex flex-col border-t border-borda pt-6">
+        <Interruptor
+          ligado={humano}
+          aoMudar={setHumano}
+          rotulo="Passar a conversa para uma pessoa"
+          descricao="Desligado, ele nunca promete atendimento humano e atende até o fim sozinho."
+        />
+        <Interruptor
+          ligado={soDaEmpresa}
+          aoMudar={setSoDaEmpresa}
+          rotulo="Falar só de assuntos da empresa"
+          descricao="Puxou outro assunto, ele volta ao atendimento em uma frase."
+        />
+      </div>
+
       <Rodape
         rotulo="Salvar o jeito de falar"
         salvando={salvando}
@@ -437,6 +490,9 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
         aoSalvar={() =>
           salva({
             emojis,
+            tom,
+            transfere_para_humano: humano,
+            restringe_temas: soDaEmpresa,
             max_mensagens_por_resposta: partes,
             buffer_segundos: buffer,
             digitacao_caracteres_por_segundo: velocidade,

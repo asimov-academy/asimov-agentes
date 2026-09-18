@@ -46,6 +46,15 @@ class NovoAgente(BaseModel):
     emojis: Literal["nenhum", "pouco", "medio", "muito"] = Field(
         default="nenhum", description="Quanto o agente usa emoji. Padrão: nenhum, que é o agente cru."
     )
+    tom: Literal["formal", "normal", "descontraido"] = Field(
+        default="normal", description="Como o agente fala. Muda o jeito, nunca o conteúdo."
+    )
+    transfere_para_humano: bool = Field(
+        default=True, description="Desligado, o agente nunca promete atendimento humano."
+    )
+    restringe_temas: bool = Field(
+        default=False, description="Ligado, o agente só fala do que é da empresa."
+    )
     contatos_permitidos: list[str] | None = Field(
         default=None,
         description="Telefones que o agente atende. Vazio (o padrão) atende qualquer pessoa; com lista, o resto é ignorado.",
@@ -66,6 +75,9 @@ class EdicaoAgente(BaseModel):
     digitacao_maximo_segundos: int | None = Field(default=None, ge=1, le=30)
     ferramentas: list[str] | None = None
     emojis: Literal["livre", "nenhum", "pouco", "medio", "muito"] | None = None
+    tom: Literal["formal", "normal", "descontraido"] | None = None
+    transfere_para_humano: bool | None = None
+    restringe_temas: bool | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
     modelo_fallback: str | None = None
@@ -128,6 +140,9 @@ class AgenteSaida(BaseModel):
     digitacao_maximo_segundos: int
     ferramentas: list[str]
     emojis: str
+    tom: str
+    transfere_para_humano: bool
+    restringe_temas: bool
     contatos_permitidos: list[str]
     ativo: bool
 
@@ -186,6 +201,9 @@ async def criar(
             digitacao_maximo_segundos=dados.digitacao_maximo_segundos,
             ferramentas=dados.ferramentas,
             emojis=dados.emojis,
+            tom=dados.tom,
+            transfere_para_humano=dados.transfere_para_humano,
+            restringe_temas=dados.restringe_temas,
             contatos_permitidos=dados.contatos_permitidos,
         )
     except servico.NaoEncontrado as erro:

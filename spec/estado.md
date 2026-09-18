@@ -10,6 +10,7 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.26.0`: **o jeito do agente vira escolha, e o treinamento ganha lugar.** O agente passa a ter tom (formal, normal ou descontraído), transferência para humano opcional (desligada, a tool nem é oferecida ao modelo e nenhum caminho automático transfere) e a opção de falar só de assuntos da empresa (migração `0020`, aditiva). As três ficam no passo "Jeito" da criação, na aba Comunicação da ficha e em `asimov editar` > Jeito de falar. Ferramenta saiu da criação: o agente nasce cru. A ficha ganhou a aba **Treinamento**, desenhada e ainda sem funcionar, com as cinco formas de ensinar (texto, site, vídeo, documento e base compartilhada), que é onde a fase 6 vai morar. E o botão **Melhorar com IA** passou a rodar pela assinatura vinculada, em vez de exigir chave de provedor.
 - `v0.25.2`: o copiloto enxerga a credencial do operador. Primeiro teste em VPS: o contêiner subia com os volumes padrão (contêiner existente não pega volume novo), rodava com um uid que não abre um arquivo `600` do root, e faltava o `~/.claude.json`, onde o Claude Code guarda o estado de primeiro uso. O erro do CLI também chegava cego, porque o stdout era descartado.
 - `v0.25.1`: o painel sobrevive a `asimov atualizar`. O `painel.caddy` é versionado e o pacote da atualização passava por cima do bloco do operador: quem tinha o painel ligado perdia o host `app.<dominio>` (o `bot` respondia, o painel dava falha de TLS). A atualização reescreve o bloco quando ele some.
 - `v0.25.0`: **conta de IA vinculada na instalação e copiloto no painel.** A instalação pede o login do CLI escolhido (Claude Code ou Codex) e `asimov ia` faz isso depois; o vínculo liga um copiloto no painel que opera a plataforma conversando, rodando pela assinatura do operador, sem chave de API e sem custo por token. O CLI fala com a plataforma por um servidor MCP nosso, com as ferramentas de código dele desligadas, e nunca escreve: o que ele propõe vira um cartão que o operador confirma. Contêiner `copiloto` com perfil (sobe só com conta vinculada e painel ligado), worker e fila próprios. Junto: `asimov painel` desligando o painel gravava `PAINEL_ATIVO=` e a API não subia com booleano vazio. **Validado em VPS real em 2026-09-18**, com as correções da v0.25.1 e da v0.25.2 que a validação exigiu.
@@ -62,7 +63,7 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 - `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 461 testes do backend passando, 47 do painel no navegador, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 468 testes do backend passando, 49 do painel no navegador, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
 
 ## Fases
 
@@ -135,7 +136,7 @@ Desligado por padrão. `asimov painel` liga, pede o DNS de `app.<dominio>` e mos
 - Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), escolhidas na criação (nenhuma por padrão desde a v0.8.11). OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
-- Migrações até `0014` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji; **perfil e assinatura do agente, que escrevem o `persona.md` pelo painel**).
+- Migrações até `0020` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji; **perfil e assinatura do agente, que escrevem o `persona.md` pelo painel**).
 
 ## Pendências conhecidas
 

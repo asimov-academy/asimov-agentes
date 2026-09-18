@@ -312,11 +312,16 @@ popup reabre com ele.
    o site, opcional.
 4. **Sobre**: o que a empresa faz, em texto livre, com o botão **Melhorar com IA**. A ajuda diz o
    ganho ("isso melhora a inteligência dele sobre a empresa"), não o mecanismo: "vira o prompt dele"
-   é jargão e não diz por que vale a pena responder. A IA da
-   instalação reescreve o que o operador digitou (`ia/redacao.py`); falhando, ele não perde o que
-   escreveu e a mensagem diz o porquê.
-5. **Ajustes**: passar a conversa para uma pessoa (sempre ligada), as ferramentas, o emoji, em
-   quantas mensagens dividir a resposta e a IA que responde.
+   é jargão e não diz por que vale a pena responder. Quem reescreve é a **conta de IA vinculada**,
+   pela assinatura do operador; sem vínculo, a chave de provedor da instalação (`ia/redacao.py`).
+   Falhando, ele não perde o que escreveu e a mensagem diz o porquê.
+5. **Jeito**: o tom (formal, normal ou descontraído), o emoji, em quantas mensagens dividir a
+   resposta, se ele pode passar a conversa para uma pessoa, se fala só de assuntos da empresa, e a
+   IA que responde.
+
+**Ferramenta não se escolhe na criação.** Ela saiu daqui em 2026-09-18: o agente nasce cru, o
+operador vê como ele fala, e ferramenta e material entram depois, no treinamento. Escolher
+calculadora e busca antes de existir uma conversa é pedir uma decisão sem nenhuma informação.
 
 **Canal não se escolhe aqui.** Todo agente nasce respondendo no painel e no terminal, e conectar a
 um WhatsApp ou a um Chatwoot é um passo depois, na ficha. Escolher canal na criação parava o
@@ -325,8 +330,9 @@ operador num formulário de credencial antes de ele ter visto o agente falar.
 **Não há prévia de como ele vai soar.** Era uma conversa de mentira ocupando um terço do popup, e o
 fluxo termina numa conversa de verdade, que é o que mostra o jeito dele falar.
 
-**O fim é um começo.** Terminar não devolve um "pronto": abre três caminhos, e o primeiro é
-conversar com ele ali mesmo. Os outros dois são conectar a um canal e ajustar a ficha.
+**O fim é um começo.** Terminar não devolve um "pronto": abre quatro caminhos, e o primeiro é
+conversar com ele ali mesmo. Depois vêm fazer treinamentos, conectar a um canal e ajustar a ficha.
+Cada um abre a ficha já na aba certa, em vez de largar o operador no começo dela.
 
 **Erro é do passo, não da tela.** Falha da API aparece no passo que falhou, sem perder as respostas
 anteriores. A criação é uma chamada só no fim: passo nenhum grava pela metade, então desistir no
@@ -338,8 +344,8 @@ meio não deixa agente capenga no banco, nem empresa órfã (ela nasce junto com
 página de edição de agente. Rota `/agentes/{id}` e `/agentes/{id}/{aba}`, para recarregar e
 compartilhar o endereço caírem na mesma aba.
 
-Abas: **Perfil**, **Comunicação**, **Trabalho**, **Ferramentas e integrações**, **Configurações** e
-**Conversar**. A última é a conversa de teste pelo canal nativo, que a spec antes punha na tela de
+Abas: **Perfil**, **Comunicação**, **Trabalho**, **Treinamento**, **Ferramentas e integrações**,
+**Configurações** e **Conversar**. A última é a conversa de teste pelo canal nativo, que a spec antes punha na tela de
 Chat: falar com o agente é como se confere uma mudança antes de ela chegar em alguém, e isso
 pertence ao agente, não à lista de conversas. Registrado em spec/decisoes.md.
 Cada seção tem o próprio botão Salvar, e sair com alteração pendente pede confirmação. Salvar
@@ -348,9 +354,13 @@ mostra o que mudou, não um "pronto" genérico.
 **Perfil**: nome, empresa, canal, situação (ativo ou inativo), criado em, endereço do webhook
 (mostrado uma vez, com copiar) e remover agente.
 
-**Comunicação**: emoji (nenhum, pouco, médio, muito), dividir resposta em partes (até quantas),
-tempo de espera antes de responder (buffer, em segundos), velocidade de digitação e teto do
-digitando, assinar o nome do agente na resposta.
+**Comunicação**: o jeito do agente, e é a mesma lista do passo 5 da criação. Tom (formal, normal ou
+descontraído), emoji (nenhum, pouco, médio, muito), dividir resposta em partes (até quantas), tempo
+de espera antes de responder (buffer, em segundos), velocidade de digitação e teto do digitando, e
+dois interruptores: **passar a conversa para uma pessoa** e **falar só de assuntos da empresa**.
+Desligar o primeiro desliga o handoff inteiro, inclusive o automático: a tool não é oferecida ao
+modelo e nem falha no turno nem arquivo grande transferem, porque prometer uma pessoa que não existe
+é pior do que dizer que não dá.
 
 **Trabalho**: a seção que escreve o prompt.
 
@@ -360,9 +370,16 @@ digitando, assinar o nome do agente na resposta.
 - Sobre a empresa: texto livre, com o rótulo "Descreva um pouco sobre <nome da empresa>".
 - Abaixo, em "Prompt gerado", o `persona.md` resultante, com opção de editar à mão.
 
+**Treinamento** (desenhada, ainda não funciona): o que o agente sabe além do prompt, em cinco
+formas de ensinar a mesma coisa: **texto** (uma afirmação por vez), **site**, **vídeo**,
+**documento** e **base de conhecimento** compartilhada entre agentes. Todas terminam em trechos que
+o agente busca na hora de responder, o que é a fase 6. A tela existe antes da máquina de propósito:
+sem um lugar combinado, cada tipo de material nasceria num canto diferente do painel.
+
 **Ferramentas e integrações**: catálogo de `ia/ferramentas/registro.py` com interruptor por
-ferramenta e a instrução de quando usar. `transferir_para_humano` sempre ligada, com o destino e o
-prazo de retomada automática. Google Calendar como cartão apagado, com selo "em breve".
+ferramenta e a instrução de quando usar. O destino do handoff e o prazo de retomada automática
+ficam aqui; ligar ou desligar a transferência é na aba Comunicação. Google Calendar como cartão
+apagado, com selo "em breve".
 
 **Configurações**: modelo e fornecedora por função (conversa, reserva, auxiliar, visão,
 transcrição), com a lista vinda do backend (`openai`, `anthropic`, `gemini`, `groq`; transcrição

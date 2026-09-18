@@ -41,6 +41,8 @@ export function Agentes({
   const [agentes, setAgentes] = useState<Agente[] | null>(null);
   const [ativo, setAtivo] = useState<boolean | undefined>(undefined);
   const [erro, setErro] = useState("");
+  // Quem termina o onboarding escolhendo o que fazer agora cai direto naquela aba da ficha.
+  const [abaDaFicha, setAbaDaFicha] = useState<string | undefined>(undefined);
   const navega = useNavigate();
   const { id } = useParams();
 
@@ -186,8 +188,9 @@ export function Agentes({
         <Onboarding
           empresas={empresas}
           aoFechar={() => navega("/agentes")}
-          aoCriar={(agente) => {
+          aoCriar={(agente, aba) => {
             busca();
+            setAbaDaFicha(aba);
             navega(`/agentes/${agente.id}`);
           }}
         />
@@ -196,8 +199,12 @@ export function Agentes({
       {id && id !== "novo" && (
         <Ficha
           agenteId={id}
-          aoFechar={() => navega("/agentes")}
+          aoFechar={() => {
+            setAbaDaFicha(undefined);
+            navega("/agentes");
+          }}
           aoMudar={busca}
+          abaInicial={abaDaFicha as Parameters<typeof Ficha>[0]["abaInicial"]}
         />
       )}
     </>

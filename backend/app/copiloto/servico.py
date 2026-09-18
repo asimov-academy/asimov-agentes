@@ -25,6 +25,9 @@ from app.copiloto import vinculo
 
 log = structlog.get_logger()
 
+FILA = "arq:fila:copiloto"
+"""Fila própria do copiloto: o worker de atendimento não enxerga estes jobs, e vice-versa."""
+
 TEMPO_LIMITE_SEGUNDOS = 420
 """Um turno com várias leituras demora. O job do worker tem folga sobre este teto."""
 LIMITE_SAIDA_BYTES = 2 * 1024 * 1024
@@ -60,6 +63,21 @@ def mcp_json() -> str:
     )
 
 
+# Texto puro, sem ferramenta nenhuma: é o que o botão "Melhorar com IA" do onboarding precisa.
+# Ele não lê a plataforma, não propõe nada e não mantém conversa; só devolve o texto reescrito.
+def comando_de_texto(cli: str, pedido: str) -> list[str]:
+    if cli == "codex":
+        return ["codex", "exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", pedido]
+    return [
+        "claude", "-p", pedido,
+        "--output-format", "json",
+        # Sem servidor de MCP nenhum, nem o nosso: aqui o modelo só escreve.
+        "--mcp-config", '{"mcpServers":{}}',
+        "--strict-mcp-config",
+        "--disallowedTools", FERRAMENTAS_DE_CODIGO,
+    ]
+
+
 def comando(cli: str, texto: str, conversa_cli: str = "") -> list[str]:
     """A linha de comando do turno. Um lugar só: é o primeiro ponto a conferir numa VPS."""
     if cli == "codex":
@@ -90,14 +108,40 @@ def comando(cli: str, texto: str, conversa_cli: str = "") -> list[str]:
     return linha
 
 
+# Quanto a rota do painel espera pelo worker antes de desistir. Curto de propósito: é um botão no
+# meio do onboarding, e o operador não fica olhando para uma estrelinha girando por um minuto.
+ESPERA_DO_TEXTO_SEGUNDOS = 75
+
+
+async def melhora_texto(fila: Any, texto: str, empresa: str) -> str:
+    """Chamada pela rota do painel: enfileira no worker do copiloto, que é quem tem o CLI, e espera.
+
+    A API não executa o CLI: ela não tem o binário nem a credencial montada, e é o contêiner do
+    copiloto que tem os dois.
+    """
+    job = await fila.enqueue_job("melhorar_texto", texto, empresa, _queue_name=FILA)
+    return str(await job.result(timeout=ESPERA_DO_TEXTO_SEGUNDOS))
+
+
+async def redige(pedido: str) -> str:
+    """Um texto reescrito pela assinatura do operador, sem ferramenta nenhuma no caminho."""
+    resposta, _ = await _roda(comando_de_texto(vinculo.cli(), pedido))
+    return resposta
+
+
 async def roda_turno(texto: str, conversa_cli: str = "") -> tuple[str, str]:
     """Devolve a resposta em texto e o identificador para retomar a conversa no próximo turno."""
+    resposta, conversa = await _roda(comando(vinculo.cli(), texto, conversa_cli))
+    return resposta, conversa or conversa_cli
+
+
+async def _roda(linha: list[str]) -> tuple[str, str]:
+    """Executa o CLI e lê o que voltou. Todo caminho de saída daqui é uma frase em português."""
     if not vinculo.disponivel():
         raise CopilotoIndisponivel(
             "nenhuma conta de IA vinculada nesta instalação; rode asimov ia no terminal da VPS"
         )
     cli = vinculo.cli()
-    linha = comando(cli, texto, conversa_cli)
     try:
         processo = await asyncio.create_subprocess_exec(
             *linha, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -132,7 +176,7 @@ async def roda_turno(texto: str, conversa_cli: str = "") -> tuple[str, str]:
     if not resposta:
         log.warning("copiloto_sem_resposta", cli=cli, detalhe=detalhe)
         raise CopilotoIndisponivel("o copiloto não respondeu desta vez; tente de novo")
-    return resposta, conversa or conversa_cli
+    return resposta, conversa
 
 
 def _motivo(detalhe: str) -> str:

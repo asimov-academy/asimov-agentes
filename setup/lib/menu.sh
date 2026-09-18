@@ -29,7 +29,8 @@ mostra_agente() {
   esac
   campo "Digitação" "$(jq -r '"\(.digitacao_caracteres_por_segundo) caracteres/s, até \(.digitacao_maximo_segundos) s por mensagem"' <<<"$AGENTE")"
   campo "Ferramentas" "$(jq -r '(.ferramentas // []) | if length == 0 then "nenhuma" else map({calculadora: "calculadora", busca_web: "busca na web"}[.] // .) | join(", ") end' <<<"$AGENTE")"
-  campo "Emoji" "$(emoji_do_agente "$AGENTE")"
+  campo "Jeito" "$(jq -r '{formal: "formal", normal: "normal", descontraido: "descontraído"}[.tom // "normal"] // "normal"' <<<"$AGENTE"), $(emoji_do_agente "$AGENTE")$(jq -r 'if .restringe_temas then ", só assuntos da empresa" else "" end' <<<"$AGENTE")"
+  campo "Humano" "$(jq -r 'if (.transfere_para_humano // true) then "pode passar a conversa para uma pessoa" else "atende até o fim sozinho" end' <<<"$AGENTE")"
 }
 
 # salva_agente JSON: PATCH só com os campos do JSON; atualiza AGENTE e deixa o RESULTADO para a
@@ -91,8 +92,8 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Emoji" "Modelos")
-    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_emoji edita_modelo)
+    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Jeito de falar" "Modelos")
+    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_jeito edita_modelo)
     # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
     # ligar o agente num canal.
     case "$(jq -r '.canal' <<<"$AGENTE")" in
@@ -309,9 +310,33 @@ aplica_ritmo_do_whatsapp() {
   fi
 }
 
-edita_emoji() {
+# Tom, emoji, o que ele pode falar e se existe alguém para assumir: é o jeito do agente, e o painel
+# tem as mesmas quatro escolhas na mesma rota.
+edita_jeito() {
+  local op tom humano temas atual
+  case "$(jq -r '.tom // "normal"' <<<"$AGENTE")" in
+    formal) atual=1 ;;
+    descontraido) atual=3 ;;
+    *) atual=2 ;;
+  esac
+  ESCOLHA_ATUAL=$atual escolha op "Como ele fala?" \
+    "Formal  ${CINZA}português correto, sem gíria${NORMAL}" \
+    "Normal  ${CINZA}como alguém da empresa no WhatsApp${NORMAL}" \
+    "Descontraído  ${CINZA}leve e próximo, sem perder o profissional${NORMAL}"
+  case "$op" in
+    1) tom=formal ;;
+    3) tom=descontraido ;;
+    *) tom=normal ;;
+  esac
+
   pergunta_emoji "$(jq -r '.emojis' <<<"$AGENTE")"
-  salva_agente "$(jq -n --arg e "$EMOJIS" '{emojis: $e}')"
+
+  dica "Desligado, ele nunca promete que alguém vai assumir: atende até o fim sozinho."
+  confirma "Ele pode passar a conversa para uma pessoa?" && humano=true || humano=false
+  confirma "Ele só fala de assuntos da empresa?" && temas=true || temas=false
+
+  salva_agente "$(jq -n --arg t "$tom" --arg e "$EMOJIS" --argjson h "$humano" --argjson r "$temas" \
+    '{tom: $t, emojis: $e, transfere_para_humano: $h, restringe_temas: $r}')"
 }
 
 edita_handoff() {

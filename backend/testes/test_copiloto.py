@@ -252,6 +252,33 @@ async def test_o_mcp_expoe_exatamente_o_registro():
     assert "agente_id" in propor.input_schema["properties"]
 
 
+# Melhorar com IA, o botão do onboarding
+
+
+async def test_melhorar_texto_usa_a_assinatura_quando_ha_conta_vinculada(
+    dentro: httpx.AsyncClient, vinculada: None, fila: Any
+):
+    resposta = await dentro.post(
+        "/painel/api/texto/melhorar", json={"texto": "vende telha", "empresa": "Loja Sul"}
+    )
+    # Sem worker de verdade no teste, a rota cai no caminho da chave, mas o job foi para a fila do
+    # copiloto: é ele quem tem o CLI e a credencial.
+    assert fila.jobs and fila.jobs[0][0] == "melhorar_texto"
+    assert resposta.status_code in (200, 422, 502)
+
+
+def test_o_pedido_de_texto_vai_sem_ferramenta_nenhuma():
+    linha = servico.comando_de_texto("claude", "reescreva isto")
+    assert "--strict-mcp-config" in linha
+    assert linha[linha.index("--mcp-config") + 1] == '{"mcpServers":{}}'
+    assert "mcp__asimov" not in linha
+    assert "Bash" in linha[linha.index("--disallowedTools") + 1]
+
+    codex = servico.comando_de_texto("codex", "reescreva isto")
+    assert codex[:2] == ["codex", "exec"]
+    assert not any("mcp_servers" in p for p in codex)
+
+
 # O comando do CLI
 
 

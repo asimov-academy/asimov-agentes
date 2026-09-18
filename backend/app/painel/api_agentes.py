@@ -23,6 +23,8 @@ from app.canais.base import CredencialInvalida, DestinoInvalido
 from app.canais.nativo import servico as nativo_servico
 from app.canais.registro import CANAIS, credenciais_visiveis, obter_canal
 from app.clientes import repo as clientes_repo
+from app.copiloto import servico as copiloto
+from app.copiloto import vinculo
 from app.clientes import servico as clientes_servico
 from app.ia import chaves, ferramentas, redacao
 from app.ia.provedores import PROVEDORES, PROVEDORES_TRANSCRICAO, ModeloInvalido
@@ -70,6 +72,9 @@ class AgenteDoPainel(BaseModel):
     digitacao_maximo_segundos: int
     ferramentas: list[str]
     emojis: str
+    tom: str
+    transfere_para_humano: bool
+    restringe_temas: bool
     contatos_permitidos: list[str]
     handoff_destino: dict[str, Any] | None
     retomada_automatica_horas: int | None
@@ -102,6 +107,9 @@ def _saida(agente: Agente, empresa: str, com_webhook: bool = False) -> AgenteDoP
         digitacao_maximo_segundos=agente.digitacao_maximo_segundos,
         ferramentas=list(agente.ferramentas),
         emojis=agente.emojis,
+        tom=agente.tom,
+        transfere_para_humano=agente.transfere_para_humano,
+        restringe_temas=agente.restringe_temas,
         contatos_permitidos=list(agente.contatos_permitidos),
         handoff_destino=agente.handoff_destino,
         retomada_automatica_horas=agente.retomada_automatica_horas,
@@ -190,6 +198,9 @@ class NovoAgenteDoPainel(BaseModel):
     digitacao_maximo_segundos: int = Field(default=20, ge=1, le=30)
     ferramentas: list[str] | None = None
     emojis: Literal["nenhum", "pouco", "medio", "muito"] = "nenhum"
+    tom: Literal["formal", "normal", "descontraido"] = "normal"
+    transfere_para_humano: bool = True
+    restringe_temas: bool = False
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = Field(default=None, max_length=200)
     """Só a resposta é escolhida no onboarding. Resumo, visão e áudio nascem no mesmo provedor e
@@ -221,6 +232,9 @@ async def cria(
             digitacao_maximo_segundos=dados.digitacao_maximo_segundos,
             ferramentas=dados.ferramentas,
             emojis=dados.emojis,
+            tom=dados.tom,
+            transfere_para_humano=dados.transfere_para_humano,
+            restringe_temas=dados.restringe_temas,
             contatos_permitidos=dados.contatos_permitidos,
         )
     except DE_NEGOCIO as erro:
@@ -249,6 +263,9 @@ class EdicaoDoPainel(BaseModel):
     digitacao_maximo_segundos: int | None = Field(default=None, ge=1, le=30)
     ferramentas: list[str] | None = None
     emojis: Literal["livre", "nenhum", "pouco", "medio", "muito"] | None = None
+    tom: Literal["formal", "normal", "descontraido"] | None = None
+    transfere_para_humano: bool | None = None
+    restringe_temas: bool | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
     modelo_fallback: str | None = None
@@ -548,8 +565,15 @@ class TextoParaMelhorar(BaseModel):
 
 @router.post("/texto/melhorar")
 async def melhorar_texto(
-    dados: TextoParaMelhorar, s: AsyncSession = Depends(sessao)
+    dados: TextoParaMelhorar, request: Request, s: AsyncSession = Depends(sessao)
 ) -> dict[str, str]:
+    # Com conta de IA vinculada, quem escreve é a assinatura do operador: ela já está paga, e o
+    # onboarding deixa de depender de haver chave de provedor guardada. Sem vínculo, segue a chave.
+    if vinculo.disponivel():
+        try:
+            return {"texto": await copiloto.melhora_texto(request.app.state.fila, dados.texto, dados.empresa)}
+        except Exception as problema:  # noqa: BLE001
+            log.warning("melhorar_texto_pela_assinatura_falhou", erro=type(problema).__name__)
     try:
         return {"texto": await redacao.melhora_descricao(s, dados.texto, dados.empresa)}
     except redacao.SemModelo as problema:
