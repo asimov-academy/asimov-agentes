@@ -22,14 +22,18 @@ mostra_template_sugerido() {
   printf '    %sResponda /retomar neste chat quando terminar.%s\n' "$CINZA" "$NORMAL"
   echo
   dica "Nome sugerido: $TEMPLATE_SUGERIDO_NOME. A aprovação costuma sair em alguns minutos."
+  dica "Onde criar: WhatsApp Manager > Modelos de mensagem."
 }
 
 # aviso_oficial: o que muda em relação à WAHA. Devolve 1 se o operador desistir.
 aviso_oficial() {
   echo
   info "O WhatsApp oficial é a $(destaque "Cloud API da Meta"): número homologado, sem risco de bloqueio."
-  dica "A Meta cobra por conversa, conforme a tabela dela. O número fica só com o agente: ele não"
-  dica "roda no celular, então ninguém responde pelo aparelho como acontece na WAHA."
+  dica "A Meta cobra por mensagem, conforme a tabela dela, e desde outubro de 2026 a resposta na"
+  dica "janela de 24 h também conta (1.000 grátis por número por mês). Sem forma de pagamento na"
+  dica "conta, ela não entrega as respostas do agente."
+  dica "O número fica só com o agente: ele não roda no celular, então ninguém responde pelo"
+  dica "aparelho como acontece na WAHA."
   dica "Você precisa ter, na Meta: um app, a conta de WhatsApp Business com o número, um token de"
   dica "acesso permanente, o segredo do app e um template aprovado para o aviso de handoff."
   echo
@@ -42,7 +46,7 @@ pede_credenciais_whatsapp() {
   local conta app token segredo corpo
   echo
   dica "Passo a passo com links: docs/whatsapp-oficial.md, no repositório."
-  dica "Conta de WhatsApp Business (WABA ID): painel da Meta, em WhatsApp > Configuração da API."
+  dica "Conta de WhatsApp Business (WABA ID): painel do app, em Casos de uso > Personalizar."
   while true; do
     pergunta conta "ID da conta de WhatsApp Business" "$(estado_get whatsapp_waba)"
     conta=$(tr -cd '0-9' <<<"$conta")
@@ -50,7 +54,7 @@ pede_credenciais_whatsapp() {
       falha "O ID da conta é só números."
       continue
     fi
-    dica "ID do app: painel da Meta, em Configurações do app > Básico, no topo."
+    dica "ID do app: painel do app, em Configurações do app > Básico, no topo."
     pergunta app "ID do app" "$(estado_get whatsapp_app)"
     app=$(tr -cd '0-9' <<<"$app")
     if [ -z "$app" ]; then
@@ -59,8 +63,8 @@ pede_credenciais_whatsapp() {
     fi
     dica "Token de acesso permanente (usuário do sistema), não o token de teste de 24 horas."
     pergunta_secreta token "Token de acesso"
-    dica "Segredo do app: painel da Meta, em Configurações do app > Básico > Chave secreta."
-    pergunta_secreta segredo "Segredo do app"
+    dica "Chave secreta do app: painel do app, em Configurações do app > Básico."
+    pergunta_secreta segredo "Chave secreta do app"
     corpo=$(jq -n --arg c "$conta" --arg a "$app" --arg t "$token" --arg s "$segredo" \
       '{conexao: {waba_id: $c, app_id: $a, access_token: $t, app_secret: $s}}')
     api_com_token POST /admin/canais/whatsapp/descobrir "$corpo" "Conferindo na Meta…"
