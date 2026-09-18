@@ -124,3 +124,7 @@ jq -c . "$DIR/patch_whatsapp"
 com_voltar edita_whatsapp
 # Diagnóstico: o que está no ar e em que versão (curl é falso aqui, então cai no ramo de falha).
 com_voltar fluxo_diagnostico
+# Oferta do painel: aparece uma vez na instalação e na primeira atualização de quem já tinha.
+# Aqui responde "não", que é o caminho que não depende de DNS nem de contêiner.
+estado_remove painel_perguntado
+tela_painel_oferta

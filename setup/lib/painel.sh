@@ -200,3 +200,26 @@ fluxo_painel() {
   [ "$op" -lt "${#rotulos[@]}" ] || return 0
   "${acoes[$((op - 1))]}"
 }
+
+# Oferece o painel uma vez, na instalação e na primeira atualização de quem já tinha instalado.
+# Sem isso, o painel só existe para quem ler a lista de comandos no fim: o operador termina o setup
+# sem saber que dá para administrar pelo navegador.
+tela_painel_oferta() {
+  estado_tem painel_perguntado && return 0
+  painel_ligado && { estado_set painel_perguntado "$(date -Is)"; return 0; }
+
+  secao "Painel no navegador"
+  info "Dá para administrar tudo pelo navegador, no computador e no celular: agentes, canais,"
+  info "conversas e consumo, sem abrir SSH."
+  dica "Criar e configurar agente vira um passo a passo com prévia de como ele vai responder."
+  echo
+  aviso "Precisa de um registro DNS novo, de $(destaque "app.$(env_get DOMINIO_BASE)") para este IP."
+  echo
+
+  if confirma "Ligar o painel agora?"; then
+    painel_liga
+  else
+    dica "Quando quiser: asimov painel"
+  fi
+  estado_set painel_perguntado "$(date -Is)"
+}

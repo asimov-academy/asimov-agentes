@@ -10,6 +10,8 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.19.0` em `asimov-academy/asimov-agentes` (público): **painel web do operador completo**, em `app.<dominio>`. Visão geral, agentes, canais, chat e contatos, com todo onboarding e toda configuração de agente num popup grande com o fundo embaçado. O onboarding tem sete passos com prévia de como o agente vai falar e termina numa conversa de teste com ele. A instalação passa a oferecer o painel uma vez, em vez de só citar o comando no fim. Correções que apareceram rodando de verdade: a API do painel devolvia o detalhe cru da falha (que já veio com chave de API dentro), a folha de estilo do login ficava em cache para sempre, e `/painel/inicio` e `/painel/agentes` eram um segundo painel. Migração `0016`, aditiva. **Nada validado em VPS.**
+- `v0.18.0`: correções dos seis achados P1 da auditoria, mais os P2 e P3, e a parte 8.1 do painel (acesso, sessão, primeiro acesso com código do terminal e `asimov painel`).
 - `v0.17.0` em `asimov-academy/asimov-agentes` (público): nível de emoji por agente (nenhum, pouco, médio ou muito), perguntado na criação em todo canal e editável no menu. Agente criado antes fica sem regra, como era.
 - `v0.16.3`: quando o token não enxerga nenhuma conta de WhatsApp Business, a mensagem passa a dizer a causa provável (token gerado antes de a conta ser atribuída ao usuário do sistema) e a saída (gerar o token de novo).
 - `v0.16.2`: o ícone do app também vem por URL (`/icone-app.png`, para baixar no navegador) e entrou `asimov diagnostico`, que diz a versão instalada e o código HTTP de cada endereço que precisa responder.
