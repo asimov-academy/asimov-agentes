@@ -41,6 +41,30 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Onboarding refeito na ordem do operador (v0.24.0)
+
+O operador mostrou o onboarding de um concorrente, disse que achou perfeito e descreveu a ordem que
+queria. O nosso virou isso, e três coisas mudaram de fundo:
+
+**Canal saiu da criação.** Todo agente nasce respondendo no painel e no terminal, e conectar a um
+WhatsApp ou a um Chatwoot é um passo depois, na ficha. Escolher canal antes parava o operador num
+formulário de credencial (URL do Chatwoot, token da Meta, QR code) antes de ele ter visto o agente
+falar uma frase. Foram oito passos para cinco: nome, objetivo, empresa, sobre e ajustes.
+
+**Melhorar com IA.** No passo do "sobre", um botão pede à IA da instalação para reescrever o que o
+operador digitou (`ia/redacao.py`, rota `POST /painel/api/texto/melhorar`). Nenhum agente existe
+ainda nessa hora, então o modelo sai do provedor que tem chave, na sugestão mais barata. O texto do
+operador chega delimitado e o prompt diz para tratá-lo como material, nunca como instrução: sem
+isso, "ignore o que foi dito antes" dentro da descrição vira ordem para o modelo. Falhando, o campo
+continua com o que ele escreveu.
+
+**A prévia saiu.** A conversa de mentira ocupava um terço do popup, e o fluxo termina numa conversa
+de verdade com o agente, que é o que mostra o jeito dele falar. `Previa.tsx` foi removido.
+
+O fim virou três caminhos, com conversar em primeiro.
+
+spec/frontend.md, seção 5.2.1.
+
 ## 2026-09-18: Cartão de canal mais visual, e o nome técnico dos dois WhatsApp (v0.23.1)
 
 O operador olhou o passo do canal no onboarding e pediu menos texto e mais desenho. O cartão tinha

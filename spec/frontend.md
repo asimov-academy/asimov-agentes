@@ -295,52 +295,40 @@ Criar agente abre o onboarding da seção 5.2.1, não um formulário.
 
 ### 5.2.1 Onboarding do agente
 
-O ponto onde o painel ganha ou perde o operador. No terminal são sete perguntas seguidas; aqui a
-mesma ordem vira uma tela inteira, com o resultado aparecendo enquanto ele responde.
+O ponto onde o painel ganha ou perde o operador. Cinco perguntas, uma por vez, na ordem que o
+operador desenhou em 2026-09-18, olhando um concorrente e dizendo o que queria.
 
-**Popup grande no meio da tela, com o que está atrás embaçado.** Regra do operador, de 2026-09-18:
-toda configuração de agente acontece assim. A lista continua montada atrás, desfocada e escurecida,
-para o foco ficar no agente. Rota própria (`/agentes/novo`), que abre o popup sobre a lista; sai com
-Esc ou com "Sair", que pergunta antes quando há resposta escrita. Rascunho guardado no navegador:
-fechar o notebook e voltar não perde o que já foi respondido.
+**Popup grande no meio da tela, com o que está atrás embaçado.** Regra do operador: toda
+configuração de agente acontece assim. Rota própria (`/agentes/novo`), que abre o popup sobre a
+lista; sai com Esc ou com o X, sem perguntar nada, porque o rascunho fica guardado no navegador e o
+popup reabre com ele.
 
-**Uma pergunta por vez, três coisas dentro do popup.** À esquerda os `Passos` (stepper da seção 5,
-04) com o que já ficou pronto, o passo atual e o que falta. No meio a pergunta, grande, com a ajuda
-em uma linha abaixo. À direita a **prévia viva**: uma conversa de mentira onde o agente já responde
-com o que foi escolhido. Trocar o nível de emoji muda a bolha na hora; escolher vendas muda o jeito
-da frase; marcar a busca na web faz aparecer a citação. É o que responde sozinho a pergunta "o que
-isso muda no meu agente", que hoje só o teste em produção responde.
+**Os passos:**
 
-**Os passos**, na ordem do terminal:
+1. **Nome**: como o agente se chama. É a primeira coisa, e daí em diante toda pergunta o chama pelo
+   nome ("Qual o objetivo de Marina?").
+2. **Objetivo**: atendimento, suporte ou vendas, em três cartões com ícone.
+3. **Empresa**: o nome de onde ele vai trabalhar, com as empresas que já existem como atalho, mais
+   o site, opcional.
+4. **Sobre**: o que a empresa faz, em texto livre, com o botão **Melhorar com IA**. A IA da
+   instalação reescreve o que o operador digitou (`ia/redacao.py`); falhando, ele não perde o que
+   escreveu e a mensagem diz o porquê.
+5. **Ajustes**: passar a conversa para uma pessoa (sempre ligada), as ferramentas, o emoji, em
+   quantas mensagens dividir a resposta e a IA que responde.
 
-1. **Empresa**: escolher uma existente ou criar. Some quando a instalação não é revenda.
-2. **Canal**: quatro cartões com os cantos marcados, ícone do sprite, uma linha do que serve e um
-   rótulo do que exige (Chatwoot pede URL e token, oficial pede app e token da Meta, WAHA pede o
-   celular à mão para ler o QR, nativo não pede nada). O cartão diz o custo de entrada antes de o
-   operador entrar nele.
-3. **Nome e função**: nome do agente e suporte, vendas ou atendimento, com a prévia mudando de tom.
-4. **Sobre a empresa**: público, site e o texto livre. Abaixo, um painel que dobra: "ver o que o
-   agente vai ler", com o `persona.md` sendo montado ao vivo.
-5. **Jeito de falar**: emoji, partes da resposta, tempo de espera, velocidade de digitação. Todos
-   refletem na prévia, com o digitando do KINETIC no ritmo escolhido.
-6. **Ferramentas**: catálogo com interruptor e a instrução de quando usar. `transferir_para_humano`
-   sempre ligada, com destino e prazo.
-7. **Conectar**: o que o canal exige, com o QR da WAHA desenhado aqui quando for o caso.
+**Canal não se escolhe aqui.** Todo agente nasce respondendo no painel e no terminal, e conectar a
+um WhatsApp ou a um Chatwoot é um passo depois, na ficha. Escolher canal na criação parava o
+operador num formulário de credencial antes de ele ter visto o agente falar.
 
-**Nada trava sem necessidade.** Só empresa, canal e nome são obrigatórios; o resto tem valor padrão
-e um "pular por ora" que deixa a pendência marcada na ficha. O passo de conexão pode ficar para
-depois: o agente nasce inativo e a lista mostra "falta conectar" com o caminho de volta.
+**Não há prévia de como ele vai soar.** Era uma conversa de mentira ocupando um terço do popup, e o
+fluxo termina numa conversa de verdade, que é o que mostra o jeito dele falar.
 
-**O fim é um começo.** Terminar não devolve um "pronto": roda a transição de sucesso do KINETIC e
-abre a conversa de teste pelo canal nativo já com a primeira mensagem sugerida. O operador fala com
-o agente antes de sair da tela. Ao lado, três atalhos: ver a ficha, conectar o canal, criar outro.
+**O fim é um começo.** Terminar não devolve um "pronto": abre três caminhos, e o primeiro é
+conversar com ele ali mesmo. Os outros dois são conectar a um canal e ajustar a ficha.
 
-**Erro é do passo, não da tela.** Falha da API aparece no passo que falhou, com o texto do que
-aconteceu e tentar de novo, sem perder as respostas anteriores. A criação é uma chamada só no fim
-(`POST /painel/api/agentes`): passo nenhum grava pela metade.
-
-Acessibilidade: navegação inteira pelo teclado (Tab, Enter e Esc), `aria-current` no passo, foco
-indo para o título a cada troca de passo e prévia marcada como `aria-live="polite"`.
+**Erro é do passo, não da tela.** Falha da API aparece no passo que falhou, sem perder as respostas
+anteriores. A criação é uma chamada só no fim: passo nenhum grava pela metade, então desistir no
+meio não deixa agente capenga no banco, nem empresa órfã (ela nasce junto com o agente).
 
 ### 5.3 Agente: ficha
 
@@ -475,7 +463,7 @@ VPS, os testes passam e o `shellcheck` não acusa erro.
 |---|---|---|
 | 1. Fundação **(construída, falta a VPS)** | `frontend/` com Vite, Tailwind com os tokens, componentes de base, build num estágio `node` do Dockerfile, API servindo `/painel/app` com retorno ao `index.html`, `GET /painel/api/eu` | Entro com a senha, caio no painel novo, vejo a casca e saio. Sem sessão, volto para entrar |
 | 2. Casca e Visão geral **(construída, falta a VPS)** | Menu lateral recolhível, gaveta no celular, barra do topo, `Grafico` portado da AXIS (seção 2) e as animações do KINETIC (seção 3), tela de visão geral com cartões, gráficos, falhas e handoffs | Abro no celular e no computador, troco de período e os números batem com `asimov consumo` |
-| 3. Agentes: lista e onboarding **(construída, falta a VPS)** | Lista com filtro, cartão do agente, o onboarding da seção 5.2.1 em tela cheia, com passos, prévia viva e rascunho | Crio um agente de Chatwoot pelo onboarding, converso com ele antes de sair da tela e ele aparece no `asimov agentes` |
+| 3. Agentes: lista e onboarding **(construída, falta a VPS)** | Lista com filtro, cartão do agente, o onboarding da seção 5.2.1 em popup, com passos e rascunho | Crio um agente pelo onboarding, converso com ele antes de sair da tela e ele aparece no `asimov agentes` |
 | 4. Agente: Perfil e Comunicação **(construída, falta a VPS)** | Duas abas, salvar por seção, remover agente | Mudo o emoji e a divisão de resposta, mando mensagem e a resposta muda |
 | 5. Agente: Trabalho **(construída, falta a VPS)** | Migração do `perfil`, formulário, geração do `persona.md`, editor do prompt | Preencho os campos, salvo, abro o `persona.md` na VPS e o texto está lá; o agente responde no papel escolhido |
 | 6. Agente: Ferramentas e integrações **(construída, falta a VPS)** | Catálogo com interruptor, handoff com destino e prazo, cartão do Google Calendar em breve | Desligo a busca web, pergunto algo que precisa dela e o agente não usa |
