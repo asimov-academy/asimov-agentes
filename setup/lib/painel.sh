@@ -116,6 +116,21 @@ painel_mostra_codigo() {
   echo
 }
 
+# O `painel.caddy` é versionado (vazio, com o painel desligado), então o pacote de uma atualização
+# passa por cima do bloco que o operador tinha: quem estava com o painel ligado perdia o host
+# app.<dominio> depois de `asimov atualizar`, e ele só voltava desligando e ligando de novo.
+# Roda em toda atualização e só faz alguma coisa quando o arquivo não tem mais o bloco.
+painel_garante_caddy() {
+  painel_ligado || return 0
+  local sub
+  sub=$(env_get SUBDOMINIO_APP)
+  [ -n "$sub" ] || return 0
+  grep -q "^$sub {" "$ARQ_CADDY_PAINEL" 2>/dev/null && return 0
+  painel_escreve_caddy "$sub"
+  painel_recarrega_caddy
+  ok "Endereço do painel reescrito no servidor web: $(destaque "$sub")"
+}
+
 painel_liga() {
   local dominio sub nome
   dominio=$(env_get DOMINIO_BASE)

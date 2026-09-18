@@ -146,6 +146,15 @@ jq -c . "$DIR/patch_whatsapp"
 com_voltar edita_whatsapp
 # Diagnóstico: o que está no ar e em que versão (curl é falso aqui, então cai no ramo de falha).
 com_voltar fluxo_diagnostico
+# Atualização de quem tinha o painel ligado: o pacote traz o painel.caddy desligado por cima, e a
+# atualização precisa reescrever o bloco do host, senão o painel some do servidor web.
+ARQ_CADDY_PAINEL=$DIR/painel.caddy
+env_set PAINEL_ATIVO 1; env_set SUBDOMINIO_APP app.exemplo.com.br
+printf '# Painel desligado.\n' >"$ARQ_CADDY_PAINEL"
+painel_garante_caddy
+printf 'bloco do painel no caddy: %s\n' "$(grep -c '^app.exemplo.com.br {' "$ARQ_CADDY_PAINEL")"
+env_set PAINEL_ATIVO ""
+
 # Conta de IA: a tela do menu com a conta já vinculada, e a desvinculação.
 com_voltar fluxo_vinculo
 printf 'IA_VINCULADA=%s\n' "$(env_get IA_VINCULADA)"
