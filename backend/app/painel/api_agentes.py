@@ -200,7 +200,7 @@ class NovoAgenteDoPainel(BaseModel):
     emojis: Literal["nenhum", "pouco", "medio", "muito"] = "nenhum"
     tom: Literal["formal", "normal", "descontraido"] = "normal"
     transfere_para_humano: bool = True
-    restringe_temas: bool = False
+    restringe_temas: bool = True
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = Field(default=None, max_length=200)
     """Só a resposta é escolhida no onboarding. Resumo, visão e áudio nascem no mesmo provedor e

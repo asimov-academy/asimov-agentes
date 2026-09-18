@@ -295,3 +295,51 @@ O que a VPS ensinou, e que virou v0.25.1 e v0.25.2:
   descartado. O stdout entrou no log e na classificação da mensagem.
 
 Commit: `feat: conta de IA vinculada na instalação e copiloto no painel`
+
+## Fase 10: Humanização dos agentes
+
+Objetivo: o contato sente que está falando com alguém da empresa, e o operador escolhe isso sem
+saber o que é buffer nem o que é prompt.
+
+Plano detalhado, com o que foi lido de três pesquisas e o que a plataforma já resolve:
+`docs/plano-humanizacao.md`. O que já existe e não se refaz: buffer com lock, digitando no ritmo de
+uma pessoa, resposta em bolhas sem markdown, tom, emoji, assunto restrito e transferência opcional.
+
+O que entra, uma versão por etapa:
+
+1. **Ritmo com nome.** Pausa de leitura antes do primeiro digitando e o preset `ritmo`
+   (instantâneo, natural, reflexivo, manual) no lugar dos quatro números crus, no painel e no menu.
+   Migração aditiva; quem já tem número próprio nasce em `manual`.
+2. **Persona com o que nunca dizer.** Dois blocos fixos da plataforma nas `instructions` (variar a
+   abertura, nada de frase corporativa, saudação pelo horário; espelhar tom positivo e neutro,
+   validar o negativo sem imitar) e um campo do operador com o que o agente nunca deve dizer, que
+   entra no `persona.md` gerado.
+3. **Memória do contato.** Resumo rolante da conversa e ficha de fatos por contato, escritos pelo
+   modelo auxiliar, entrando no turno marcados como dado do contato, nunca como instrução. Nasce
+   ligada. Tela Contatos mostra o que ele lembra e apaga.
+4. **Sentimento, gatilhos e aviso de IA.** Campo `sentimento` na saída, transferência por frustração
+   e por resposta repetida (só quando o agente transfere) e o aviso de atendimento automatizado por
+   agente, que **nasce desligado** e o operador marca.
+5. **Regressão de persona.** `pydantic-evals` com casos por agente, mostrando as respostas antes e
+   depois quando a IA reescreve o prompt (Melhorar com IA e copiloto). Mostra, não bloqueia.
+- Testes: memória de um contato nunca aparece em conversa de outro contato, agente ou cliente; texto
+  da memória não vira instrução do sistema; preset grava os quatro números e o contrário também.
+
+Dependências: Fase 6 (a memória do contato reaproveita decisão da base de conhecimento).
+
+Critério de aceite:
+- Escolho "Natural" no painel e o agente espera antes de começar a digitar; escolho "Instantâneo" e
+  ele responde na hora; a mudança aparece no `asimov editar` e o contrário também.
+- Duas conversas seguidas com o mesmo agente abrem de jeitos diferentes, e o que escrevi em "nunca
+  diga" não aparece em nenhuma.
+- Escrevo irritado duas vezes e a conversa cai para uma pessoa; no agente que não transfere, não cai.
+- Volto a falar com o agente dias depois e ele lembra do que ficou combinado; apago no painel e o
+  turno seguinte não sabe mais.
+- Agente novo não avisa que é uma IA; marco o aviso e a conversa nova começa com ele uma vez só.
+- Clico em Melhorar com IA e vejo como o agente responde antes e depois; recuso e o prompt fica.
+
+O que o operador precisa fazer:
+- Conversar com um agente como se fosse cliente, em dias diferentes, para julgar o que só se julga
+  conversando.
+
+Commit: `feat: humanização dos agentes, do ritmo à memória do contato`

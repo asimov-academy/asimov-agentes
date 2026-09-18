@@ -43,6 +43,13 @@ def sem_padrao_no_env() -> Config:
     )
 
 
+def sem_chave_nenhuma() -> Config:
+    """Instalação recém-criada: nem modelo no `.env`, nem chave de provedor em lugar nenhum."""
+    return sem_padrao_no_env().model_copy(
+        update={"openai_api_key": "", "anthropic_api_key": "", "gemini_api_key": "", "groq_api_key": ""}
+    )
+
+
 async def test_chave_boa_e_guardada_cifrada_e_nunca_volta(http: httpx.AsyncClient, sessao: Any) -> None:
     resp = await http.put("/admin/ia/chaves/anthropic", json={"chave": "boa"}, headers=ADMIN)
     assert resp.status_code == 204, resp.text
@@ -118,9 +125,18 @@ def test_resposta_na_anthropic_transcreve_em_outro_provedor_com_chave() -> None:
     assert final["modelo_transcricao"] == "openai:gpt-4o-transcribe"
 
 
-def test_sem_modelo_de_resposta_a_criacao_e_recusada() -> None:
-    with pytest.raises(ModeloInvalido):
-        chaves.completa({}, sem_padrao_no_env())
+def test_sem_modelo_escolhido_o_agente_nasce_com_a_ia_da_instalacao() -> None:
+    """A criação no painel não pergunta mais provedor e modelo: usa o primeiro com chave."""
+    final = chaves.completa({}, sem_padrao_no_env())
+    # O `.env` de teste tem chave da OpenAI e da Groq; a OpenAI vem primeiro.
+    assert final["modelo_conversa"] == "openai:gpt-5.5"
+    assert final["modelo_auxiliar"] == "openai:gpt-5-mini"
+
+
+def test_sem_modelo_e_sem_chave_nenhuma_a_criacao_e_recusada() -> None:
+    chaves._guardadas.clear()
+    with pytest.raises(ModeloInvalido, match="nenhuma chave de IA"):
+        chaves.completa({}, sem_chave_nenhuma())
 
 
 async def test_chave_guardada_pela_api_vale_no_worker(http: httpx.AsyncClient, sessao: Any) -> None:

@@ -8,9 +8,12 @@ import {
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Icone } from "../design/Icone";
-import { Modal } from "../design/Modal";
 
-/** O copiloto do painel, no popup grande de sempre.
+/** O copiloto do painel, na coluna da direita.
+ *
+ *  Ele é o único lugar do painel que não é popup: o operador pede uma mudança e precisa olhar a
+ *  tela de que está falando enquanto pede. Alargar e estreitar é do operador, e no celular ele
+ *  toma a tela inteira, porque lá não existe "ao lado".
  *
  *  Duas coisas separam esta tela de um chat qualquer:
  *
@@ -28,6 +31,7 @@ export function Copiloto({ aoFechar }: { aoFechar: () => void }) {
   const [erro, setErro] = useState("");
   const [texto, setTexto] = useState("");
   const [ocupado, setOcupado] = useState("");
+  const [largo, setLargo] = useState(false);
   const fim = useRef<HTMLDivElement>(null);
 
   const sessao = estado?.sessao ?? null;
@@ -102,51 +106,72 @@ export function Copiloto({ aoFechar }: { aoFechar: () => void }) {
   );
 
   return (
-    <Modal
-      titulo="Copiloto"
-      subtitulo={
-        vinculo?.vinculada
-          ? `Peça em português e ele configura a plataforma. Rodando pelo ${vinculo.nome}.`
-          : "O assistente que configura a plataforma conversando com você."
-      }
-      aoFechar={aoFechar}
-      rodape={
-        vinculo?.vinculada ? (
-          <>
-            <Botao
-              tom="fantasma"
-              pequeno
-              icone="sys-refresh"
-              onClick={recomeca}
-            >
-              Recomeçar
-            </Botao>
-            <Botao tom="fantasma" onClick={aoFechar}>
-              Fechar
-            </Botao>
-          </>
-        ) : undefined
-      }
+    // No celular ele toma a tela; no computador é uma coluna ao lado do conteúdo, que continua
+    // rolando e clicável atrás dele. Era um popup grande sobre tudo, e pedir "mude a Bella" sem
+    // poder olhar a Bella é pedir de memória.
+    <aside
+      className={`fixed inset-0 z-40 flex flex-col border-borda bg-panel md:relative md:inset-auto md:z-20 md:h-full md:shrink-0 md:border-l ${
+        largo ? "md:w-[34rem]" : "md:w-[24rem]"
+      }`}
     >
-      {erro && (
-        <div className="mb-5">
-          <Aviso tom="erro" titulo="não deu certo">
-            {erro}
-          </Aviso>
-        </div>
-      )}
+      <header className="flex items-center gap-2 border-b border-borda px-4 py-3">
+        <Icone nome="comm-chat" tamanho={16} className="text-ciano" />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-texto">Copiloto</span>
+        {vinculo?.vinculada && (
+          <button
+            onClick={recomeca}
+            title="Recomeçar a conversa"
+            aria-label="Recomeçar a conversa"
+            className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface hover:text-texto"
+          >
+            <Icone nome="sys-refresh" tamanho={16} />
+          </button>
+        )}
+        <button
+          onClick={() => setLargo((antes) => !antes)}
+          title={largo ? "Estreitar" : "Alargar"}
+          aria-label={largo ? "Estreitar o copiloto" : "Alargar o copiloto"}
+          className="hidden rounded-md p-1.5 text-muted transition-colors hover:bg-surface hover:text-texto md:block"
+        >
+          <Icone
+            nome="sys-chevron"
+            tamanho={16}
+            className={largo ? "rotate-0" : "rotate-180"}
+          />
+        </button>
+        <button
+          onClick={aoFechar}
+          title="Fechar o copiloto"
+          aria-label="Fechar o copiloto"
+          className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface hover:text-texto"
+        >
+          <Icone nome="sys-close" tamanho={16} />
+        </button>
+      </header>
 
-      {!estado ? (
-        <p className="text-sm text-muted">abrindo o copiloto…</p>
-      ) : !vinculo?.vinculada ? (
-        <SemConta
-          nome={vinculo?.nome ?? ""}
-          assinatura={vinculo?.assinatura ?? ""}
-          comando={vinculo?.comando ?? "asimov ia"}
-        />
-      ) : (
-        <div className="flex flex-col gap-5">
-          <div className="max-h-[46vh] min-h-[16rem] overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {erro && (
+          <div className="mb-4">
+            <Aviso tom="erro" titulo="não deu certo">
+              {erro}
+            </Aviso>
+          </div>
+        )}
+
+        {!estado ? (
+          <p className="text-sm text-muted">abrindo o copiloto…</p>
+        ) : !vinculo?.vinculada ? (
+          <SemConta
+            nome={vinculo?.nome ?? ""}
+            assinatura={vinculo?.assinatura ?? ""}
+            comando={vinculo?.comando ?? "asimov ia"}
+          />
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-muted">
+              Peça em português e ele configura a plataforma. Rodando pelo {vinculo.nome}.
+            </p>
+
             {sessao && sessao.mensagens.length === 0 ? (
               <Comeco />
             ) : (
@@ -174,45 +199,48 @@ export function Copiloto({ aoFechar }: { aoFechar: () => void }) {
                 </Aviso>
               </div>
             )}
+
+            {pendentes.map((proposta) => (
+              <div key={proposta.id} className="mt-4">
+                <Proposta
+                  proposta={proposta}
+                  ocupado={ocupado === proposta.id}
+                  aoDecidir={decide}
+                />
+              </div>
+            ))}
             <div ref={fim} />
-          </div>
+          </>
+        )}
+      </div>
 
-          {pendentes.map((proposta) => (
-            <Proposta
-              key={proposta.id}
-              proposta={proposta}
-              ocupado={ocupado === proposta.id}
-              aoDecidir={decide}
-            />
-          ))}
-
-          <div className="flex items-end gap-3">
-            <textarea
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void fala();
-                }
-              }}
-              rows={2}
-              placeholder="Ex: deixe a Bella mais objetiva e ligue a calculadora nela"
-              aria-label="o que você quer que o copiloto faça"
-              className="min-h-[3.25rem] flex-1 resize-y rounded-md border border-dim bg-panel p-3 text-sm text-texto placeholder:text-dim focus:border-ciano focus:outline-none"
-            />
-            <Botao
-              tom="solido"
-              icone="comm-send"
-              onClick={fala}
-              disabled={pensando || !texto.trim()}
-            >
-              Enviar
-            </Botao>
-          </div>
+      {vinculo?.vinculada && (
+        <div className="flex items-end gap-2 border-t border-borda p-3">
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void fala();
+              }
+            }}
+            rows={2}
+            placeholder="Ex: deixe a Bella mais objetiva e ligue a calculadora nela"
+            aria-label="o que você quer que o copiloto faça"
+            className="min-h-[3.25rem] flex-1 resize-y rounded-md border border-dim bg-panel p-3 text-sm text-texto placeholder:text-dim focus:border-ciano focus:outline-none"
+          />
+          <Botao
+            tom="solido"
+            icone="comm-send"
+            onClick={fala}
+            disabled={pensando || !texto.trim()}
+          >
+            Enviar
+          </Botao>
         </div>
       )}
-    </Modal>
+    </aside>
   );
 }
 

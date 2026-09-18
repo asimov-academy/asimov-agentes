@@ -7,8 +7,8 @@ ficha. O que estes testes seguram:
 - **handoff desligado desliga todos os caminhos**: a tool nem é oferecida ao modelo, e uma falha no
   turno ou um arquivo grande demais também não transferem. Prometer uma pessoa que não existe é
   pior do que dizer que não dá;
-- restringir temas entra no prompt só quando ligado;
-- agente que já existia continua como estava: tom normal, transferindo e sem restrição.
+- restringir temas nasce ligado e sai do prompt quando o operador desliga;
+- agente que já existia continua como estava: tom normal e transferindo.
 """
 
 from typing import Any
@@ -62,11 +62,13 @@ async def roda_um_turno(http, sessao, redis, agente, mensagem_id: int = 1) -> st
     )
 
 
-async def test_agente_nasce_com_tom_normal_transferindo_e_sem_restricao(http, canal) -> None:  # type: ignore[no-untyped-def]
+async def test_agente_nasce_com_tom_normal_transferindo_e_so_no_assunto_da_empresa(http, canal) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     assert agente["tom"] == "normal"
     assert agente["transfere_para_humano"] is True
-    assert agente["restringe_temas"] is False
+    # Quem contrata um agente de atendimento não quer o modelo respondendo qualquer coisa em nome
+    # da empresa: a restrição nasce ligada e o operador desliga se quiser.
+    assert agente["restringe_temas"] is True
 
 
 async def test_tom_entra_no_prompt_e_tom_inventado_e_recusado(http, canal, fila, sessao, redis, instrucoes) -> None:  # type: ignore[no-untyped-def]
@@ -83,16 +85,16 @@ async def test_tom_entra_no_prompt_e_tom_inventado_e_recusado(http, canal, fila,
     assert (await http.patch(caminho, json={"tom": "gritando"}, headers=ADMIN)).status_code == 422
 
 
-async def test_restringir_temas_so_entra_quando_ligado(http, canal, fila, sessao, redis, instrucoes) -> None:  # type: ignore[no-untyped-def]
+async def test_restringir_temas_nasce_ligado_e_sai_do_prompt_quando_desligado(http, canal, fila, sessao, redis, instrucoes) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
     caminho = f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}"
 
     assert await roda_um_turno(http, sessao, redis, agente, 1) == "respondido"
-    assert "apenas do que é da empresa" not in instrucoes[0]
+    assert "apenas do que é da empresa" in instrucoes[0]
 
-    await http.patch(caminho, json={"restringe_temas": True}, headers=ADMIN)
+    await http.patch(caminho, json={"restringe_temas": False}, headers=ADMIN)
     assert await roda_um_turno(http, sessao, redis, agente, 2) == "respondido"
-    assert "apenas do que é da empresa" in instrucoes[1]
+    assert "apenas do que é da empresa" not in instrucoes[1]
 
 
 async def test_handoff_desligado_tira_a_tool_e_a_promessa(http, canal, fila, sessao, redis, instrucoes) -> None:  # type: ignore[no-untyped-def]

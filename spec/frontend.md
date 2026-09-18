@@ -190,8 +190,11 @@ superior esquerdo. Itens, nesta ordem:
 | Oportunidades | `/oportunidades` | ativo |
 | Conversas | `/chat` | ativo |
 | Contatos | `/contatos` | ativo |
-| Conhecimento | `/conhecimento` | em breve, item apagado com selo |
+| Copiloto | abre a coluna da direita | ativo, no rodapé do menu, logo acima da conta |
 | Perfil e configurações | `/configuracoes` | ativo, no rodapé do menu, com avatar e o endereço da instalação |
+
+**Conhecimento não é item de menu.** Era um item apagado com selo de "em breve", e prometia uma base
+da instalação. A base é de cada agente e mora na aba Treinamento da ficha dele.
 
 **O recolher é um botão redondo na borda do menu**, na altura da marca. No rodapé ele ficava solto
 embaixo do sair, e ao lado da marca ele espremia a faixa recolhida e saía do eixo dos ícones. Na
@@ -225,15 +228,24 @@ aconteceu e o botão de tentar de novo. Tela sem os três não passa na revisão
 
 ### 5.0 Configurações
 
-Cinco blocos, todos da instalação e nunca de uma empresa atendida:
+Quatro blocos: a conta de quem opera e o assistente de código. **Não é o painel de controle da
+instalação**, e duas coisas saíram dele em 2026-09-18.
 
 | Bloco | O que tem |
 |---|---|
-| Instalação | endereço do painel e dos agentes, quantas empresas e agentes, quando o acesso nasceu e o sair |
+| Sua conta | nome e e-mail de quem administra, e o sair. Não serve para entrar: a senha continua a única credencial, trocada com `asimov painel` na VPS |
 | Espaço de trabalho | nome e sigla, que aparecem no menu no lugar de ASIMOV. Serve para reconhecer de qual instalação é a aba aberta |
-| Perfil do operador | nome e e-mail de quem administra. Não serve para entrar: a senha continua a única credencial |
 | Dados do negócio | razão social, documento, e-mail, telefone e site de quem opera, não das empresas atendidas |
-| Chaves de IA | uma por provedor, com o estado de cada uma e o formulário para guardar ou trocar. A chave é da instalação e antes só existia dentro da ficha de um agente |
+| Assistente de código | qual CLI está vinculado (Claude Code ou Codex), em que conta, e o comando que troca. Só de leitura: o login acontece na VPS |
+
+**Chaves de IA saíram daqui.** A IA é escolha de cada agente, e a chave passou a ser pedida e trocada
+onde o modelo é escolhido, na aba Configurações da ficha (`EscolheIA`). Uma lista de provedores numa
+tela geral fazia parecer que a instalação tem uma IA, quando cada agente tem a sua. O que ficou de IA
+aqui é o assistente de código, que é da instalação mesmo.
+
+**Os endereços e as contagens da instalação saíram daqui.** Subdomínio do painel, subdomínio dos
+agentes, quantas empresas e quantos agentes não se configuram: são fato, e fato de plantão é a Visão
+geral.
 
 Espaço de trabalho, perfil e negócio moram numa linha só cada (`espaco_trabalho` e as colunas novas
 de `usuario_painel`), como o operador: a instalação é de quem tem a VPS. Salvar relê o `/painel/api/eu`,
@@ -316,8 +328,14 @@ popup reabre com ele.
    pela assinatura do operador; sem vínculo, a chave de provedor da instalação (`ia/redacao.py`).
    Falhando, ele não perde o que escreveu e a mensagem diz o porquê.
 5. **Jeito**: o tom (formal, normal ou descontraído), o emoji, em quantas mensagens dividir a
-   resposta, se ele pode passar a conversa para uma pessoa, se fala só de assuntos da empresa, e a
-   IA que responde.
+   resposta, se ele pode passar a conversa para uma pessoa e se fala só de assuntos da empresa
+   (que nasce ligado).
+
+**A IA que responde saiu da criação** em 2026-09-18, pelo mesmo motivo da ferramenta: escolher
+provedor e modelo antes de ver o agente falar é decidir sem informação, e o nome do campo ("IA que
+responde") não dizia nada a quem nunca comparou dois modelos. O agente nasce com a IA que a
+instalação já tem (o primeiro provedor com chave) e troca na aba Configurações da ficha. Exceção:
+instalação sem chave nenhuma, em que o passo pede uma, senão o agente nasceria sem conseguir falar.
 
 **Ferramenta não se escolhe na criação.** Ela saiu daqui em 2026-09-18: o agente nasce cru, o
 operador vê como ele fala, e ferramenta e material entram depois, no treinamento. Escolher
@@ -355,7 +373,10 @@ mostra o que mudou, não um "pronto" genérico.
 (mostrado uma vez, com copiar) e remover agente.
 
 **Comunicação**: o jeito do agente, e é a mesma lista do passo 5 da criação. Tom (formal, normal ou
-descontraído), emoji (nenhum, pouco, médio, muito), dividir resposta em partes (até quantas), tempo
+descontraído), emoji numa **faixa que se arrasta** (nenhum, pouco, médio, muito), pelo componente
+`design/Faixa.tsx`: escolha de grau tem ordem, e quatro botões lado a lado escondem a ordem. Agente
+criado antes da escolha existir ganha "Como quiser" como primeira posição da faixa, para salvar
+outro campo da aba não trocar o emoji dele sem ninguém pedir. Mais dividir resposta em partes (até quantas), tempo
 de espera antes de responder (buffer, em segundos), velocidade de digitação e teto do digitando, e
 dois interruptores: **passar a conversa para uma pessoa** e **falar só de assuntos da empresa**.
 Desligar o primeiro desliga o handoff inteiro, inclusive o automático: a tool não é oferecida ao
@@ -415,8 +436,11 @@ nenhuma.
 
 ### 5.8 Copiloto
 
-Botão redondo no canto inferior direito, em toda tela, que abre o popup grande de sempre. Dentro
-dele, a conversa com o copiloto do painel.
+**Coluna da direita, não popup.** Ele é a única parte do painel que não abre em popup: o operador
+pede uma mudança e precisa olhar a tela de que está falando enquanto pede. Abre pelo botão no rodapé
+do menu, ao lado da conta (era um botão redondo flutuante no canto, que tapava conteúdo em toda tela
+para uma coisa que se usa de vez em quando), tem um alargar e estreitar no cabeçalho e, no celular,
+toma a tela inteira, porque lá não existe "ao lado".
 
 - **Sem conta de IA vinculada** o popup não vira um chat morto: explica o que o copiloto faria,
   diz que ele roda pela assinatura do operador e mostra o comando do terminal (`asimov ia`). O

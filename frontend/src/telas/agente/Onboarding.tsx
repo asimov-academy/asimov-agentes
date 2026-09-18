@@ -10,6 +10,7 @@ import {
 import { Aviso } from "../../design/Aviso";
 import { Botao } from "../../design/Botao";
 import { Campo } from "../../design/Campo";
+import { Faixa } from "../../design/Faixa";
 import { Icone } from "../../design/Icone";
 import { Interruptor } from "../../design/Interruptor";
 import { Modal } from "../../design/Modal";
@@ -96,7 +97,7 @@ const VAZIO: Rascunho = {
   emojis: "nenhum",
   tom: "normal",
   humano: true,
-  soDaEmpresa: false,
+  soDaEmpresa: true,
   partes: 3,
   buffer: 8,
   modelo: "",
@@ -127,6 +128,16 @@ export function Onboarding({
   const [salvando, setSalvando] = useState(false);
   const [listaDeEmpresas, setListaDeEmpresas] = useState(empresas);
   const [criado, setCriado] = useState<Agente | null>(null);
+  // A IA não se escolhe mais na criação: o agente nasce com a da instalação e troca na ficha. Só
+  // quando não existe chave nenhuma o passo pede uma, senão o agente nasceria sem conseguir falar.
+  const [semChave, setSemChave] = useState(false);
+
+  useEffect(() => {
+    api
+      .modelos()
+      .then((catalogo) => setSemChave(catalogo.com_chave.length === 0))
+      .catch(() => setSemChave(false));
+  }, []);
 
   useEffect(() => {
     try {
@@ -148,9 +159,9 @@ export function Onboarding({
   const podeAvancar = useMemo(() => {
     if (passo === 0) return Boolean(dados.nome.trim());
     if (passo === 2) return Boolean(nomeDaEmpresa.trim());
-    if (passo === 4) return dados.modelo.includes(":") && !dados.modelo.endsWith(":");
+    if (passo === 4 && semChave) return dados.modelo.includes(":") && !dados.modelo.endsWith(":");
     return true;
-  }, [passo, dados, nomeDaEmpresa]);
+  }, [passo, dados, nomeDaEmpresa, semChave]);
 
   function avanca() {
     setErro("");
@@ -185,7 +196,8 @@ export function Onboarding({
         buffer_segundos: dados.buffer,
         // Ferramenta não se escolhe aqui: o agente nasce cru e ganha ferramenta no treinamento,
         // depois de o operador ver como ele fala.
-        modelo_conversa: dados.modelo,
+        // Vazio: o servidor usa a IA que a instalação já tem.
+        modelo_conversa: dados.modelo || undefined,
       });
       await api.gravaPerfil(agente.id, {
         funcao: dados.funcao as "suporte" | "vendas" | "atendimento",
@@ -375,25 +387,12 @@ export function Onboarding({
               </div>
 
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                <div>
-                  <p className="rotulo">Emoji nas respostas</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {EMOJIS.map((e) => (
-                      <button
-                        key={e.valor}
-                        onClick={() => muda("emojis", e.valor)}
-                        aria-pressed={dados.emojis === e.valor}
-                        className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                          dados.emojis === e.valor
-                            ? "border-ciano bg-ciano/5 text-ciano"
-                            : "border-borda text-muted hover:text-texto"
-                        }`}
-                      >
-                        {e.rotulo}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <Faixa
+                  rotulo="Emoji nas respostas"
+                  opcoes={EMOJIS}
+                  valor={dados.emojis}
+                  aoMudar={(nivel) => muda("emojis", nivel)}
+                />
 
                 <label className="block">
                   <span className="rotulo">Dividir a resposta em até</span>
@@ -426,16 +425,22 @@ export function Onboarding({
                 />
               </div>
 
-              <div className="mt-6 border-t border-borda pt-5">
-                <p className="rotulo">IA que responde</p>
-                <div className="mt-3">
-                  <EscolheIA
-                    funcao="conversa"
-                    valor={dados.modelo}
-                    aoMudar={(m) => muda("modelo", m)}
-                  />
+              {semChave && (
+                <div className="mt-6 border-t border-borda pt-5">
+                  <p className="rotulo">Falta a chave de uma IA</p>
+                  <p className="mt-1 text-sm text-muted">
+                    Esta instalação ainda não tem nenhuma. Guarde uma aqui e ela vale para todos os
+                    agentes; depois, o que cada um usa fica em Configurações, na ficha dele.
+                  </p>
+                  <div className="mt-3">
+                    <EscolheIA
+                      funcao="conversa"
+                      valor={dados.modelo}
+                      aoMudar={(m) => muda("modelo", m)}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </Pergunta>
           )}
         </div>

@@ -2,6 +2,82 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O painel para de prometer o que não é dele
+
+Três cortes no painel, todos vindos de o operador olhar a tela e perguntar o que aquilo faz ali.
+
+**Conhecimento sai do menu.** Era um item apagado com selo de "em breve" e prometia uma base da
+instalação. A base é de cada agente e mora na aba Treinamento da ficha dele. A tela `EmBreve` saiu
+junto; o arquivo virou `NaoEncontrada.tsx`, que era a outra metade dele.
+
+**Configurações deixa de ser o painel de controle da instalação.** Saíram as chaves de IA (a IA é de
+cada agente: a chave agora é pedida e trocada no `EscolheIA`, onde o modelo é escolhido) e o cartão
+de Instalação (endereço e contagem não se configuram; são fato, e fato é Visão geral). Ficaram a
+conta, o espaço de trabalho, os dados do negócio e um cartão novo, **Assistente de código**, que diz
+qual CLI está vinculado e em que conta. Esse sim é escolha da instalação, e é o que move o copiloto.
+
+**O copiloto vira coluna da direita.** Era um botão redondo flutuante que abria o popup grande sobre
+tudo. Pedir "deixe a Bella mais objetiva" sem poder olhar a Bella é pedir de memória. Agora ele abre
+ao lado do conteúdo, com alargar e estreitar, e o botão mora no rodapé do menu. No celular ele toma a
+tela, porque lá não existe "ao lado".
+
+Atualizados: `spec/frontend.md` (menu, 5.0 Configurações e 5.8 Copiloto).
+
+## 2026-09-18: O passo Jeito depois de o operador usar
+
+Três correções vindas de olhar o passo 5 da criação numa instalação de verdade.
+
+**Emoji vira faixa.** Eram quatro botões lado a lado, e botão não mostra que existe ordem entre as
+opções: o operador lia os quatro rótulos para descobrir que "pouco" é menos que "médio". Virou uma
+faixa que se arrasta, como o volume, no componente novo `frontend/src/design/Faixa.tsx`, que serve
+toda escolha de grau (o ritmo da fase 10 vai usar o mesmo). Agente criado antes de a escolha existir
+(`emojis: livre`) ganha "Como quiser" como primeira posição, senão salvar outro campo da aba trocaria
+o emoji dele sem ninguém pedir.
+
+**Falar só de assuntos da empresa nasce ligado.** Quem contrata um agente de atendimento não quer o
+modelo respondendo qualquer coisa em nome da empresa, e quem queria o contrário desliga num toque. O
+`server_default` continua `false`, como o do emoji: agente que já existe não muda de comportamento
+sozinho, e só o agente novo nasce com a restrição.
+
+**A IA que responde sai da criação.** Mesmo motivo da ferramenta, que saiu na v0.26.0: escolher
+provedor e modelo antes de ver o agente falar é decidir sem informação. O nome do campo também não
+ajudava ninguém. Agora o agente nasce com a IA que a instalação já tem (o primeiro provedor com
+chave, em `ia/chaves.completa`) e o operador troca na aba Configurações da ficha. Instalação sem
+chave nenhuma é a única exceção: aí o passo pede uma, senão o agente nasceria sem conseguir falar.
+O terminal continua perguntando na criação, e isso é divergência a resolver.
+
+Atualizados: `spec/frontend.md` (passo 5 e aba Comunicação).
+
+## 2026-09-18: Humanização vira a fase 10
+
+O operador trouxe três pesquisas sobre humanização de agentes de atendimento (práticas de mercado,
+o que os líderes expõem na interface e o que a PydanticAI oferece) e pediu um plano. A leitura do
+código mostrou que boa parte do que elas chamam de estado da arte já está no ar desde a fase 5:
+buffer com lock, digitando no ritmo de uma pessoa, resposta em bolhas sem markdown, tom, emoji,
+assunto restrito e transferência opcional. O plano ficou com o que falta, em
+`docs/plano-humanizacao.md`: ritmo com nome, persona com o que nunca dizer, memória do contato,
+sentimento com gatilhos e aviso de IA, e regressão de persona quando a IA reescreve o prompt.
+
+**Vira uma fase, a 10, depois da fase 6.** A alternativa era soltar as duas primeiras etapas como
+versão de polimento agora, no molde das v0.21 a v0.24. O operador preferiu a fase inteira: a memória
+do contato encosta na base de conhecimento, e as duas mexem no que o agente sabe além da conversa.
+
+**O aviso de que é uma IA nasce desligado**, e o operador marca. Pela lei europeia ele seria
+obrigatório desde 2 de agosto de 2026, mas quem atende só no Brasil não está nesse caso, e a fase
+entrega a escolha com a frase que explica quando marcar, não a regra ligada por padrão.
+
+**A memória do contato nasce ligada.** Lembrar do que ficou combinado é o que o contato espera de
+quem já falou com ele, e é o item com mais efeito na percepção de atendimento humano. Agente criado
+antes da fase nasce sem memória e só lembra do que vier depois de ligada.
+
+**O validador de preço e prazo fica para a fase 6.** Recusar a resposta que fala de preço sem
+nenhuma ferramenta chamada só funciona quando existe de onde tirar o preço. Hoje quase todo agente
+tem zero ferramenta e o preço mora no "sobre a empresa" escrito pelo operador: o validador recusaria
+a resposta certa. Na fase 10 a regra é só texto no prompt ("não afirme preço ou prazo que não esteja
+no que você recebeu"); o validador entra com a base de conhecimento, ligado em agente com base.
+
+Atualizados: `spec/fases.md` (fase 10), `spec/estado.md` (tabela de fases).
+
 ## 2026-09-18: O jeito do agente vira escolha, e o treinamento ganha lugar (v0.26.0)
 
 Primeiro refino depois do copiloto no ar, com o operador usando o painel e apontando o que faltava.

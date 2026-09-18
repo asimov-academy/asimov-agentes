@@ -53,7 +53,7 @@ class NovoAgente(BaseModel):
         default=True, description="Desligado, o agente nunca promete atendimento humano."
     )
     restringe_temas: bool = Field(
-        default=False, description="Ligado, o agente só fala do que é da empresa."
+        default=True, description="Ligado (o padrão), o agente só fala do que é da empresa."
     )
     contatos_permitidos: list[str] | None = Field(
         default=None,

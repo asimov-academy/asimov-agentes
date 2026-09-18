@@ -1,44 +1,27 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  api,
-  ErroDaApi,
-  type EspacoDeTrabalho,
-  type Eu,
-  type Modelos,
-} from "../api/cliente";
+import { useEffect, useState } from "react";
+import { api, type EspacoDeTrabalho, type Eu, type VinculoDeIa } from "../api/cliente";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
-import { Carregando } from "../design/Carregando";
 import { Campo } from "../design/Campo";
 import { Cartao } from "../design/Cartao";
-import { Icone } from "../design/Icone";
+import { Carregando } from "../design/Carregando";
 import { Selo } from "../design/Selo";
-import { FormDaChave, NOME_DO_PROVEDOR } from "./agente/FormDaChave";
 
-/** Conta, instalação e chaves de IA, no fim do menu.
+/** A conta do operador, o espaço de trabalho e o assistente de código que move o copiloto.
  *
- *  Nasceu de duas faltas: não havia onde ver a conta do operador nem os endereços da instalação, e
- *  as chaves de IA só apareciam dentro da ficha de um agente, na hora de escolher um modelo. Chave
- *  é da instalação, não do agente, e é aqui que ela se administra.
+ *  **Não é o painel de controle da instalação.** Duas coisas saíram daqui em 2026-09-18:
+ *
+ *  - **Chaves de IA.** A IA é escolha de cada agente, e a chave passou a ser pedida onde o modelo é
+ *    escolhido, na aba Configurações da ficha. Uma lista de provedores numa tela geral fazia
+ *    parecer que a instalação tem uma IA, quando cada agente tem a sua.
+ *  - **Os endereços e as contagens da instalação.** Subdomínio do painel, subdomínio dos agentes,
+ *    quantas empresas e quantos agentes não se configuram: são fato, e fato de plantão é a Visão
+ *    geral. O que restou aqui é o que o operador edita ou precisa saber para editar.
+ *
+ *  O que ficou de IA é o **assistente de código**, que é escolha da instalação mesmo: Claude Code
+ *  ou Codex, pela assinatura do operador, e é ele que move o copiloto do painel.
  */
-function data(iso: string | null): string {
-  if (!iso) return "nunca";
-  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-}
-
-function Linha({ rotulo, valor, tecnico }: { rotulo: string; valor: string; tecnico?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="rotulo">{rotulo}</dt>
-      <dd className={`mt-1 truncate text-sm text-texto ${tecnico ? "tecnico" : ""}`} title={valor}>
-        {valor}
-      </dd>
-    </div>
-  );
-}
-
-/** Um formulário de uma seção: os campos, o botão que salva e o que ele diz depois de salvar. */
 function Secao({
   titulo,
   ajuda,
@@ -47,6 +30,7 @@ function Secao({
   aoMudar,
   aoSalvar,
   rotuloDoBotao,
+  rodape,
 }: {
   titulo: string;
   ajuda?: string;
@@ -55,20 +39,21 @@ function Secao({
   aoMudar: (campo: string, valor: string) => void;
   aoSalvar: () => Promise<void>;
   rotuloDoBotao: string;
+  rodape?: React.ReactNode;
 }) {
   const [salvando, setSalvando] = useState(false);
   const [feito, setFeito] = useState(false);
   const [erro, setErro] = useState("");
 
   async function salva() {
-    setErro("");
     setSalvando(true);
+    setErro("");
+    setFeito(false);
     try {
       await aoSalvar();
       setFeito(true);
-      setTimeout(() => setFeito(false), 2500);
     } catch (problema) {
-      setErro(problema instanceof ErroDaApi ? problema.message : String(problema));
+      setErro((problema as Error).message);
     } finally {
       setSalvando(false);
     }
@@ -77,49 +62,86 @@ function Secao({
   return (
     <Cartao titulo={titulo}>
       {ajuda && <p className="max-w-[70ch] text-sm text-muted">{ajuda}</p>}
+
       <div className="grid gap-4 sm:grid-cols-2">
         {campos.map((c) => (
           <Campo
             key={c.campo}
             rotulo={c.rotulo}
-            type={c.tipo}
+            type={c.tipo ?? "text"}
             placeholder={c.placeholder}
             value={valores[c.campo] ?? ""}
             onChange={(e) => aoMudar(c.campo, e.target.value)}
           />
         ))}
       </div>
+
       {erro && (
         <Aviso tom="erro" titulo="não deu para salvar">
-          <p>{erro}</p>
+          {erro}
         </Aviso>
       )}
-      <div className="flex items-center gap-3">
-        <Botao pequeno icone="act-save" ocupado={salvando} onClick={salva}>
-          {rotuloDoBotao}
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Botao icone="act-save" pequeno ocupado={salvando} onClick={salva}>
+          {feito ? "Salvo" : rotuloDoBotao}
         </Botao>
-        {feito && <Selo tom="ok">salvo</Selo>}
+        {rodape}
       </div>
     </Cartao>
   );
 }
 
-export function Configuracoes({ eu, aoMudarConta }: { eu: Eu | null; aoMudarConta: () => void }) {
-  const [modelos, setModelos] = useState<Modelos | null>(null);
-  const [espaco, setEspaco] = useState<EspacoDeTrabalho | null>(null);
-  const [perfil, setPerfil] = useState<{ nome: string; email: string } | null>(null);
+/** Quem move o copiloto: o CLI em que o operador entrou na instalação. Só de leitura. */
+function AssistenteDeCodigo() {
+  const [vinculo, setVinculo] = useState<VinculoDeIa | null>(null);
   const [erro, setErro] = useState("");
-  const [abrindo, setAbrindo] = useState("");
 
-  const busca = useCallback(() => {
-    setErro("");
+  useEffect(() => {
     api
-      .modelos()
-      .then(setModelos)
-      .catch((problema) => setErro(problema instanceof ErroDaApi ? problema.message : String(problema)));
+      .copiloto()
+      .then((estado) => setVinculo(estado.vinculo))
+      .catch((problema) => setErro((problema as Error).message));
   }, []);
 
-  useEffect(busca, [busca]);
+  return (
+    <Cartao titulo="Assistente de código">
+      <p className="max-w-[70ch] text-sm text-muted">
+        É ele que move o copiloto do painel, rodando pela sua assinatura, sem chave de API e sem
+        custo por mensagem. A IA que responde aos contatos é outra coisa: essa é de cada agente, na
+        ficha dele.
+      </p>
+
+      {erro ? (
+        <Aviso tom="erro" titulo="não deu para ver o vínculo">
+          {erro}
+        </Aviso>
+      ) : !vinculo ? (
+        <Carregando tipo="pontos" o_que="vendo o vínculo" />
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-texto">{vinculo.nome}</span>
+          {vinculo.vinculada ? <Selo tom="ok">conta vinculada</Selo> : <Selo>sem conta</Selo>}
+          {vinculo.vinculada && vinculo.conta && (
+            <span className="tecnico text-sm text-muted">{vinculo.conta}</span>
+          )}
+        </div>
+      )}
+
+      <p className="text-sm text-dim">
+        {vinculo?.vinculada
+          ? "Para trocar de assistente ou sair da conta, rode "
+          : "Para ligar o copiloto, rode "}
+        <span className="tecnico text-muted">{vinculo?.comando || "asimov ia"}</span> na VPS. A
+        credencial fica onde o CLI oficial guarda, nunca no banco nem no painel.
+      </p>
+    </Cartao>
+  );
+}
+
+export function Configuracoes({ eu, aoMudarConta }: { eu: Eu | null; aoMudarConta: () => void }) {
+  const [espaco, setEspaco] = useState<EspacoDeTrabalho | null>(null);
+  const [perfil, setPerfil] = useState<{ nome: string; email: string } | null>(null);
 
   // O formulário só nasce quando o `eu` chega: antes disso não há o que editar.
   useEffect(() => {
@@ -133,37 +155,36 @@ export function Configuracoes({ eu, aoMudarConta }: { eu: Eu | null; aoMudarCont
 
   return (
     <>
-      <Cabecalho titulo="Configurações" contexto="Da instalação inteira, não de um agente." />
+      <Cabecalho
+        titulo="Configurações"
+        contexto="Sua conta e o assistente que opera a plataforma. A IA de cada agente fica na ficha dele."
+      />
 
-      {/* Um cartão, não dois: eram duas metades com quatro linhas cada, e a da direita ficava com
-          metade vazia. Saíram também as duas linhas que não diziam nada, "Operador: único desta
-          instalação" e um "último acesso" que, com uma conta só, ou é "nunca" ou é "agora". */}
+      {espaco && perfil ? (
+        <div className="mt-6 grid gap-4">
+          <Secao
+            titulo="Sua conta"
+            ajuda="Quem administra esta instalação. Não serve para entrar: a senha continua a única credencial, e ela se troca com asimov painel na VPS."
+            campos={[
+              { campo: "nome", rotulo: "Seu nome", placeholder: "como você quer ser chamado" },
+              { campo: "email", rotulo: "Seu e-mail", tipo: "email", placeholder: "para contato, não para entrar" },
+            ]}
+            valores={perfil}
+            aoMudar={(campo, valor) => setPerfil((antes) => (antes ? { ...antes, [campo]: valor } : antes))}
+            rotuloDoBotao="Salvar a conta"
+            aoSalvar={async () => {
+              await api.gravaPerfilDoOperador(perfil);
+              aoMudarConta();
+            }}
+            rodape={
+              <form method="post" action="/painel/sair">
+                <Botao type="submit" pequeno icone="sys-logout">
+                  Sair do painel
+                </Botao>
+              </form>
+            }
+          />
 
-      <div className="mt-6">
-        <Cartao titulo="Instalação">
-          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Linha rotulo="Painel" valor={eu?.instalacao.subdominio_app || "não publicado"} tecnico />
-            <Linha rotulo="Agentes em" valor={eu?.instalacao.subdominio_bot ?? "…"} tecnico />
-            <Linha rotulo="Empresas" valor={String(eu?.empresas ?? 0)} />
-            <Linha rotulo="Agentes criados" valor={String(eu?.agentes ?? 0)} />
-          </dl>
-
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-borda pt-4">
-            <p className="text-sm text-dim">
-              Acesso criado em {data(eu?.operador.criado_em ?? null)}. Para trocar a senha, rode{" "}
-              <span className="tecnico text-muted">asimov painel</span> na VPS.
-            </p>
-            <form method="post" action="/painel/sair">
-              <Botao type="submit" pequeno icone="sys-logout">
-                Sair do painel
-              </Botao>
-            </form>
-          </div>
-        </Cartao>
-      </div>
-
-      {espaco && perfil && (
-        <div className="mt-4 grid gap-4">
           <Secao
             titulo="Espaço de trabalho"
             ajuda="O nome e a sigla aparecem no menu, no lugar de ASIMOV. Serve para reconhecer de qual instalação é a aba aberta."
@@ -176,22 +197,6 @@ export function Configuracoes({ eu, aoMudarConta }: { eu: Eu | null; aoMudarCont
             rotuloDoBotao="Salvar o espaço"
             aoSalvar={async () => {
               await api.gravaEspaco(espaco);
-              aoMudarConta();
-            }}
-          />
-
-          <Secao
-            titulo="Perfil do operador"
-            ajuda="Quem administra esta instalação. Não serve para entrar: a senha continua a única credencial."
-            campos={[
-              { campo: "nome", rotulo: "Seu nome", placeholder: "como você quer ser chamado" },
-              { campo: "email", rotulo: "Seu e-mail", tipo: "email", placeholder: "para contato, não para entrar" },
-            ]}
-            valores={perfil}
-            aoMudar={(campo, valor) => setPerfil((antes) => (antes ? { ...antes, [campo]: valor } : antes))}
-            rotuloDoBotao="Salvar o perfil"
-            aoSalvar={async () => {
-              await api.gravaPerfilDoOperador(perfil);
               aoMudarConta();
             }}
           />
@@ -214,68 +219,14 @@ export function Configuracoes({ eu, aoMudarConta }: { eu: Eu | null; aoMudarCont
               aoMudarConta();
             }}
           />
+
+          <AssistenteDeCodigo />
+        </div>
+      ) : (
+        <div className="mt-6">
+          <Carregando tipo="pontos" o_que="abrindo as configurações" />
         </div>
       )}
-
-      <section className="mt-4">
-        <Cartao titulo="Chaves de IA">
-          <p className="max-w-[70ch] text-sm text-muted">
-            Uma chave por provedor, guardada cifrada no servidor e usada por todo agente que escolher
-            aquele provedor. Ela entra uma vez e nunca mais sai: aqui só aparece se existe.
-          </p>
-
-          {erro ? (
-            <Aviso tom="erro" titulo="não deu para carregar os provedores">
-              <p>{erro}</p>
-              <div className="mt-4">
-                <Botao icone="sys-refresh" pequeno onClick={busca}>
-                  Tentar de novo
-                </Botao>
-              </div>
-            </Aviso>
-          ) : modelos === null ? (
-            <Carregando tipo="pontos" o_que="buscando os provedores" />
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {modelos.provedores.map((p) => {
-                const tem = modelos.com_chave.includes(p);
-                const aberto = abrindo === p;
-                return (
-                  <li key={p} className="rounded-md border border-borda">
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                      <span className="flex items-center gap-3">
-                        <span className="text-sm text-texto">{NOME_DO_PROVEDOR[p] ?? p}</span>
-                        {tem ? <Selo tom="ok">chave guardada</Selo> : <Selo>sem chave</Selo>}
-                      </span>
-                      <Botao pequeno onClick={() => setAbrindo(aberto ? "" : p)}>
-                        {aberto ? "Cancelar" : tem ? "Trocar a chave" : "Guardar a chave"}
-                      </Botao>
-                    </div>
-                    {aberto && (
-                      <div className="border-t border-borda px-4 py-4">
-                        <div className="max-w-md">
-                          <FormDaChave
-                            provedor={p}
-                            aoGuardar={() => {
-                              setAbrindo("");
-                              busca();
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <p className="flex items-start gap-2 text-sm text-dim">
-            <Icone nome="stat-info" tamanho={14} className="mt-0.5" />
-            Áudio não roda na Anthropic: com ela, guarde também a chave de outro provedor.
-          </p>
-        </Cartao>
-      </section>
     </>
   );
 }
