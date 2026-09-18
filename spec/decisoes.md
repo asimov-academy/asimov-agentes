@@ -2,6 +2,11 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: `/retomar` do aparelho do agente, e nada mais some calado (v0.13.4)
+
+- **Ponto cego achado ao investigar o `/retomar` que não funcionava**: fala de saída numa conversa que o agente ainda não atendeu devolvia 200 sem uma linha de log. A WAHA registrava o envio com 200 e do nosso lado não havia nada, o que torna o diagnóstico impossível. Agora toda saída do webhook tem log.
+- **`/retomar <código>` escrito no chat do handoff pelo aparelho do agente** passou a valer como comando. O aviso chega no celular de quem recebe o handoff, mas o operador que tem o aparelho do agente na mão responde dali com a mesma naturalidade, e isso caía na regra de intervenção humana (pausa) em vez de devolver a conversa.
+
 ## 2026-09-18: Log do webhook diz de quem é a mensagem (v0.13.3)
 
 - **Um `/retomar` que não funcionava não aparecia no log**: nem como comando, nem como conversa, nem como ignorado. As linhas de ignorado diziam só "mensagem de grupo", sem dizer de qual conversa, o que não permite concluir nada.
