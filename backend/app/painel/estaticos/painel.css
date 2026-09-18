@@ -41,8 +41,9 @@
   --surface: #0a0a0a;
   --panel: #111111;
   --borda: #222222;
-  --dim: #444444;
-  --muted: #525252;
+  /* Mesma escala do tailwind.config.ts: acima dos 4,5:1 da WCAG AA sobre os fundos escuros. */
+  --dim: #8a8a8a;
+  --muted: #a3a3a3;
   --texto: #e5e5e5;
   --ciano: #29b8db;
   --ok: #00cc66;

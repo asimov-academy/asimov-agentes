@@ -58,13 +58,16 @@ escritos soltos no componente.
 | `surface` | `#0a0a0a` | fundo de cartão e de campo |
 | `panel` | `#111111` | menu lateral e barra do topo |
 | `border` | `#222222` | borda padrão |
-| `dim` | `#444444` | borda de controle desligado, ícone apagado |
-| `muted` | `#525252` | texto secundário |
+| `dim` | `#8a8a8a` | texto de apoio, rótulo, placeholder, borda de controle desligado |
+| `muted` | `#a3a3a3` | texto secundário |
 | `text` | `#e5e5e5` | texto |
 | `ciano` | `#29b8db` | acento, item ativo, foco, confirmação |
 | `success` | `#00cc66` | situação boa |
 | `warning` | `#ffaa00` | atenção |
 | `danger` | `#ff453a` | erro e ação destrutiva |
+
+Todo texto fica acima dos 4,5:1 da WCAG AA sobre os três fundos: `text` em 15:1, `muted` em 7,5:1 e
+`dim` em 5,5:1. `dim` e `muted` nasceram em 1,9:1 e 2,4:1 e sumiam no preto.
 
 Tipografia: Inter para texto, JetBrains Mono para rótulo, número, token e situação. As duas vêm dos
 pacotes `@fontsource`, só no subconjunto latino, e entram no build: são servidas da VPS, nunca de CDN.
