@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Agente · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+<style>
+  .abas { display: flex; gap: 4px; border-bottom: 1px solid var(--borda); margin-bottom: 20px; overflow-x: auto; }
+  .abas button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    padding: 9px 12px; font: inherit; font-size: 14px; color: var(--fraco); cursor: pointer; white-space: nowrap; }
+  .abas button.ativo { color: var(--acento); border-bottom-color: var(--acento); font-weight: 550; }
+  .painel-aba[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1 id="nome"></h1>
+      <p class="sub" id="linha"></p>
+    </div>
+    <div class="acoes">
+      <a class="botao" id="btn-teste">Conversar de teste</a>
+      <a class="botao" href="agentes.html">Voltar</a>
+    </div>
+  </div>
+
+  <div class="abas" id="abas"></div>
+
+  <section class="painel-aba" id="aba-ficha"></section>
+  <section class="painel-aba" id="aba-ferramentas" hidden></section>
+  <section class="painel-aba" id="aba-prompt" hidden></section>
+  <section class="painel-aba" id="aba-modelos" hidden></section>
+  <section class="painel-aba" id="aba-canal" hidden></section>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("agentes");
+
+const id = new URLSearchParams(location.search).get("id") || "a1";
+let A, FERR;
+
+const ABAS = [
+  ["ficha", "Ficha"],
+  ["ferramentas", "Ferramentas"],
+  ["prompt", "Prompt"],
+  ["modelos", "Modelos"],
+  ["canal", "Canal e handoff"],
+];
+
+(async () => {
+  [A, FERR] = await Promise.all([api.agente(id), api.ferramentas()]);
+  $("#nome").textContent = A.nome;
+  $("#linha").innerHTML = `${esc(A.cliente)} · ${CANAIS[A.canal]} · <span class="mono">${esc(A.conta)}</span>`;
+  $("#btn-teste").href = `teste.html?id=${A.id}`;
+
+  $("#abas").innerHTML = ABAS.map(
+    ([k, n], i) => `<button data-aba="${k}" class="${i === 0 ? "ativo" : ""}">${n}</button>`,
+  ).join("");
+  $$("#abas button").forEach((b) =>
+    b.addEventListener("click", () => {
+      $$("#abas button").forEach((x) => x.classList.toggle("ativo", x === b));
+      ABAS.forEach(([k]) => ($("#aba-" + k).hidden = k !== b.dataset.aba));
+    }),
+  );
+
+  ficha(); ferramentas(); prompt_(); modelos(); canal();
+})();
+
+function ficha() {
+  $("#aba-ficha").innerHTML = `
+    <div class="grade g2">
+      <div class="carta">
+        <h2>Como responde</h2>
+        <div class="campo">
+          <label for="f-nome">Nome<span class="dica">Renomeia o bot no canal também.</span></label>
+          <input type="text" id="f-nome" value="${esc(A.nome)}">
+        </div>
+        <div class="campo">
+          <label for="f-buffer">Tempo de buffer
+            <span class="dica">Quanto espera juntar mensagens antes de responder.</span></label>
+          <input type="number" id="f-buffer" min="1" max="60" value="${A.buffer_segundos}">
+        </div>
+        <div class="campo">
+          <label for="f-msgs">Mensagens por resposta</label>
+          <input type="number" id="f-msgs" min="1" max="5" value="${A.max_mensagens_por_resposta}">
+        </div>
+        <div class="campo">
+          <label>Digitação<span class="dica">Velocidade do digitando e teto por mensagem.</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="number" id="f-cps" min="1" max="30" value="${A.digitacao_caracteres_por_segundo}">
+            <input type="number" id="f-max" min="1" max="30" value="${A.digitacao_maximo_segundos}">
+          </div>
+        </div>
+      </div>
+
+      <div class="carta">
+        <h2>Emoji</h2>
+        <div class="opcoes">
+          ${["nenhum", "pouco", "medio", "muito"].map((n) => `
+            <label class="opcao ${A.emojis === n ? "marcada" : ""}">
+              <input type="radio" name="emoji" value="${n}" ${A.emojis === n ? "checked" : ""}>
+              <span><b>${EMOJIS[n]}</b>
+                <span>${{
+                  nenhum: "Nunca usa emoji.",
+                  pouco: "Um de vez em quando, quando cabe.",
+                  medio: "Usa com naturalidade.",
+                  muito: "Usa bastante, tom bem informal.",
+                }[n]}</span></span>
+            </label>`).join("")}
+        </div>
+        <p class="rotulo" style="margin-bottom:0">Vale a partir da próxima mensagem.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:16px">
+      <button class="botao forte" onclick="salvaFicha()">Salvar</button>
+      <span class="rotulo">PATCH /admin/clientes/${A.cliente_id}/agentes/${A.id}</span>
+    </p>`;
+}
+
+async function salvaFicha() {
+  await api.salvaAgente(A.id, {
+    nome: $("#f-nome").value,
+    buffer_segundos: +$("#f-buffer").value,
+    max_mensagens_por_resposta: +$("#f-msgs").value,
+    digitacao_caracteres_por_segundo: +$("#f-cps").value,
+    digitacao_maximo_segundos: +$("#f-max").value,
+    emojis: $("input[name=emoji]:checked").value,
+  });
+  $("#nome").textContent = $("#f-nome").value;
+  torrada("Salvo. Vale a partir da próxima mensagem.");
+}
+
+function ferramentas() {
+  $("#aba-ferramentas").innerHTML = `
+    <div class="carta">
+      <h2>Ferramentas do agente</h2>
+      <p class="rotulo" style="margin-top:-6px">
+        Ferramenta ligada entra no prompt e custa tokens. Agente novo nasce sem nenhuma.
+      </p>
+      <div class="opcoes" style="margin-top:14px">
+        ${FERR.map((f) => {
+          const on = A.ferramentas.includes(f.nome);
+          return `<label class="opcao ${on ? "marcada" : ""}">
+            <input type="checkbox" value="${f.nome}" ${on ? "checked" : ""}>
+            <span><b>${esc(f.rotulo)}</b><span>${esc(f.descricao)}</span></span>
+          </label>`;
+        }).join("")}
+      </div>
+      <p style="margin-bottom:0;margin-top:16px">
+        <button class="botao forte" onclick="salvaFerramentas()">Salvar</button>
+        <span class="rotulo">GET /admin/ferramentas · PATCH no agente</span>
+      </p>
+    </div>
+
+    <div class="carta">
+      <h2>Base de conhecimento</h2>
+      <p class="vazio" style="padding:18px">Entra na fase 6. A tool <span class="mono">buscar_base_conhecimento</span> vem ligada em todo agente quando houver documento.</p>
+    </div>`;
+}
+
+async function salvaFerramentas() {
+  const marcadas = $$("#aba-ferramentas input:checked").map((i) => i.value);
+  await api.salvaAgente(A.id, { ferramentas: marcadas });
+  torrada(marcadas.length ? `Ferramentas: ${marcadas.length} ligada(s).` : "Nenhuma ferramenta ligada.");
+}
+
+async function prompt_() {
+  const texto = await api.prompt(A.id);
+  $("#aba-prompt").innerHTML = `
+    <div class="carta">
+      <h2>persona.md</h2>
+      <p class="rotulo" style="margin-top:-6px">
+        Arquivo em <span class="mono">prompts/${esc(A.cliente.toLowerCase().replace(/ /g, "-"))}/${esc(A.slug)}/persona.md</span>.
+        Hoje só dá para editar por SSH.
+      </p>
+      <textarea id="p-texto" style="margin-top:12px">${esc(texto)}</textarea>
+      <p style="margin-bottom:0;margin-top:12px">
+        <button class="botao forte" onclick="torrada('Prompt salvo. Vale no próximo turno.')">Salvar</button>
+        <span class="rotulo">PUT .../agentes/${A.id}/prompt (rota a construir)</span>
+      </p>
+    </div>`;
+}
+
+function modelos() {
+  const linhas = [
+    ["Resposta ao contato", A.modelo_conversa],
+    ["Fallback", A.modelo_fallback || "nenhum"],
+    ["Resumo do handoff", A.modelo_auxiliar],
+    ["Visão (imagem e PDF)", A.modelo_visao],
+    ["Transcrição de áudio", A.modelo_transcricao],
+  ];
+  $("#aba-modelos").innerHTML = `
+    <div class="carta">
+      <h2>Modelos deste agente</h2>
+      ${linhas.map(([r, v]) => `
+        <div class="campo">
+          <label>${r}</label>
+          <select><option>${esc(v)}</option><option>trocar…</option></select>
+        </div>`).join("")}
+      <p style="margin-bottom:0;margin-top:16px">
+        <button class="botao forte" onclick="torrada('Modelos salvos.')">Salvar</button>
+      </p>
+    </div>
+    <div class="carta">
+      <h2>Padrão da instalação</h2>
+      <dl class="ficha">
+        <dt>Resposta</dt><dd class="mono">${INSTALACAO.modelos_padrao.conversa}</dd>
+        <dt>Fallback</dt><dd class="mono">${INSTALACAO.modelos_padrao.fallback}</dd>
+        <dt>Visão</dt><dd class="mono">${INSTALACAO.modelos_padrao.visao}</dd>
+        <dt>Áudio</dt><dd class="mono">${INSTALACAO.modelos_padrao.transcricao}</dd>
+      </dl>
+      <p class="aviso info" style="margin-top:14px">
+        Trocar chave de provedor ou o padrão da instalação continua no terminal:
+        são do <span class="mono">.env</span>, e o contêiner não mexe nele.
+      </p>
+    </div>`;
+}
+
+function canal() {
+  const d = A.handoff_destino;
+  const destino = !d ? "aparece na própria conversa do terminal"
+    : d.tipo === "atendente" ? `atendente ${d.nome}`
+    : d.tipo === "grupo" ? `grupo ${d.nome}`
+    : `número ${d.numero}`;
+
+  $("#aba-canal").innerHTML = `
+    <div class="grade g2">
+      <div class="carta">
+        <h2>Canal</h2>
+        <dl class="ficha">
+          <dt>Canal</dt><dd>${CANAIS[A.canal]}</dd>
+          <dt>Conta</dt><dd>${esc(A.conta)}</dd>
+          <dt>Webhook</dt><dd class="mono" style="word-break:break-all">${esc(A.url_webhook || "não usa webhook")}</dd>
+          <dt>Privacidade</dt><dd class="mono" style="word-break:break-all">${esc(A.url_privacidade || "não se aplica")}</dd>
+          <dt>Atende</dt><dd>${A.contatos_permitidos.length ? "só " + A.contatos_permitidos.join(", ") : "qualquer contato"}</dd>
+        </dl>
+        ${A.canal === "waha" ? `<p style="margin-bottom:0"><a class="botao pequeno" href="whatsapp.html">Ver número e QR code</a></p>` : ""}
+        ${A.canal === "whatsapp" ? `<p style="margin-bottom:0"><button class="botao pequeno" onclick="torrada('Webhook refeito na Meta.')">Refazer webhook na Meta</button></p>` : ""}
+        ${A.canal === "nativo" ? `<p style="margin-bottom:0"><button class="botao pequeno" onclick="torrada('Abre o assistente de conexão a um canal.')">Conectar a um canal</button></p>` : ""}
+      </div>
+
+      <div class="carta">
+        <h2>Handoff</h2>
+        <dl class="ficha">
+          <dt>Destino</dt><dd>${esc(destino)}</dd>
+          <dt>Volta sozinho</dt><dd>${A.retomada_automatica_horas ? `em ${A.retomada_automatica_horas} h` : "só quando devolverem"}</dd>
+          <dt>Retomada</dt><dd>${A.canal === "chatwoot" ? "conversa de volta para Pendente" : "👍 no aviso ou /retomar &lt;código&gt;"}</dd>
+        </dl>
+        <p style="margin-bottom:0">
+          <button class="botao pequeno" onclick="torrada('Abre a troca de destino.')">Trocar destino</button>
+        </p>
+      </div>
+    </div>
+
+    <div class="carta">
+      <h2 style="color:var(--erro)">Remover agente</h2>
+      <p class="rotulo" style="margin-top:-6px">
+        Desfaz no canal antes (o Chatwoot apaga o Agent Bot, a WAHA faz logout), invalida o webhook e
+        apaga as credenciais. As conversas ficam no banco.
+      </p>
+      <button class="botao perigo" onclick="torrada('Pede o nome do agente para confirmar.')">Remover ${esc(A.nome)}</button>
+    </div>`;
+}
+</script>
+</body>
+</html>

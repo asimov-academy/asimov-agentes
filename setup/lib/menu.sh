@@ -192,6 +192,9 @@ fluxo_diagnostico() {
   if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
     confere_endereco "WAHA, por dentro" "http://127.0.0.1:8000/admin/canais/waha" --com-chave
   fi
+  if painel_ligado; then
+    confere_endereco "Painel" "https://$(env_get SUBDOMINIO_APP)/painel/entrar"
+  fi
   echo
   if [ "$(estado_get versao)" != "$VERSAO" ]; then
     aviso "A versão instalada não é a do código. Rode: asimov atualizar"
@@ -493,8 +496,8 @@ menu_operador() {
       rotulos+=("WhatsApp (WAHA)")
       acoes+=("com_pausa fluxo_waha")
     fi
-    rotulos+=("Token do Chatwoot" "Diagnóstico" "Sair")
-    acoes+=("com_pausa fluxo_token_chatwoot" "com_pausa fluxo_diagnostico")
+    rotulos+=("Painel no navegador" "Token do Chatwoot" "Diagnóstico" "Sair")
+    acoes+=("com_pausa fluxo_painel" "com_pausa fluxo_token_chatwoot" "com_pausa fluxo_diagnostico")
     ESC_ESCOLHE=${#rotulos[@]} escolha op "O que fazer?" "${rotulos[@]}"
     [ "$op" -lt "${#rotulos[@]}" ] || return 0
     # shellcheck disable=SC2086  # a ação pode vir com `com_pausa` na frente

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block titulo %}Painel{% endblock %} · Asimov Agentes</title>
+<link rel="stylesheet" href="/painel/painel.css">
+</head>
+<body>
+{% if sem_casca is not defined %}
+<header class="topo">
+  <div class="topo-linha">
+    <a class="marca" href="/painel/inicio">
+      <span class="ponto">A</span>
+      <span>Asimov Agentes<small>{{ cfg.subdominio_app or cfg.subdominio_bot }}</small></span>
+    </a>
+    <div class="topo-fim">
+      <form method="post" action="/painel/sair" style="margin:0">
+        <button class="botao pequeno" type="submit">Sair</button>
+      </form>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="/painel/inicio" class="{{ 'ativo' if aba == 'inicio' }}">Início</a>
+    <a href="/painel/agentes" class="{{ 'ativo' if aba == 'agentes' }}">Agentes</a>
+  </nav>
+</header>
+{% endif %}
+
+<main{% if estreito %} class="entrar"{% endif %}>
+{% block conteudo %}{% endblock %}
+</main>
+
+{% if sem_casca is not defined %}
+<footer class="rodape">
+  Asimov Agentes · webhooks em <span class="mono">{{ cfg.subdominio_bot }}</span>
+</footer>
+{% endif %}
+</body>
+</html>

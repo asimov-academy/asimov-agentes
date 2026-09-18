@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% set aba = "inicio" %}
+{% block titulo %}Início{% endblock %}
+
+{% block conteudo %}
+<div class="cabeca">
+  <div>
+    <h1>Início</h1>
+    <p class="sub">O que está acontecendo agora na instalação.</p>
+  </div>
+</div>
+
+<div class="grade g4">
+  <div class="carta">
+    <div class="numero">{{ agentes | length }}</div>
+    <div class="rotulo">agentes ativos</div>
+  </div>
+  <div class="carta">
+    <div class="numero">{{ clientes | length }}</div>
+    <div class="rotulo">empresas</div>
+  </div>
+  <div class="carta">
+    <div class="numero">{{ turnos }}</div>
+    <div class="rotulo">turnos em {{ consumo.dias }} dias</div>
+  </div>
+  <div class="carta">
+    <div class="numero">R$ {{ "%.2f" | format(custo) | replace(".", ",") }}</div>
+    <div class="rotulo">custo estimado</div>
+  </div>
+</div>
+
+<div class="carta" style="margin-top:16px">
+  <h2>Agentes</h2>
+  {% if agentes %}
+  <div class="tabela-rola">
+    <table>
+      <thead><tr><th>Agente</th><th>Canal</th><th>Resposta</th><th class="fim">Ferramentas</th></tr></thead>
+      <tbody>
+        {% for a in agentes %}
+        <tr class="clicavel" onclick="location.href='/painel/agentes'">
+          <td><b>{{ a.nome }}</b><br><span class="rotulo">{{ clientes.get(a.cliente_id, "empresa") }}</span></td>
+          <td>{{ canais.get(a.canal, a.canal) }}</td>
+          <td class="mono" style="font-size:12.5px">{{ a.modelo_conversa }}</td>
+          <td class="fim">
+            {% if a.ferramentas %}{{ a.ferramentas | join(", ") }}{% else %}<span class="rotulo">nenhuma</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="vazio">Nenhum agente ainda. Rode <span class="mono">asimov novo-agente</span> na VPS.</p>
+  {% endif %}
+</div>
+
+{% if consumo.falhas %}
+<div class="carta">
+  <h2>Últimas falhas</h2>
+  {# O detalhe da falha é JSON livre vindo do provedor: só o resumo curto aparece aqui. #}
+  {% for f in consumo.falhas %}
+  <div style="padding:9px 0;border-top:1px solid var(--borda)">
+    <span class="selo erro">{{ f.tipo }}</span>
+    <span class="rotulo" style="float:right">
+      {{ f.criado_em | hora_curta }}{% if f.agente %} · {{ f.agente }}{% endif %}
+    </span>
+    {% if f.detalhe | resumo_da_falha %}
+    <div style="margin-top:6px;font-size:13.5px">{{ f.detalhe | resumo_da_falha }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conversa de teste · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main style="max-width:860px">
+  <div class="cabeca">
+    <div>
+      <h1 id="titulo">Conversa de teste</h1>
+      <p class="sub">Não passa pelo canal: nenhum contato recebe nada, e a conversa fica separada das reais.</p>
+    </div>
+    <div class="acoes"><a class="botao" id="voltar">Voltar ao agente</a></div>
+  </div>
+
+  <div class="grade g2" style="grid-template-columns:1fr 260px">
+    <div class="carta">
+      <div class="conversa" id="mensagens"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <input type="text" id="texto" placeholder="Escreva como se fosse o contato" autofocus>
+        <button class="botao forte" id="enviar">Enviar</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="carta">
+        <h3>Último turno</h3>
+        <dl class="ficha" style="grid-template-columns:1fr;gap:2px" id="turno"></dl>
+      </div>
+      <div class="carta">
+        <h3>Como funciona</h3>
+        <p class="rotulo" style="margin:0">
+          A tela pergunta a cada segundo se o turno terminou
+          (<span class="mono">GET .../terminal/{conversa}?depois=</span>), igual ao terminal.
+          Com HTMX isso é um atributo, sem JS.
+        </p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("agentes");
+
+const id = new URLSearchParams(location.search).get("id") || "a1";
+let msgs = [];
+
+(async () => {
+  const [a, t] = await Promise.all([api.agente(id), api.teste()]);
+  $("#titulo").textContent = `Teste com ${a.nome}`;
+  $("#voltar").href = `agente.html?id=${a.id}`;
+  msgs = [...t.mensagens];
+  desenha(a);
+  turno(t.turno);
+
+  $("#enviar").addEventListener("click", () => manda(a));
+  $("#texto").addEventListener("keydown", (e) => { if (e.key === "Enter") manda(a); });
+})();
+
+function desenha(a, digitando = false) {
+  $("#mensagens").innerHTML =
+    msgs.map((m) => `
+      <div class="balao ${m.autor === "contato" ? "de-contato" : "de-agente"}">
+        <div class="quem">${m.autor === "contato" ? "Você" : esc(a.nome)}</div>${esc(m.texto)}
+        <div class="hora">${m.hora}</div>
+      </div>`).join("") +
+    (digitando ? '<div class="digitando">digitando…</div>' : "");
+  $("#mensagens").scrollTop = 1e6;
+}
+
+function turno(t) {
+  $("#turno").innerHTML = `
+    <dt>Modelo</dt><dd class="mono" style="font-size:12.5px">${esc(t.modelo)}</dd>
+    <dt>Latência</dt><dd>${t.latencia} s</dd>
+    <dt>Tokens</dt><dd>${mil(t.tokens)}</dd>
+    <dt>Custo</dt><dd>${"R$ " + t.custo.toFixed(4).replace(".", ",")}</dd>
+    <dt>Ferramentas</dt><dd>${t.ferramentas.length ? t.ferramentas.join(", ") : "nenhuma"}</dd>`;
+}
+
+function manda(a) {
+  const texto = $("#texto").value.trim();
+  if (!texto) return;
+  msgs.push({ autor: "contato", texto, hora: "agora" });
+  $("#texto").value = "";
+  desenha(a, true);
+  setTimeout(() => {
+    msgs.push({ autor: "agente", texto: "No protótipo a resposta é de exemplo. Ligado na API, este texto vem do turno de verdade.", hora: "agora" });
+    desenha(a);
+    turno({ modelo: a.modelo_conversa, latencia: 2.1, tokens: 640, custo: 0.0043, ferramentas: [] });
+  }, 1400);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Agentes · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1>Agentes</h1>
+      <p class="sub">Um agente por canal, por empresa.</p>
+    </div>
+    <div class="acoes">
+      <select id="filtro" style="width:auto"></select>
+      <a class="botao forte" href="assistente.html">Novo agente</a>
+    </div>
+  </div>
+
+  <div class="carta">
+    <div class="tabela-rola"><table id="lista"></table></div>
+  </div>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("agentes");
+
+(async () => {
+  const clientes = await api.clientes();
+  $("#filtro").innerHTML =
+    '<option value="">Todas as empresas</option>' +
+    clientes.map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join("");
+  $("#filtro").addEventListener("change", desenha);
+  desenha();
+})();
+
+async function desenha() {
+  const agentes = await api.agentes($("#filtro").value);
+  $("#lista").innerHTML = `
+    <thead><tr>
+      <th>Agente</th><th>Canal</th><th>Resposta</th><th>Ferramentas</th><th class="fim">Situação</th>
+    </tr></thead>
+    <tbody>${agentes.map((a) => `
+      <tr class="clicavel" onclick="location.href='agente.html?id=${a.id}'">
+        <td><b>${esc(a.nome)}</b><br><span class="rotulo">${esc(a.cliente)}</span></td>
+        <td>${CANAIS[a.canal]}<br><span class="rotulo">${esc(a.conta)}</span></td>
+        <td class="mono" style="font-size:12.5px">${esc(a.modelo_conversa)}${
+          a.modelo_fallback ? `<br><span class="rotulo">fallback ${esc(a.modelo_fallback)}</span>` : ""
+        }</td>
+        <td>${
+          a.ferramentas.length
+            ? a.ferramentas.map((f) => `<span class="selo neutro">${esc((FERRAMENTAS.find((x) => x.nome === f) || {}).rotulo || f)}</span> `).join("")
+            : '<span class="rotulo">nenhuma</span>'
+        }</td>
+        <td class="fim">${
+          a.canal === "waha" && a.waha
+            ? (a.waha.status === "WORKING"
+                ? '<span class="selo ok"><i class="bolinha"></i>número pareado</span>'
+                : '<span class="selo alerta"><i class="bolinha"></i>' + a.waha.status + "</span>")
+            : '<span class="selo ok"><i class="bolinha"></i>ativo</span>'
+        }</td>
+      </tr>`).join("")}</tbody>`;
+}
+</script>
+</body>
+</html>

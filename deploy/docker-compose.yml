@@ -72,6 +72,8 @@ services:
       EMAIL_SSL: ${EMAIL_SSL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Bloco do painel, escrito pelo setup quando o operador liga app.<dominio>.
+      - ./caddy:/etc/caddy/extras:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conversa · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1 id="contato"></h1>
+      <p class="sub" id="linha"></p>
+    </div>
+    <div class="acoes" id="acoes"></div>
+  </div>
+
+  <div class="grade g2" style="grid-template-columns:1fr 300px">
+    <div class="carta">
+      <div class="conversa" id="mensagens"></div>
+    </div>
+    <div>
+      <div class="carta">
+        <h3>Situação</h3>
+        <div id="situacao"></div>
+      </div>
+      <div class="carta">
+        <h3>Privacidade</h3>
+        <p class="rotulo" style="margin:0">
+          Esta tela mostra conversa de contato. Desde a v0.14.2 o texto não aparece no log.
+          Decisão registrada antes de ligar de verdade.
+        </p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("conversas");
+
+const id = new URLSearchParams(location.search).get("id") || "v2";
+
+(async () => {
+  const c = await api.conversa(id);
+  $("#contato").textContent = c.contato;
+  $("#linha").innerHTML = `${esc(c.telefone)} · ${esc(c.agente)} · ${CANAIS[c.canal]} · ${esc(c.cliente)}`;
+
+  $("#acoes").innerHTML =
+    (c.status === "humano" ? `<button class="botao forte" onclick="devolver()">Devolver ao agente</button>` : "") +
+    `<a class="botao" href="conversas.html">Voltar</a>`;
+
+  $("#mensagens").innerHTML = (c.mensagens.length
+    ? c.mensagens.map((m) => {
+        if (m.autor === "sistema") return `<div class="balao de-sistema">${esc(m.texto)}</div>`;
+        const classe = { contato: "de-contato", agente: "de-agente", atendente: "de-atendente" }[m.autor];
+        const quem = { contato: c.contato, agente: c.agente, atendente: "Atendente" }[m.autor];
+        const ferr = m.ferramentas ? ` · ${m.ferramentas.join(", ")}` : "";
+        return `<div class="balao ${classe}">
+          <div class="quem">${esc(quem)}</div>${esc(m.texto)}
+          <div class="hora">${m.hora}${ferr}</div>
+        </div>`;
+      }).join("")
+    : '<p class="vazio">Sem mensagens carregadas neste exemplo.</p>');
+
+  $("#situacao").innerHTML = `
+    ${seloStatus(c.status, c.respondendo)}
+    <dl class="ficha" style="grid-template-columns:1fr;gap:2px;margin-top:12px">
+      <dt>Mensagens</dt><dd>${c.mensagens.length || "-"}</dd>
+      <dt>Última</dt><dd>${horaCurta(c.ultima)}</dd>
+      ${c.handoff ? `
+        <dt>Com</dt><dd>${esc(c.handoff.destino)}</dd>
+        <dt>Motivo</dt><dd>${esc(c.handoff.motivo)}</dd>
+        <dt>Código</dt><dd class="mono">${c.handoff.codigo}</dd>
+        <dt>Desde</dt><dd>${horaCurta(c.handoff.aberto_em)}</dd>` : ""}
+    </dl>`;
+})();
+
+async function devolver() {
+  await api.retomar(id);
+  torrada("Conversa devolvida ao agente.");
+  setTimeout(() => location.reload(), 700);
+}
+</script>
+</body>
+</html>

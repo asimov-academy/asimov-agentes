@@ -35,6 +35,33 @@ os.environ["DIRETORIO_PROMPTS"] = tempfile.mkdtemp(prefix="prompts-")
 os.environ["DIRETORIO_MIDIA"] = tempfile.mkdtemp(prefix="midia-")
 os.environ["DIRETORIO_MODELOS"] = os.environ.get("TESTE_DIRETORIO_MODELOS", str(RAIZ / "modelos"))
 os.environ["LOG_NIVEL"] = "DEBUG"
+# O painel nasce desligado na instalação; nos testes ele sobe para as telas serem exercitadas.
+os.environ["PAINEL_ATIVO"] = "1"
+os.environ["SUBDOMINIO_APP"] = "app.teste.local"
+
+def _confere_que_e_banco_de_teste() -> None:
+    """As fixtures apagam tudo: apontar para o banco errado destruiria uma instalação de verdade.
+
+    Um endereço sem `teste`/`test` no nome do banco, ou um Redis fora dos bancos altos, para aqui
+    em vez de rodar (auditoria de 2026-09-18, A22).
+    """
+    # A query vem depois: `...///asimov_teste?host=/tmp` tem barra dentro do parâmetro.
+    banco = os.environ["DATABASE_URL"].split("?", 1)[0].rsplit("/", 1)[-1]
+    if "teste" not in banco and "test" not in banco:
+        raise RuntimeError(
+            f"DATABASE_URL aponta para o banco {banco!r}, que não parece de teste. "
+            "Os testes apagam todas as tabelas: use TESTE_DATABASE_URL com um banco dedicado."
+        )
+    redis = os.environ["REDIS_URL"]
+    indice = redis.split("?", 1)[0].rsplit("/", 1)[-1]
+    if not (indice.isdigit() and int(indice) >= 10) and "teste" not in redis:
+        raise RuntimeError(
+            f"REDIS_URL aponta para {redis!r}. Os testes apagam chaves: use um índice alto "
+            "(10 a 15) em TESTE_REDIS_URL."
+        )
+
+
+_confere_que_e_banco_de_teste()
 
 import httpx  # noqa: E402
 import pytest  # noqa: E402
@@ -187,7 +214,25 @@ class FilaFalsa:
             raise ConnectionError("redis fora do ar")
         return self.chaves.get(chave)
 
+    async def ping(self) -> bool:
+        if self.falhar:
+            raise ConnectionError("redis fora do ar")
+        return True
+
+    async def exists(self, chave: str) -> int:
+        """O webhook consulta o lock da conversa antes de reagendar uma reentrega."""
+        if self.falhar:
+            raise ConnectionError("redis fora do ar")
+        return int(chave in self.chaves)
+
+    async def delete(self, chave: str) -> int:
+        if self.falhar:
+            raise ConnectionError("redis fora do ar")
+        return int(self.chaves.pop(chave, None) is not None)
+
     async def enqueue_job(self, nome: str, *args: Any, **kwargs: Any) -> None:
+        if self.falhar:
+            raise ConnectionError("redis fora do ar")
         self.jobs.append((nome, *args))
         self.adiamentos.append(kwargs.get("_defer_by"))
 

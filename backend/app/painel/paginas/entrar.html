@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set sem_casca = true %}
+{% set estreito = true %}
+{% block titulo %}Entrar{% endblock %}
+
+{% block conteudo %}
+<div class="marca" style="justify-content:center;margin-bottom:22px">
+  <span class="ponto">A</span>
+  <span>Asimov Agentes<small>{{ cfg.subdominio_app or cfg.subdominio_bot }}</small></span>
+</div>
+
+<div class="carta">
+  <h2>Entrar</h2>
+  {% if erro %}<p class="aviso erro">{{ erro }}</p>{% endif %}
+  <form method="post" action="/painel/entrar">
+    <div class="campo">
+      <label for="senha">Senha do operador</label>
+      <input type="password" id="senha" name="senha" autocomplete="current-password" autofocus>
+    </div>
+    <div class="campo">
+      <button class="botao forte" style="width:100%" type="submit">Entrar</button>
+    </div>
+  </form>
+</div>
+
+<p class="rotulo" style="text-align:center;margin-top:18px">
+  Esqueceu a senha? Rode <span class="mono">asimov painel</span> na VPS.
+</p>
+{% endblock %}

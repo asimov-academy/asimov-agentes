@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conversas · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1>Conversas</h1>
+      <p class="sub">Sessões ativas: quem está falando com qual agente, e o que está parado com gente.</p>
+    </div>
+    <div class="acoes">
+      <select id="f-agente" style="width:auto"></select>
+      <select id="f-status" style="width:auto">
+        <option value="">Todas</option>
+        <option value="agente">Com o agente</option>
+        <option value="humano">Com atendente</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="carta">
+    <div class="tabela-rola"><table id="lista"></table></div>
+  </div>
+
+  <p class="rotulo" style="margin-top:14px">
+    Fonte: <span class="mono">GET /admin/conversas?cliente_id=&amp;agente_id=&amp;status=</span>, rota a construir.
+    Toda consulta filtra por <span class="mono">cliente_id</span>, como todo repositório do projeto.
+  </p>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("conversas");
+
+(async () => {
+  const agentes = await api.agentes();
+  $("#f-agente").innerHTML =
+    '<option value="">Todos os agentes</option>' +
+    agentes.map((a) => `<option value="${a.id}">${esc(a.nome)} · ${esc(a.cliente)}</option>`).join("");
+  $("#f-status").value = new URLSearchParams(location.search).get("status") || "";
+  $("#f-agente").addEventListener("change", desenha);
+  $("#f-status").addEventListener("change", desenha);
+  desenha();
+})();
+
+async function desenha() {
+  const lista = await api.conversas({ agente_id: $("#f-agente").value, status: $("#f-status").value });
+  $("#lista").innerHTML = lista.length === 0
+    ? '<tbody><tr><td class="vazio">Nenhuma conversa com esse filtro.</td></tr></tbody>'
+    : `<thead><tr>
+        <th>Contato</th><th>Agente</th><th>Situação</th><th>Mensagens</th><th class="fim">Última</th>
+      </tr></thead>
+      <tbody>${lista.map((c) => `
+        <tr class="clicavel" onclick="location.href='conversa.html?id=${c.id}'">
+          <td><b>${esc(c.contato)}</b><br><span class="rotulo mono">${esc(c.telefone)}</span></td>
+          <td>${esc(c.agente)}<br><span class="rotulo">${CANAIS[c.canal]} · ${esc(c.cliente)}</span></td>
+          <td>${seloStatus(c.status, c.respondendo)}${
+            c.handoff ? `<br><span class="rotulo">${esc(c.handoff.destino)} · <span class="mono">${c.handoff.codigo}</span></span>` : ""
+          }</td>
+          <td class="rotulo">${c.mensagens}</td>
+          <td class="fim rotulo">${horaCurta(c.ultima)}</td>
+        </tr>`).join("")}</tbody>`;
+}
+</script>
+</body>
+</html>
