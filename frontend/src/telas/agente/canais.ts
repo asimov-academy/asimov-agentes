@@ -7,7 +7,8 @@ import type { NomeDeMarca } from "../../design/marcas";
  *  explicação. Um teste confere que os quatro de hoje têm texto.
  *
  *  O "custo de entrada" é a informação que falta em todo onboarding: dizer antes o que a pessoa vai
- *  precisar ter na mão, para ela não descobrir no meio do caminho que precisa do celular.
+ *  precisar ter na mão, para ela não descobrir no meio do caminho que precisa do celular. Em frase
+ *  curta: o cartão é para escolher de relance, não para ler.
  *
  *  `atencao` é a limitação que o terminal conta e o painel escondia (auditoria de copy de
  *  2026-09-18): o risco de bloqueio da API não oficial e a cobrança por mensagem da Meta. Quem
@@ -23,28 +24,28 @@ export type TextoDoCanal = {
 
 export const CANAIS: Record<string, TextoDoCanal> = {
   nativo: {
-    rotulo: "Só conversa de teste",
-    serve: "O agente responde no painel e no terminal, sem falar com ninguém de fora.",
-    exige: "nada. Dá para conectar a um canal depois",
+    rotulo: "Conversa de teste",
+    serve: "Só no painel e no terminal.",
+    exige: "nada",
     marca: "terminal",
   },
   chatwoot: {
     rotulo: "Chatwoot",
-    serve: "O agente atende nas caixas do seu Chatwoot e passa para a equipe quando precisa.",
-    exige: "o endereço do Chatwoot e um token de administrador",
+    serve: "Nas caixas do seu Chatwoot.",
+    exige: "endereço e token de administrador",
     marca: "chatwoot",
   },
   waha: {
-    rotulo: "WhatsApp pelo aparelho",
-    serve: "Um número comum de WhatsApp, conectado por QR code, como um aparelho a mais.",
-    exige: "o celular com o número na mão, para ler o QR code agora",
+    rotulo: "WhatsApp WAHA",
+    serve: "Um número comum, conectado por QR code.",
+    exige: "o celular com o número na mão",
     atencao: "Não é a API oficial: a Meta pode bloquear o número sem aviso. Use um chip só do agente.",
     marca: "whatsapp",
   },
   whatsapp: {
-    rotulo: "WhatsApp oficial",
-    serve: "Número da Cloud API da Meta, homologado, que não roda no celular de ninguém.",
-    exige: "app na Meta, token permanente e a chave secreta do app",
+    rotulo: "WhatsApp Cloud API",
+    serve: "Número homologado na Meta, fora do celular.",
+    exige: "app, token permanente e chave secreta",
     atencao: "A Meta cobra por mensagem, com 1.000 grátis por número por mês.",
     marca: "meta",
   },

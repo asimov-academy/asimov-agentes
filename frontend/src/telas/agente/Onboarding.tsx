@@ -12,10 +12,10 @@ import { Aviso } from "../../design/Aviso";
 import { Botao } from "../../design/Botao";
 import { Campo } from "../../design/Campo";
 import { Carregando } from "../../design/Carregando";
-import { Icone } from "../../design/Icone";
 import { Interruptor } from "../../design/Interruptor";
 import { Modal } from "../../design/Modal";
 import { Passos } from "../../design/Passos";
+import { Dica } from "../../design/Dica";
 import { Marca } from "../../design/Marca";
 import { CANAIS } from "./canais";
 import { EscolheIA } from "./EscolheIA";
@@ -343,26 +343,33 @@ export function Onboarding({
                       <button
                         key={c.nome}
                         onClick={() => muda("canal", c.nome)}
-                        className={`relative flex flex-col gap-2 rounded-lg border p-4 text-left transition-colors ${
+                        className={`relative flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
                           marcado ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
                         }`}
                       >
-                        <span className="flex items-center gap-2.5">
+                        <span
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${
+                            marcado ? "border-ciano/40 text-ciano" : "border-borda text-muted"
+                          }`}
+                        >
                           {texto && <Marca nome={texto.marca} tamanho={20} />}
-                          <span className="text-sm font-semibold text-texto">
-                            {texto?.rotulo ?? c.nome}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start gap-2">
+                            <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-texto">
+                              {texto?.rotulo ?? c.nome}
+                            </span>
+                            {/* O aviso é só o ícone: aberto, ele ocupava mais linha que a
+                                descrição do canal. O texto abre no hover e no foco. */}
+                            {texto?.atencao && <Dica texto={texto.atencao} />}
+                          </span>
+                          <span className="mt-1 block text-sm leading-snug text-muted">
+                            {texto?.serve}
+                          </span>
+                          <span className="mt-1 block text-xs leading-snug text-dim">
+                            Precisa: {texto?.exige ?? "nada"}
                           </span>
                         </span>
-                        <span className="text-sm leading-snug text-muted">{texto?.serve}</span>
-                        <span className="text-xs leading-snug text-dim">
-                          Precisa de {texto?.exige ?? "nada"}.
-                        </span>
-                        {texto?.atencao && (
-                          <span className="mt-1 flex items-start gap-1.5 text-xs leading-snug text-atencao">
-                            <Icone nome="stat-warning" tamanho={14} className="mt-px" />
-                            {texto.atencao}
-                          </span>
-                        )}
                       </button>
                     );
                   })}

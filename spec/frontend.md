@@ -114,6 +114,7 @@ seção de origem:
 | `Aviso` | Barra fina por dentro, à esquerda, na cor do tom, ícone do sprite, título e corpo em Inter | 5, 05 |
 | `Medidor` | Anel de 2px com arco em ciano e brilho, número em mono no centro | 5, 05 |
 | `Vazio` | Tracejado `dim` que vira `ciano` no hover, ícone em círculo apagado | 5, 02 |
+| `Dica` | Aviso que ocupa só um ícone e abre o texto no hover e no foco. Só CSS, sem biblioteca | fora do sistema |
 | `.rotulo` | `.comp-label`, em Inter: 0.6875rem, `dim`, maiúsculo, semibold, espaçado em 0.08em | 5 |
 | `.titulo-secao` | `.section-title`, em Inter: ciano, maiúsculo, com régua embaixo | 5 |
 | `.tecnico` | Mono, 12px. O único lugar onde a JetBrains Mono continua | fora do sistema |
@@ -251,6 +252,7 @@ várias empresas tem um funil para cada uma.
 - **Arrastar é o arrasto nativo do navegador** (`draggable` e `dataTransfer`), nunca biblioteca. O
   cartão aparece na coluna nova antes de o servidor responder: a mão chega antes da rede.
 - **Coluna com cartão não some**: a remoção responde 409 dizendo quantos cartões mover antes.
+- **Ressalva de canal é ícone, não parágrafo**: aberta, ela ocupava mais linha que a descrição. O texto abre no `Dica`, passando o mouse ou pelo teclado.
 - **Cor de etiqueta é nome de token da paleta** (`ciano`, `ok`, `atencao`, `perigo`, `muted`),
   nunca hexadecimal. Etiqueta fora da paleta estragaria o quadro inteiro, e o backend recusa.
 - Apagar etiqueta a tira dos cartões junto, pelo `ON DELETE CASCADE` da ligação.

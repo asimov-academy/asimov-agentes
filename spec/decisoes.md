@@ -41,6 +41,20 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Cartão de canal mais visual, e o nome técnico dos dois WhatsApp (v0.23.1)
+
+O operador olhou o passo do canal no onboarding e pediu menos texto e mais desenho. O cartão tinha
+título, duas frases, a linha do que exige e o aviso aberto em três linhas laranja: mais aviso do que
+descrição. Agora ele é logo num quadrado, nome, uma frase curta, o "Precisa:" e o aviso como ícone,
+que abre no hover e no foco (`design/Dica.tsx`, só CSS, sem biblioteca).
+
+**Os dois WhatsApp passaram a usar o nome técnico**: "WhatsApp Cloud API" e "WhatsApp WAHA". A
+auditoria de copy tinha recomendado o contrário, e o operador decidiu: quem instala esta plataforma
+conhece os dois termos, e o nome de fantasia obrigava a traduzir de volta na cabeça. Vale só para
+eles; o canal `nativo` continua como "Conversa de teste".
+
+O logo do Chatwoot era um balão genérico que eu tinha desenhado. Virou a forma da marca.
+
 ## 2026-09-18: Funil de oportunidades, com kanban e etiquetas (v0.23.0)
 
 O operador pediu kanban, oportunidades e etiquetas para controle. Entrou o módulo
