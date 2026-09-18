@@ -4,6 +4,7 @@ https://bot.exemplo.com.br/
 operador@exemplo.com.br
 2
 
+s
 n
 1
 1
@@ -56,9 +57,9 @@ luiz
 s
 6
 1
-8
+9
 1
-10
+11
 1
 
 1
@@ -99,4 +100,6 @@ Sofia
 
 1
 4
+2
+s
 n

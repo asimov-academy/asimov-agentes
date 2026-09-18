@@ -33,7 +33,9 @@ async function chama<T>(caminho: string, opcoes: RequestInit = {}): Promise<T> {
     credentials: "same-origin",
     headers: {
       Accept: "application/json",
-      ...(escrita ? { "Content-Type": "application/json", "X-Painel-CSRF": csrf } : {}),
+      ...(escrita
+        ? { "Content-Type": "application/json", "X-Painel-CSRF": csrf }
+        : {}),
       ...opcoes.headers,
     },
   });
@@ -61,11 +63,15 @@ export const api = {
   /** A tela de abertura. Sem empresa, a instalação inteira; o filtro viaja na URL, nunca no corpo. */
   visaoGeral: (dias: Periodo, empresa?: string) =>
     chama<VisaoGeral>(
-      `/visao-geral?dias=${dias}` + (empresa ? `&cliente_id=${encodeURIComponent(empresa)}` : ""),
+      `/visao-geral?dias=${dias}` +
+        (empresa ? `&cliente_id=${encodeURIComponent(empresa)}` : ""),
     ),
 
   criaEmpresa: (nome: string) =>
-    chama<Empresa>("/empresas", { method: "POST", body: JSON.stringify({ nome }) }),
+    chama<Empresa>("/empresas", {
+      method: "POST",
+      body: JSON.stringify({ nome }),
+    }),
 
   /** Lista de agentes. `ativo` sem valor traz todos. */
   agentes: (empresa?: string, ativo?: boolean) => {
@@ -86,13 +92,19 @@ export const api = {
     }),
 
   editaAgente: (id: string, mudancas: Partial<EdicaoDoAgente>) =>
-    chama<Agente>(`/agentes/${id}`, { method: "PATCH", body: JSON.stringify(mudancas) }),
+    chama<Agente>(`/agentes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(mudancas),
+    }),
 
   removeAgente: (id: string, confirmacao: string) =>
-    chama<{ removido: boolean; canal_desconectado: boolean }>(`/agentes/${id}`, {
-      method: "DELETE",
-      body: JSON.stringify({ confirmacao }),
-    }),
+    chama<{ removido: boolean; canal_desconectado: boolean }>(
+      `/agentes/${id}`,
+      {
+        method: "DELETE",
+        body: JSON.stringify({ confirmacao }),
+      },
+    ),
 
   /** As respostas da aba Trabalho. Gravar reescreve o `persona.md` a partir delas. */
   gravaPerfil: (id: string, perfil: PerfilDoAgente) =>
@@ -131,7 +143,9 @@ export const api = {
     }),
 
   apagaEtapa: (empresa: string, id: string) =>
-    chama<void>(`/empresas/${empresa}/funil/etapas/${id}`, { method: "DELETE" }),
+    chama<void>(`/empresas/${empresa}/funil/etapas/${id}`, {
+      method: "DELETE",
+    }),
 
   criaEtiqueta: (empresa: string, nome: string, cor: CorDeEtiqueta) =>
     chama<EtiquetaDoFunil>(`/empresas/${empresa}/funil/etiquetas`, {
@@ -140,22 +154,36 @@ export const api = {
     }),
 
   apagaEtiqueta: (empresa: string, id: string) =>
-    chama<void>(`/empresas/${empresa}/funil/etiquetas/${id}`, { method: "DELETE" }),
+    chama<void>(`/empresas/${empresa}/funil/etiquetas/${id}`, {
+      method: "DELETE",
+    }),
 
-  criaOportunidade: (empresa: string, dados: Partial<OportunidadeDoFunil> & { titulo: string }) =>
+  criaOportunidade: (
+    empresa: string,
+    dados: Partial<OportunidadeDoFunil> & { titulo: string },
+  ) =>
     chama<{ id: string }>(`/empresas/${empresa}/funil/oportunidades`, {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
-  editaOportunidade: (empresa: string, id: string, mudancas: Record<string, unknown>) =>
-    chama<{ id: string; etapa_id: string }>(`/empresas/${empresa}/funil/oportunidades/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(mudancas),
-    }),
+  editaOportunidade: (
+    empresa: string,
+    id: string,
+    mudancas: Record<string, unknown>,
+  ) =>
+    chama<{ id: string; etapa_id: string }>(
+      `/empresas/${empresa}/funil/oportunidades/${id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(mudancas),
+      },
+    ),
 
   apagaOportunidade: (empresa: string, id: string) =>
-    chama<void>(`/empresas/${empresa}/funil/oportunidades/${id}`, { method: "DELETE" }),
+    chama<void>(`/empresas/${empresa}/funil/oportunidades/${id}`, {
+      method: "DELETE",
+    }),
 
   /** O botão de estrelinha: a IA da instalação reescreve a descrição que o operador digitou. */
   melhoraTexto: (texto: string, empresa: string) =>
@@ -164,26 +192,53 @@ export const api = {
       body: JSON.stringify({ texto, empresa }),
     }),
 
+  /** Copiloto do painel: o estado numa chamada, e depois só o que a conversa mudou. */
+  copiloto: () => chama<EstadoDoCopiloto>("/copiloto"),
+  copilotoSessao: () => chama<SessaoDoCopiloto>("/copiloto/sessao"),
+  copilotoFala: (texto: string) =>
+    chama<SessaoDoCopiloto>("/copiloto/mensagens", {
+      method: "POST",
+      body: JSON.stringify({ texto }),
+    }),
+  /** O clique que autoriza. Nada que o copiloto propõe muda sem passar por aqui. */
+  copilotoDecide: (proposta: string, aplicar: boolean) =>
+    chama<SessaoDoCopiloto>(`/copiloto/propostas/${proposta}`, {
+      method: "POST",
+      body: JSON.stringify({ aplicar }),
+    }),
+  copilotoRecomeca: () =>
+    chama<SessaoDoCopiloto>("/copiloto/sessao", { method: "DELETE" }),
+
   ferramentas: () => chama<Ferramenta[]>("/ferramentas"),
   modelos: () => chama<Modelos>("/modelos"),
   modelosDoProvedor: (provedor: string, funcao: string) =>
     chama<string[]>(`/modelos/${provedor}?funcao=${funcao}`),
   /** A chave vai e nunca volta: o backend testa no provedor e guarda cifrada. */
   guardaChave: (provedor: string, chave: string) =>
-    chama<void>(`/chaves/${provedor}`, { method: "PUT", body: JSON.stringify({ chave }) }),
+    chama<void>(`/chaves/${provedor}`, {
+      method: "PUT",
+      body: JSON.stringify({ chave }),
+    }),
   canais: () => chama<CanalDisponivel[]>("/canais"),
 
   /** A situação de cada canal, uma linha por agente. */
   situacaoDosCanais: (empresa?: string) =>
-    chama<LinhaDeCanal[]>("/canais/situacao" + (empresa ? `?cliente_id=${empresa}` : "")),
+    chama<LinhaDeCanal[]>(
+      "/canais/situacao" + (empresa ? `?cliente_id=${empresa}` : ""),
+    ),
 
   acaoNoCanal: (id: string, acao: "reiniciar" | "qr") =>
-    chama<{ situacao?: SituacaoDoCanal; qr?: string | null }>(`/agentes/${id}/canal/acao`, {
-      method: "POST",
-      body: JSON.stringify({ acao }),
-    }),
+    chama<{ situacao?: SituacaoDoCanal; qr?: string | null }>(
+      `/agentes/${id}/canal/acao`,
+      {
+        method: "POST",
+        body: JSON.stringify({ acao }),
+      },
+    ),
 
-  conversas: (filtros: { empresa?: string; agente?: string; status?: string } = {}) => {
+  conversas: (
+    filtros: { empresa?: string; agente?: string; status?: string } = {},
+  ) => {
     const busca = new URLSearchParams();
     if (filtros.empresa) busca.set("cliente_id", filtros.empresa);
     if (filtros.agente) busca.set("agente_id", filtros.agente);
@@ -212,17 +267,27 @@ export const api = {
 
   /** Conversa de teste pelo canal nativo: o mesmo `asimov conversar` do terminal. */
   mandaTeste: (id: string, texto: string, conversa?: string) =>
-    chama<{ conversa: string; conversa_id: string; agendada: boolean }>(`/agentes/${id}/teste`, {
-      method: "POST",
-      body: JSON.stringify({ texto, conversa: conversa ?? null }),
-    }),
+    chama<{ conversa: string; conversa_id: string; agendada: boolean }>(
+      `/agentes/${id}/teste`,
+      {
+        method: "POST",
+        body: JSON.stringify({ texto, conversa: conversa ?? null }),
+      },
+    ),
 
   leTeste: (id: string, conversa: string, depois: number) =>
-    chama<LeituraDoTeste>(`/agentes/${id}/teste/${encodeURIComponent(conversa)}?depois=${depois}`),
+    chama<LeituraDoTeste>(
+      `/agentes/${id}/teste/${encodeURIComponent(conversa)}?depois=${depois}`,
+    ),
 };
 
 export type Eu = {
-  operador: { nome: string; email: string; criado_em: string; ultimo_acesso_em: string | null };
+  operador: {
+    nome: string;
+    email: string;
+    criado_em: string;
+    ultimo_acesso_em: string | null;
+  };
   espaco: EspacoDeTrabalho;
   instalacao: { subdominio_bot: string; subdominio_app: string };
   empresas: number;
@@ -230,7 +295,12 @@ export type Eu = {
   csrf: string;
 };
 
-export type Empresa = { id: string; nome: string; slug: string; ativo: boolean };
+export type Empresa = {
+  id: string;
+  nome: string;
+  slug: string;
+  ativo: boolean;
+};
 
 /** Os três períodos que o backend aceita. Qualquer outro vira 422 lá, de propósito. */
 export const PERIODOS = [1, 7, 30] as const;
@@ -238,7 +308,12 @@ export type Periodo = (typeof PERIODOS)[number];
 
 export type Ponto = { quando: string; turnos: number };
 
-export type GastoDoModelo = { modelo: string; chamadas: number; tokens: number; custo: string };
+export type GastoDoModelo = {
+  modelo: string;
+  chamadas: number;
+  tokens: number;
+  custo: string;
+};
 
 export type FalhaDoPainel = {
   criado_em: string;
@@ -277,7 +352,12 @@ export type Resolucao = {
   porcento: number | null;
 };
 
-export type TurnosDoAgente = { agente: string; cliente: string; turnos: number; custo: string };
+export type TurnosDoAgente = {
+  agente: string;
+  cliente: string;
+  turnos: number;
+  custo: string;
+};
 
 export type VisaoGeral = {
   dias: number;
@@ -369,14 +449,24 @@ export type EdicaoDoAgente = {
   modelo_transcricao: string;
 };
 
-export type Ferramenta = { nome: string; rotulo: string; descricao: string; padrao: boolean };
+export type Ferramenta = {
+  nome: string;
+  rotulo: string;
+  descricao: string;
+  padrao: boolean;
+};
 
 export type Modelos = {
   provedores: string[];
   provedores_transcricao: string[];
   /** Provedores que já têm chave guardada na instalação. A chave em si nunca vem. */
   com_chave: string[];
-  funcoes: { campo: string; funcao: string; rotulo: string; obrigatorio: boolean }[];
+  funcoes: {
+    campo: string;
+    funcao: string;
+    rotulo: string;
+    obrigatorio: boolean;
+  }[];
   padroes: Record<string, string | null>;
 };
 
@@ -524,7 +614,13 @@ export type Contato = {
 export type ContatoAberto = Contato & {
   id_externo: string;
   criado_em: string;
-  conversas: { id: string; canal: string; status: string; criado_em: string; atualizado_em: string }[];
+  conversas: {
+    id: string;
+    canal: string;
+    status: string;
+    criado_em: string;
+    atualizado_em: string;
+  }[];
 };
 
 export type LeituraDoTeste = {
@@ -534,4 +630,43 @@ export type LeituraDoTeste = {
   respondendo: boolean;
   turno: Record<string, unknown> | null;
   handoff: Record<string, unknown> | null;
+};
+
+export type VinculoDeIa = {
+  vinculada: boolean;
+  cli: string;
+  nome: string;
+  assinatura: string;
+  conta: string;
+  comando: string;
+};
+
+export type PropostaDoCopiloto = {
+  id: string;
+  tipo: string;
+  titulo: string;
+  resumo: string;
+  situacao: "aguardando" | "aplicada" | "recusada" | "falhou";
+  resultado?: string;
+  campos?: Record<string, unknown>;
+  prompt?: string | null;
+};
+
+export type MensagemDoCopiloto = {
+  autor: "operador" | "copiloto" | "sistema";
+  texto: string;
+  em: string;
+};
+
+export type SessaoDoCopiloto = {
+  id: string;
+  estado: "parado" | "pensando";
+  erro: string;
+  mensagens: MensagemDoCopiloto[];
+  propostas: PropostaDoCopiloto[];
+};
+
+export type EstadoDoCopiloto = {
+  vinculo: VinculoDeIa;
+  sessao: SessaoDoCopiloto;
 };

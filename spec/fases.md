@@ -241,3 +241,35 @@ O que o operador precisa fazer:
   `asimov painel` liga depois.
 
 Commit: `feat: painel web do operador em app.<dominio>`
+
+## Fase 9: Conta de IA vinculada e copiloto do painel
+
+A conta de IA do operador vira parte da instalação, e é ela que liga o copiloto do painel, que opera
+a plataforma conversando em português.
+
+- Parte 9.1 (construída, falta a VPS): a instalação pede o login do CLI escolhido
+  (`setup/lib/vinculo.sh`, tela 5a de `spec/telas.md`), grava o vínculo no `.env` e deixa
+  `asimov ia` para vincular, trocar de assistente e desvincular depois. Pular não impede nada:
+  o painel instala do mesmo jeito, só sem copiloto.
+- Parte 9.2 (construída, falta a VPS): contêiner `copiloto` com perfil, worker e fila próprios,
+  servidor MCP com as ferramentas da plataforma e as rotas `/painel/api/copiloto`.
+- Parte 9.3 (construída, falta a VPS): o popup do copiloto no painel, com o cartão de proposta e o
+  cartão de "sem conta vinculada" (`spec/frontend.md`, 5.8).
+
+Dependências: Fase 8.
+
+Critério de aceite:
+- Numa VPS nova, escolho o Claude Code, entro na minha conta na tela da instalação, ligo o painel e
+  o copiloto já aparece lá dentro.
+- Peço "deixe a Bella mais objetiva e ligue a calculadora nela", confirmo a proposta e confiro no
+  terminal que o prompt no disco e as ferramentas do agente mudaram.
+- Recuso uma proposta e nada muda.
+- Repito a instalação escolhendo o Codex, e depois uma terceira pulando o vínculo: o painel sobe
+  sem copiloto e ensina `asimov ia`.
+- Sem conta vinculada, `POST /painel/api/copiloto/mensagens` responde 409 com o comando, não erro.
+
+O que o operador precisa fazer:
+- Ter uma assinatura Claude Pro ou Max, ou ChatGPT Plus ou Pro, e aprovar o login no navegador do
+  próprio computador quando o terminal pedir.
+
+Commit: `feat: conta de IA vinculada na instalação e copiloto no painel`

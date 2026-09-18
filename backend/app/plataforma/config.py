@@ -1,7 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +24,16 @@ class Config(BaseSettings):
     # instalação segue com a API exatamente como sempre foi, sem rota nova e sem host novo no Caddy.
     painel_ativo: bool = False
     subdominio_app: str = ""
+
+    # Conta de IA do operador, vinculada por `asimov ia`. O segredo do login nunca chega aqui: ele
+    # fica na pasta do CLI oficial, montada só no contêiner do copiloto. Daqui sai o que o painel
+    # precisa para mostrar ou esconder o copiloto, e qual CLI o worker do copiloto executa.
+    ia_vinculada: bool = False
+    ia_cli: Literal["", "claude_code", "codex"] = ""
+    ia_conta: str = ""
+    # Assistente escolhido na instalação. Vale de padrão para quem instalou antes do vínculo existir.
+    agente_codigo: Literal["", "claude_code", "codex"] = ""
+
     # Onde mora o front construído (`frontend/dist`, copiado para cá no Dockerfile). Caminho relativo
     # conta a partir do pacote `app/`. Vazio, o painel responde que o front não foi construído em vez
     # de quebrar: é o que se vê rodando a API na máquina de desenvolvimento sem `npm run build`.
@@ -76,6 +87,13 @@ class Config(BaseSettings):
     midia_limite_audio_segundos: int = 5 * 60
     midia_paginas_pdf_visao: int = 10
     midia_caracteres_extraidos: int = 12000
+
+    @field_validator("painel_ativo", "ia_vinculada", mode="before")
+    @classmethod
+    def _desligado_quando_vazio(cls, valor: Any) -> Any:
+        """O setup desliga uma chave gravando `CHAVE=` no .env, e o Compose entrega isso como texto
+        vazio. Sem esta conversão, `asimov painel` desligando o painel derrubava a API no boot."""
+        return False if valor == "" else valor
 
     def chave_do_provedor(self, provedor: str) -> str:
         return {

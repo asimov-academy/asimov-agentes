@@ -396,6 +396,21 @@ mídia. Sem exportação em massa.
 Tela com o selo "em breve" e uma linha sobre o que vai fazer, ligada à Fase 6. Não chama rota
 nenhuma.
 
+### 5.8 Copiloto
+
+Botão redondo no canto inferior direito, em toda tela, que abre o popup grande de sempre. Dentro
+dele, a conversa com o copiloto do painel.
+
+- **Sem conta de IA vinculada** o popup não vira um chat morto: explica o que o copiloto faria,
+  diz que ele roda pela assinatura do operador e mostra o comando do terminal (`asimov ia`). O
+  login é do CLI e acontece na VPS; o navegador não tem como conduzir esse fluxo.
+- **Com conta vinculada**, três exemplos de pedido enquanto ninguém falou nada, e depois a conversa.
+  Enquanto o copiloto pensa, uma linha diz isso e a tela pergunta de dois em dois segundos, como a
+  conversa de teste do agente.
+- **Proposta é um cartão, não uma frase.** Título, o que muda campo a campo, o prompt proposto num
+  `details`, e dois botões: Confirmar e Agora não. Enquanto ninguém clica, nada mudou na plataforma.
+- Recomeçar abandona a conversa e o fio do lado do CLI.
+
 ## 6. Contrato `/painel/api`
 
 Leitura pode chamar `repo.py`; escrita sempre passa por `servico.py`. Toda rota confere a sessão e,
@@ -423,6 +438,11 @@ GET    /painel/api/conversas/{id}             histórico e turnos
 POST   /painel/api/conversas/{id}/retomar     devolve ao agente
 GET    /painel/api/contatos                   lista com busca
 GET    /painel/api/contatos/{id}              ficha
+GET    /painel/api/copiloto                   conta de IA vinculada e a conversa de hoje
+GET    /painel/api/copiloto/sessao            só a conversa, para o polling enquanto ele pensa
+POST   /painel/api/copiloto/mensagens         enfileira um pedido do operador
+POST   /painel/api/copiloto/propostas/{id}    confirma ou recusa: o único caminho de escrita
+DELETE /painel/api/copiloto/sessao            recomeça a conversa
 ```
 
 Onde a rota cria dentro de uma empresa, o `cliente_id` vem da URL e é conferido no banco antes de
@@ -474,6 +494,8 @@ VPS, os testes passam e o `shellcheck` não acusa erro.
 | 9. Chat **(construída, falta a VPS)** | Rotas de conversa e mensagem, lista, histórico, devolver ao agente, conversa de teste | Abro uma conversa real, vejo o turno e devolvo um handoff pelo painel |
 | 10. Contatos **(construída, falta a VPS)** | Lista com busca e ficha | Acho um contato pelo telefone e vejo as conversas dele |
 | 11. Base de conhecimento e polimento **(construída, falta a VPS)** | Tela em breve, vazios, erros, acessibilidade, responsivo | Navego o painel inteiro no celular sem quebrar, e nenhum erro no console |
+
+| 12. Copiloto **(construída, falta a VPS)** | Popup do copiloto, cartão de proposta, cartão de "sem conta vinculada", rotas `/painel/api/copiloto`, contêiner e worker do copiloto | Peço "deixe a Bella mais objetiva", confirmo a proposta e o prompt no disco muda; sem vincular conta, o popup ensina `asimov ia` |
 
 Testes por etapa: pytest para toda rota nova, com isolamento por `cliente_id` obrigatório; vitest
 para o cliente de API e para os componentes de base; a checagem de que ninguém escreve cor solta.

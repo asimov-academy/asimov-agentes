@@ -17,6 +17,20 @@ espera_waha_no_ar() { :; }
 curl() { case "$*" in *hub.docker.com*) echo '{"results":[{"name":"gows-2026.9.1"},{"name":"gows-arm-2026.9.1"},{"name":"gows-2026.8.2"},{"name":"gows-arm-2026.8.2"},{"name":"gows"},{"name":"dev"}]}' ;; *) return 1 ;; esac; }
 dc() { echo "dc $*" >>"$DIR/dc.log"; }
 qrencode() { printf '  [QR code de %s]\n' "${*: -1}"; }
+# CLI de IA: aqui o Codex é de mentira. O arquivo marca que o login já rolou, como a credencial
+# de verdade faria em ~/.codex.
+codex() {
+  case "$*" in
+    "login --device-auth")
+      printf '  Abra https://chatgpt.com/device e informe o código ABCD-1234\n'
+      touch "$DIR/codex_logado" ;;
+    "login status")
+      [ -f "$DIR/codex_logado" ] || return 1
+      printf 'Logged in using ChatGPT account operador@exemplo.com.br\n' ;;
+    logout) rm -f "$DIR/codex_logado" ;;
+    *) return 1 ;;
+  esac
+}
 WAHA_ESPERA_STATUS=0
 ip_do_dominio() { local n; n=$(cat $DIR/n 2>/dev/null || echo 0); echo $((n+1)) > $DIR/n; [ "$n" -ge 2 ] && echo 203.0.113.10 || true; }
 ipv6_do_dominio() { :; }
@@ -86,6 +100,11 @@ api() {
   esac
 }
 banner_asimov; tela_boas_vindas; tela_modo; tela_dados; tela_dns
+# Como no instalar.sh: a conta de IA vem antes do painel. Aqui responde "sim" e o Codex de mentira
+# aceita o login, que é o caminho que liga o copiloto.
+tela_vinculo_ia
+printf 'IA_VINCULADA=%s IA_CONTA=%s CREDENCIAL_IA_CONTAINER=%s\n' \
+  "$(env_get IA_VINCULADA)" "$(env_get IA_CONTA)" "$(env_get CREDENCIAL_IA_CONTAINER)"
 # Como no instalar.sh: o painel é oferecido antes do primeiro agente. Aqui responde "não".
 tela_painel_oferta
 tela_primeiro_agente
@@ -127,6 +146,9 @@ jq -c . "$DIR/patch_whatsapp"
 com_voltar edita_whatsapp
 # Diagnóstico: o que está no ar e em que versão (curl é falso aqui, então cai no ramo de falha).
 com_voltar fluxo_diagnostico
+# Conta de IA: a tela do menu com a conta já vinculada, e a desvinculação.
+com_voltar fluxo_vinculo
+printf 'IA_VINCULADA=%s\n' "$(env_get IA_VINCULADA)"
 # Oferta do painel: aparece uma vez na instalação e na primeira atualização de quem já tinha.
 # Aqui responde "não", que é o caminho que não depende de DNS nem de contêiner.
 estado_remove painel_perguntado

@@ -25,6 +25,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Só o contêiner do copiloto instala o SDK do MCP: é ele que serve as ferramentas ao CLI. A API e
+# o worker de atendimento seguem sem isso na imagem.
+copiloto = ["mcp>=2.2"]
 openai = ["pydantic-ai-slim[openai]>=1.0"]
 anthropic = ["pydantic-ai-slim[anthropic]>=1.0"]
 gemini = ["pydantic-ai-slim[google]>=1.0"]

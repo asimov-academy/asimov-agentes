@@ -2,6 +2,49 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Conta de IA vinculada na instalação e copiloto no painel (v0.25.0)
+
+O setup instalava o Claude Code ou o Codex e parava aí. Quem nunca abria o CLI ficava com um binário
+morto na VPS, e o painel não tinha como ajudar a configurar nada. A conta de IA passa a ser parte da
+instalação, e é ela que liga o copiloto do painel.
+
+**A instalação pede o login do CLI escolhido**, logo depois de a plataforma subir e antes da oferta
+do painel (`setup/lib/vinculo.sh`, tela `tela_vinculo_ia`). Quem quiser pular pula: a instalação
+segue inteira e o painel também, só sem copiloto. Depois, `asimov ia` vincula, troca de assistente,
+mostra a situação e desvincula. O menu do operador ganhou "Conta de IA".
+
+**A assinatura é a única forma de pagar o copiloto.** Claude Pro ou Max, ChatGPT Plus ou Pro. Chave
+de API não liga o copiloto: quem assina já pagou, e cobrar por token do lado de cá seria cobrar duas
+vezes. A contrapartida é o limite por janela da assinatura, que o painel diz com todas as letras
+quando acontece.
+
+**A credencial não entra no banco nem no `.env`.** Ela nasce e vive onde o CLI oficial guarda
+(`~/.claude/.credentials.json` ou `~/.codex/auth.json`, com a permissão dele), e o contêiner do
+copiloto monta essa pasta. O `.env` guarda só `IA_VINCULADA`, `IA_CLI`, `IA_CONTA` e o caminho da
+pasta, que é o que o painel precisa para mostrar ou esconder o copiloto. É a regra de credencial do
+projeto cumprida pelo caminho mais curto: o segredo não passa por nós.
+
+**O copiloto roda num contêiner próprio, com perfil, no molde da WAHA** (`COPILOTO_ATIVO=1` no
+`.env`, lido pelo `dc`). Só ele leva o CLI dentro, e ele só sobe com conta vinculada **e** painel
+ligado: quem administra pelo terminal não paga o build. A API enfileira e o worker do copiloto
+executa; os dois nunca dividem processo, porque um turno de atendimento precisa ser rápido e um
+turno de copiloto pensa por minutos.
+
+**O CLI não escreve na plataforma.** A fronteira é um servidor MCP nosso (`app/copiloto/mcp.py`),
+com ferramentas de leitura que respondem na hora e ferramentas `propor_` que só registram uma
+proposta. Quem aplica é o backend, no clique do operador. Sem isso, uma frase escondida num prompt
+ou numa conversa de contato poderia mudar a configuração de um agente sozinha. As ferramentas de
+código do CLI ficam desligadas: o copiloto opera a plataforma, não a VPS.
+
+**Agente novo pelo copiloto nasce no canal nativo.** Conectar a um WhatsApp ou Chatwoot continua no
+passo a passo do painel, que é onde se cola token e se lê QR code.
+
+**Bug achado no caminho:** `asimov painel` desligando o painel gravava `PAINEL_ATIVO=` no `.env`, e
+a API não subia com um booleano vazio. O `Config` passou a tratar chave vazia como desligada.
+
+Atualizados: spec/arquitetura.md, spec/telas.md, spec/frontend.md, spec/fases.md, spec/dados.md e
+spec/estado.md.
+
 ## 2026-09-18: A IA vira escolha de cada agente, e a instalação fica só com o essencial (v0.20.0)
 
 O operador instalou numa VPS e apontou o que não fazia sentido. Tudo abaixo veio dessa rodada.
