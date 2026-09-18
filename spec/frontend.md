@@ -310,7 +310,9 @@ popup reabre com ele.
 2. **Objetivo**: atendimento, suporte ou vendas, em três cartões com ícone.
 3. **Empresa**: o nome de onde ele vai trabalhar, com as empresas que já existem como atalho, mais
    o site, opcional.
-4. **Sobre**: o que a empresa faz, em texto livre, com o botão **Melhorar com IA**. A IA da
+4. **Sobre**: o que a empresa faz, em texto livre, com o botão **Melhorar com IA**. A ajuda diz o
+   ganho ("isso melhora a inteligência dele sobre a empresa"), não o mecanismo: "vira o prompt dele"
+   é jargão e não diz por que vale a pena responder. A IA da
    instalação reescreve o que o operador digitou (`ia/redacao.py`); falhando, ele não perde o que
    escreveu e a mensagem diz o porquê.
 5. **Ajustes**: passar a conversa para uma pessoa (sempre ligada), as ferramentas, o emoji, em
