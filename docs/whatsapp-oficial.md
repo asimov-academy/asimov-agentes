@@ -153,14 +153,23 @@ O token que aparece na Etapa 1 vale 24 horas. O agente precisa de um permanente.
 3. Selecione o usuário criado e clique em **Adicionar ativos**:
    - o **app** do passo 2, com **Gerenciar app**;
    - a **conta de WhatsApp Business** do passo 4, com **Gerenciar contas do WhatsApp Business**.
-4. Clique em **Gerar token**, escolha o app e marque as permissões:
-   - `whatsapp_business_messaging`
-   - `whatsapp_business_management`
-   - `business_management`
+4. Clique em **Gerar token**, escolha o app e marque **as duas permissões**:
+   - `whatsapp_business_messaging` (mandar e receber mensagem)
+   - `whatsapp_business_management` (número, templates e webhook)
 5. Em validade, escolha **Nunca expira**.
 6. Copie o token. **Ele aparece uma vez só.** Se perder, gere outro.
 
-Referência: [token permanente com usuário do sistema](https://developers.facebook.com/docs/whatsapp/business-management-api/get-started).
+**`business_management` não aparece na lista? Não precisa dela.** App criado pelo caso de uso
+"Conectar-se com clientes pelo WhatsApp" oferece só as permissões daquele caso de uso, e as duas
+acima são todas as que o agente usa. Também não precisa de `whatsapp_business_manage_events` nem de
+`manage_app_solution`.
+
+A `business_management` serve a uma coisa só aqui: deixar o setup **descobrir** a conta de WhatsApp
+Business pelos negócios do token. Sem ela, o setup ainda descobre pelos escopos do próprio token e,
+se não achar, pergunta o ID à mão, que está em
+[onde fica o ID da conta](#onde-fica-o-id-da-conta-de-whatsapp-business). Nada deixa de funcionar.
+
+Referência: [tokens de acesso](https://developers.facebook.com/documentation/business-messaging/whatsapp/access-tokens/).
 
 O token vai para a plataforma e é guardado criptografado no banco. Ele nunca aparece em log, na
 resposta da API nem no `.env`.
@@ -264,7 +273,8 @@ dizer que a mensagem chegou.
 
 | O que acontece | Causa provável | O que fazer |
 |---|---|---|
-| A Meta recusa o token de acesso | token de 24 h da Etapa 1, ou sem as permissões | refaça o passo 7, com as três permissões e "Nunca expira" |
+| A Meta recusa o token de acesso | token de 24 h da Etapa 1, ou sem as permissões | refaça o passo 7, com as duas permissões e "Nunca expira" |
+| `business_management` não aparece para marcar | app do caso de uso do WhatsApp só oferece as permissões dele | não precisa: marque as duas `whatsapp_*` |
 | A Meta recusa apontar o webhook | o usuário do sistema não tem o app ou a conta como ativo | passo 7, item 3 |
 | O agente recebe mas nada chega ao contato | conta sem forma de pagamento | passo 5 |
 | O agente não recebe nada | alguém mexeu na configuração do webhook pelo painel da Meta | `asimov editar`, opção **WhatsApp**, **Refazer o webhook na Meta** |

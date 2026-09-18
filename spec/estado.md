@@ -4,7 +4,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.15.2` em `asimov-academy/asimov-agentes` (público): o setup não pede mais o ID da conta de WhatsApp Business: com app, token e chave secreta ele pergunta à Meta quais contas o token alcança e lista para escolher. O ID era o dado mais escondido do painel novo.
+- `v0.15.2` em `asimov-academy/asimov-agentes` (público, com `docs/whatsapp-oficial.md` corrigido depois: o token do agente precisa de duas permissões, `whatsapp_business_messaging` e `whatsapp_business_management`; `business_management` não aparece em app do caso de uso do WhatsApp e não é necessária): o setup não pede mais o ID da conta de WhatsApp Business: com app, token e chave secreta ele pergunta à Meta quais contas o token alcança e lista para escolher. O ID era o dado mais escondido do painel novo.
 - `v0.15.1`: `docs/whatsapp-oficial.md` refeito com o painel novo da Meta ("Produtos" virou "Casos de uso", com as três etapas guiadas), a cobrança por mensagem de serviço que começou em 1º de outubro de 2026 (e que exige forma de pagamento para o agente conseguir responder) e a política de IA de propósito geral de janeiro de 2026.
 - `v0.15.0`: **WhatsApp oficial (Cloud API da Meta)**, terceira parte da fase 5. Cada agente tem o próprio endereço de webhook, apontado no número pela API; o aviso de handoff sai em texto livre ou pelo template aprovado, e a conversa volta com 👍 no aviso, `/retomar` ou o prazo do agente.
 - `v0.14.2`: o texto das mensagens saiu do log (conversa pessoal de quem emprestou o número ao agente passava por lá) e mexer no contêiner da WAHA deixou de disparar alarme de número fora do ar.
