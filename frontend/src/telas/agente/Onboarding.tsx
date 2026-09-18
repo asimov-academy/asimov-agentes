@@ -452,7 +452,7 @@ function Sobre({
   return (
     <Pergunta
       titulo={`O que ${empresa || "a empresa"} faz?`}
-      ajuda="Isto vira o prompt dele. Pode pular e escrever depois."
+      ajuda={`Isso melhora a inteligência dele sobre ${empresa || "a empresa"}. Pode pular e escrever depois.`}
     >
       <textarea
         rows={7}
