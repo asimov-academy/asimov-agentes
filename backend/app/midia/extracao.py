@@ -88,19 +88,28 @@ def duracao_audio(conteudo: bytes) -> float | None:
 
 
 async def transcrever(nome_modelo: str, conteudo: bytes, tipo_mime: str) -> Extracao:
+    """O idioma vai junto quando configurado: sem ele o transcritor adivinha pelo som, e áudio
+    curto ou com ruído vira outra língua (um "Boa noite" voltou em russo no teste da v0.14.0)."""
     provedor = provedores.provedor_de(nome_modelo)
+    idioma = config().idioma_audio.strip()
     if provedor == "gemini":
-        return await _com_modelo(nome_modelo, PROMPT_TRANSCRICAO, conteudo, tipo_mime)
+        prompt = PROMPT_TRANSCRICAO
+        if idioma:
+            prompt = f"{prompt} O áudio está em {idioma}."
+        return await _com_modelo(nome_modelo, prompt, conteudo, tipo_mime)
     endpoint = ENDPOINT_TRANSCRICAO.get(provedor)
     if endpoint is None:
         raise provedores.ModeloInvalido(f"{provedor} não transcreve áudio")
 
     extensao = EXTENSAO_AUDIO.get(tipo_mime, tipo_mime.rsplit("/", 1)[-1])
+    campos = {"model": nome_modelo.split(":", 1)[1]}
+    if idioma:
+        campos["language"] = idioma
     async with _http() as http:
         resp = await http.post(
             endpoint,
             headers={"Authorization": f"Bearer {config().chave_do_provedor(provedor)}"},
-            data={"model": nome_modelo.split(":", 1)[1]},
+            data=campos,
             files={"file": (f"audio.{extensao}", conteudo, tipo_mime)},
         )
     resp.raise_for_status()

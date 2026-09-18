@@ -442,3 +442,30 @@ async def _algum_cliente(s: Any) -> Any:
     s.add(cliente)
     await s.commit()
     return cliente.id
+
+
+async def test_transcricao_manda_o_idioma_configurado(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Sem o idioma, áudio curto vira outra língua: um "Boa noite" voltou em russo na VPS."""
+    import httpx
+
+    from app.midia import extracao
+
+    enviados: dict[str, object] = {}
+
+    class HttpFalso:
+        async def __aenter__(self) -> "HttpFalso":
+            return self
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
+        async def post(self, url: str, **kwargs: object) -> httpx.Response:
+            enviados.update(kwargs.get("data") or {})  # type: ignore[arg-type]
+            return httpx.Response(200, json={"text": "Boa noite."}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(extracao, "_http", lambda: HttpFalso())
+
+    lido = await extracao.transcrever("openai:whisper-1", b"audio", "audio/ogg")
+
+    assert lido.texto == "Boa noite."
+    assert enviados["language"] == "pt"
