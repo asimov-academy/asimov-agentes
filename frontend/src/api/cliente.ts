@@ -220,6 +220,15 @@ export const api = {
       body: JSON.stringify({ chave }),
     }),
   canais: () => chama<CanalDisponivel[]>("/canais"),
+  /** O que o acesso do operador enxerga no canal: caixas do Chatwoot, contas e números da Meta. */
+  descobreNoCanal: (canal: string, conexao: Record<string, unknown>) =>
+    chama<DescobertaNoCanal>(`/canais/${canal}/descobrir`, {
+      method: "POST",
+      body: JSON.stringify({ conexao }),
+    }),
+  /** Liga num canal externo um agente que nasceu no nativo. Trocar de canal é remover e criar. */
+  conectaCanal: (id: string, dados: ConexaoDoAgente) =>
+    chama<Agente>(`/agentes/${id}/canal`, { method: "POST", body: JSON.stringify(dados) }),
 
   /** A situação de cada canal, uma linha por agente. */
   situacaoDosCanais: (empresa?: string) =>
@@ -412,6 +421,30 @@ export type Agente = {
   retomada_automatica_horas: number | null;
   perfil: Record<string, string>;
   assina_nome: boolean;
+};
+
+/** O que cada canal devolve antes de conectar. Tudo opcional: a WAHA não tem o que escolher. */
+export type DescobertaNoCanal = {
+  /** Chatwoot: uma por conta que o token de administrador enxerga. */
+  contas?: {
+    id: number | string;
+    nome?: string | null;
+    caixas?: { id: number; nome?: string | null; tipo?: string | null }[];
+    atendentes?: { id: number; nome?: string | null }[];
+    times?: { id: number; nome?: string | null }[];
+  }[];
+  /** WhatsApp oficial: números da conta escolhida. */
+  numeros?: { id: string; numero: string; nome?: string | null }[];
+  /** WhatsApp oficial: só os aprovados e com os três parâmetros do aviso de handoff. */
+  templates?: { nome: string; idioma: string; situacao?: string; parametros?: number }[];
+  templates_todos?: { nome: string; idioma: string; situacao?: string; parametros?: number }[];
+};
+
+export type ConexaoDoAgente = {
+  canal: string;
+  conexao?: Record<string, unknown>;
+  handoff_destino?: Record<string, unknown> | null;
+  retomada_automatica_horas?: number | null;
 };
 
 export type NivelDeEmoji = "nenhum" | "pouco" | "medio" | "muito";

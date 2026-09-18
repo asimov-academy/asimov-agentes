@@ -20,6 +20,7 @@ import { Interruptor } from "../../design/Interruptor";
 import { Marca } from "../../design/Marca";
 import { Modal } from "../../design/Modal";
 import { Selo } from "../../design/Selo";
+import { Canal } from "./Canal";
 import { EscolheIA } from "./EscolheIA";
 import { CANAIS, ROTULO_DO_CANAL } from "./canais";
 import { Teste } from "./Teste";
@@ -27,7 +28,7 @@ import { Treinamento } from "./Treinamento";
 
 /** A ficha do agente, no mesmo popup do onboarding: a lista fica embaçada atrás.
  *
- *  Seis abas, e **cada seção tem o próprio salvar**. Salvar diz o que mudou, não um "pronto"
+ *  Oito abas, e **cada seção tem o próprio salvar**. Salvar diz o que mudou, não um "pronto"
  *  genérico: quem mexeu em três campos quer saber quais três foram para o banco.
  *
  *  A sexta aba é Conversar: falar com o agente é o jeito de conferir uma mudança antes de ela
@@ -36,6 +37,7 @@ import { Treinamento } from "./Treinamento";
 
 const ABAS = [
   "perfil",
+  "canais",
   "comunicacao",
   "trabalho",
   "treinamento",
@@ -47,6 +49,7 @@ type Aba = (typeof ABAS)[number];
 
 const NOME_DA_ABA: Record<Aba, string> = {
   perfil: "Perfil",
+  canais: "Canais",
   comunicacao: "Comunicação",
   trabalho: "Trabalho",
   treinamento: "Treinamento",
@@ -185,6 +188,7 @@ export function Ficha({
             {aba === "perfil" && (
               <Perfil agente={agente} atualiza={atualiza} aoRemover={aoFechar} aoListar={aoMudar} />
             )}
+            {aba === "canais" && <Canal agente={agente} atualiza={atualiza} />}
             {aba === "comunicacao" && <Comunicacao agente={agente} atualiza={atualiza} />}
             {aba === "trabalho" && <Trabalho agente={agente} atualiza={atualiza} />}
             {aba === "treinamento" && <Treinamento agente={agente} />}

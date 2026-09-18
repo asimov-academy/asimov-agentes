@@ -448,6 +448,60 @@ async def perfil(
 
 
 # Canais
+#
+# Ligar um agente a um canal só existia no terminal: o painel mostrava o canal na ficha e não tinha
+# como mudá-lo. Agente nasce no nativo desde a v0.24.0, então quem criava pelo navegador ficava sem
+# saída. As duas rotas abaixo são as mesmas do menu (`/admin/canais/{canal}/descobrir` e
+# `/admin/.../canal`), com a sessão do painel no lugar da chave de administrador.
+
+
+class DescobertaNoCanal(BaseModel):
+    conexao: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.post("/canais/{canal}/descobrir")
+async def descobrir_no_canal(
+    canal: str, dados: DescobertaNoCanal, s: AsyncSession = Depends(sessao)
+) -> dict[str, Any]:
+    """O que o acesso do operador enxerga no canal: caixas do Chatwoot, contas e números da Meta."""
+    if canal not in CANAIS:
+        raise HTTPException(status_code=404, detail="canal não suportado")
+    try:
+        return await agentes_servico.descobrir(s, canal, dados.conexao)
+    except DE_NEGOCIO as erro:
+        raise _erro_de_negocio(erro) from erro
+
+
+class ConexaoDoAgente(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    canal: str
+    conexao: dict[str, Any] = Field(default_factory=dict)
+    handoff_destino: dict[str, Any] | None = None
+    retomada_automatica_horas: int | None = Field(default=None, ge=1, le=168)
+
+
+@router.post("/agentes/{agente_id}/canal")
+async def conecta_no_canal(
+    agente_id: uuid.UUID, dados: ConexaoDoAgente, s: AsyncSession = Depends(sessao)
+) -> AgenteDoPainel:
+    """Liga num canal externo um agente que nasceu no nativo. Trocar de canal continua sendo remover."""
+    agente, empresa = await _acha(s, agente_id)
+    if dados.canal not in CANAIS:
+        raise HTTPException(status_code=422, detail=f"canal não suportado: {dados.canal}")
+    try:
+        agente = await agentes_servico.conectar_canal(
+            s,
+            agente.cliente_id,
+            agente_id,
+            dados.canal,
+            dados.conexao,
+            dados.handoff_destino,
+            dados.retomada_automatica_horas,
+        )
+    except DE_NEGOCIO as erro:
+        raise _erro_de_negocio(erro) from erro
+    return _saida(agente, empresa, com_webhook=True)
 
 
 @router.get("/canais/situacao")

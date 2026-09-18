@@ -363,7 +363,14 @@ página de edição de agente. Rota `/agentes/{id}` e `/agentes/{id}/{aba}`, par
 compartilhar o endereço caírem na mesma aba.
 
 Abas: **Perfil**, **Comunicação**, **Trabalho**, **Treinamento**, **Ferramentas e integrações**,
-**Configurações** e **Conversar**. A última é a conversa de teste pelo canal nativo, que a spec antes punha na tela de
+**Configurações** e **Conversar**. A segunda é **Canais**, onde o agente é ligado a um canal: isso
+só existia no terminal, e como todo agente nasce no nativo desde a v0.24.0, quem criava pelo
+navegador ficava com um agente que não atendia ninguém. A aba mostra o canal ligado (com a
+credencial mascarada, o QR code e o reiniciar da WAHA) ou, no nativo, os três canais para escolher,
+com as mesmas perguntas do menu: Chatwoot (endereço, token de administrador, conta e caixas),
+WhatsApp pelo aparelho (cria a sessão e mostra o QR) e WhatsApp oficial (app, token, chave secreta,
+conta e número). Trocar de canal continua sendo remover e criar de novo, e a aba diz isso em vez de
+oferecer um botão que vai falhar. A última é a conversa de teste pelo canal nativo, que a spec antes punha na tela de
 Chat: falar com o agente é como se confere uma mudança antes de ela chegar em alguém, e isso
 pertence ao agente, não à lista de conversas. Registrado em spec/decisoes.md.
 Cada seção tem o próprio botão Salvar, e sair com alteração pendente pede confirmação. Salvar

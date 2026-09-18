@@ -2,6 +2,23 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O painel ganha a aba Canais
+
+O operador não achava onde ligar um agente a um canal, e não achava porque não existia. Desde a
+v0.24.0 todo agente nasce no nativo e conectar virou "um passo depois, na ficha", mas esse passo só
+foi construído no terminal: o painel mostrava o canal na ficha como fato e não deixava mudá-lo.
+Quem criava um agente pelo navegador ficava com um agente que não atendia ninguém.
+
+Entram duas rotas no painel, as mesmas do menu com a sessão no lugar da chave de administrador
+(`POST /painel/api/canais/{canal}/descobrir` e `POST /painel/api/agentes/{id}/canal`), e a aba
+**Canais** na ficha, que é a segunda, logo depois do Perfil.
+
+Um limite que a aba conta em vez de esconder: o contêiner da WAHA sobe sob demanda, e subir
+contêiner é da VPS, não do navegador. Em instalação que nunca teve agente WhatsApp pelo aparelho, o
+primeiro ainda precisa do terminal.
+
+Atualizados: `spec/frontend.md` (5.x, as abas da ficha).
+
 ## 2026-09-18: O painel para de prometer o que não é dele
 
 Três cortes no painel, todos vindos de o operador olhar a tela e perguntar o que aquilo faz ali.
