@@ -157,6 +157,13 @@ export const api = {
   apagaOportunidade: (empresa: string, id: string) =>
     chama<void>(`/empresas/${empresa}/funil/oportunidades/${id}`, { method: "DELETE" }),
 
+  /** O botão de estrelinha: a IA da instalação reescreve a descrição que o operador digitou. */
+  melhoraTexto: (texto: string, empresa: string) =>
+    chama<{ texto: string }>("/texto/melhorar", {
+      method: "POST",
+      body: JSON.stringify({ texto, empresa }),
+    }),
+
   ferramentas: () => chama<Ferramenta[]>("/ferramentas"),
   modelos: () => chama<Modelos>("/modelos"),
   modelosDoProvedor: (provedor: string, funcao: string) =>

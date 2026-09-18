@@ -11,6 +11,7 @@ criam recebem a empresa na URL, conferida antes de virar filtro.
 import uuid
 from typing import Any, Literal
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,13 +24,15 @@ from app.canais.nativo import servico as nativo_servico
 from app.canais.registro import CANAIS, credenciais_visiveis, obter_canal
 from app.clientes import repo as clientes_repo
 from app.clientes import servico as clientes_servico
-from app.ia import chaves, ferramentas
+from app.ia import chaves, ferramentas, redacao
 from app.ia.provedores import PROVEDORES, PROVEDORES_TRANSCRICAO, ModeloInvalido
 from app.painel import canais as canais_do_painel
 from app.painel import repo
 from app.painel.acesso import exige_csrf, exige_sessao
 from app.plataforma.banco import sessao
 from app.plataforma.config import config
+
+log = structlog.get_logger()
 
 router = APIRouter(
     prefix="/api",
@@ -530,3 +533,30 @@ async def le_teste(
         "turno": leitura.turno,
         "handoff": leitura.handoff,
     }
+
+
+# Melhorar texto com a IA
+#
+# O único lugar em que o modelo escreve para o operador, e não para o contato. Fica aqui porque é do
+# onboarding do agente; a regra mora em `ia/redacao.py`.
+
+
+class TextoParaMelhorar(BaseModel):
+    texto: str = Field(min_length=1, max_length=2000)
+    empresa: str = Field(default="", max_length=200)
+
+
+@router.post("/texto/melhorar")
+async def melhorar_texto(
+    dados: TextoParaMelhorar, s: AsyncSession = Depends(sessao)
+) -> dict[str, str]:
+    try:
+        return {"texto": await redacao.melhora_descricao(s, dados.texto, dados.empresa)}
+    except redacao.SemModelo as problema:
+        raise HTTPException(status_code=422, detail=str(problema)) from problema
+    except Exception as problema:  # noqa: BLE001
+        # Provedor fora do ar não pode derrubar o onboarding: o operador segue com o texto dele.
+        log.warning("melhorar_texto_falhou", erro=type(problema).__name__)
+        raise HTTPException(
+            status_code=502, detail="a IA não respondeu agora; tente de novo em alguns segundos"
+        ) from problema

@@ -3,7 +3,6 @@ import {
   api,
   ErroDaApi,
   type Agente,
-  type CanalDisponivel,
   type Empresa,
   type Ferramenta,
   type NivelDeEmoji,
@@ -11,43 +10,51 @@ import {
 import { Aviso } from "../../design/Aviso";
 import { Botao } from "../../design/Botao";
 import { Campo } from "../../design/Campo";
-import { Carregando } from "../../design/Carregando";
+import { Icone } from "../../design/Icone";
 import { Interruptor } from "../../design/Interruptor";
 import { Modal } from "../../design/Modal";
 import { Passos } from "../../design/Passos";
-import { Dica } from "../../design/Dica";
-import { Marca } from "../../design/Marca";
-import { CANAIS } from "./canais";
 import { EscolheIA } from "./EscolheIA";
-import { Previa } from "./Previa";
 import { Teste } from "./Teste";
 
 /** O onboarding do agente, no popup grande com o fundo embaçado.
  *
- *  Oito passos na mesma ordem do terminal, um por vez, com a prévia viva ao lado. Só empresa, canal
- *  e nome travam; o resto tem padrão e dá para pular. A criação é uma chamada só no fim: passo
- *  nenhum grava pela metade, então desistir no meio não deixa agente capenga no banco.
+ *  Não há prévia de como ele vai soar: era uma conversa de mentira ocupando um terço do popup, e o
+ *  fluxo termina numa conversa de verdade com o agente, que é o que mostra o jeito dele falar.
  *
- *  O rascunho fica no navegador. Fechar o notebook e voltar não perde o que já foi respondido.
+ *  A ordem é a que o operador desenhou: nome, objetivo, onde ele trabalha, o que a empresa faz e os
+ *  ajustes. **Canal não se escolhe aqui.** Todo agente nasce respondendo no painel e no terminal, e
+ *  conectar a um WhatsApp ou a um Chatwoot virou um passo depois, na ficha: escolher canal na
+ *  criação parava o operador num formulário de credencial antes de ele ter visto o agente falar.
+ *
+ *  A criação é uma chamada só no fim: passo nenhum grava pela metade, então desistir no meio não
+ *  deixa agente capenga no banco. O rascunho fica no navegador, e fechar o popup não perde nada.
  */
-
 const RASCUNHO = "asimov:onboarding";
 
-const PASSOS = [
-  "Empresa",
-  "Canal",
-  "Nome e função",
-  "Sobre a empresa",
-  "Jeito de falar",
-  "Ferramentas",
-  "IA",
-  "Confirmação",
-];
+const PASSOS = ["Nome", "Objetivo", "Empresa", "Sobre", "Ajustes"];
 
-const FUNCOES: { valor: string; rotulo: string; explica: string }[] = [
-  { valor: "atendimento", rotulo: "Atendimento", explica: "Recebe quem chega, tira dúvidas e encaminha." },
-  { valor: "suporte", rotulo: "Suporte", explica: "Resolve problema de quem já é cliente." },
-  { valor: "vendas", rotulo: "Vendas", explica: "Ajuda quem está decidindo a comprar." },
+type NomeDeIconeDaFuncao = "comm-chat" | "stat-info" | "nav-reports";
+
+const FUNCOES: { valor: string; rotulo: string; explica: string; icone: NomeDeIconeDaFuncao }[] = [
+  {
+    valor: "atendimento",
+    rotulo: "Atendimento",
+    explica: "Recebe quem chega, tira dúvidas e encaminha.",
+    icone: "comm-chat",
+  },
+  {
+    valor: "suporte",
+    rotulo: "Suporte",
+    explica: "Resolve problema de quem já é cliente.",
+    icone: "stat-info",
+  },
+  {
+    valor: "vendas",
+    rotulo: "Vendas",
+    explica: "Ajuda quem está decidindo a comprar.",
+    icone: "nav-reports",
+  },
 ];
 
 const EMOJIS: { valor: NivelDeEmoji; rotulo: string }[] = [
@@ -58,12 +65,10 @@ const EMOJIS: { valor: NivelDeEmoji; rotulo: string }[] = [
 ];
 
 type Rascunho = {
-  empresaId: string;
-  empresaNova: string;
-  canal: string;
   nome: string;
   funcao: string;
-  publico: string;
+  empresaId: string;
+  empresaNova: string;
   site: string;
   sobre: string;
   emojis: NivelDeEmoji;
@@ -74,12 +79,10 @@ type Rascunho = {
 };
 
 const VAZIO: Rascunho = {
-  empresaId: "",
-  empresaNova: "",
-  canal: "",
   nome: "",
   funcao: "atendimento",
-  publico: "",
+  empresaId: "",
+  empresaNova: "",
   site: "",
   sobre: "",
   emojis: "nenhum",
@@ -109,7 +112,6 @@ export function Onboarding({
 }) {
   const [passo, setPasso] = useState(0);
   const [dados, setDados] = useState<Rascunho>(leRascunho);
-  const [canais, setCanais] = useState<CanalDisponivel[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -117,20 +119,11 @@ export function Onboarding({
   const [criado, setCriado] = useState<Agente | null>(null);
 
   useEffect(() => {
-    Promise.all([api.canais(), api.ferramentas()])
-      .then(([c, f]) => {
-        setCanais(c);
-        setFerramentas(f);
-      })
-      .catch((problema) => setErro(problema.message));
+    api
+      .ferramentas()
+      .then(setFerramentas)
+      .catch(() => setFerramentas([]));
   }, []);
-
-  // Uma empresa só: ela já vem escolhida, e o passo vira confirmação em vez de pergunta.
-  useEffect(() => {
-    if (!dados.empresaId && listaDeEmpresas.length === 1) {
-      setDados((antes) => ({ ...antes, empresaId: listaDeEmpresas[0].id }));
-    }
-  }, [listaDeEmpresas, dados.empresaId]);
 
   useEffect(() => {
     try {
@@ -146,32 +139,18 @@ export function Onboarding({
     [],
   );
 
-  const empresaEscolhida = listaDeEmpresas.find((e) => e.id === dados.empresaId);
+  const nomeDaEmpresa =
+    listaDeEmpresas.find((e) => e.id === dados.empresaId)?.nome || dados.empresaNova;
 
   const podeAvancar = useMemo(() => {
-    if (passo === 0) return Boolean(dados.empresaId || dados.empresaNova.trim());
-    if (passo === 1) return Boolean(dados.canal);
-    if (passo === 2) return Boolean(dados.nome.trim());
-    if (passo === 6) return dados.modelo.includes(":") && !dados.modelo.endsWith(":");
+    if (passo === 0) return Boolean(dados.nome.trim());
+    if (passo === 2) return Boolean(nomeDaEmpresa.trim());
+    if (passo === 4) return dados.modelo.includes(":") && !dados.modelo.endsWith(":");
     return true;
-  }, [passo, dados]);
+  }, [passo, dados, nomeDaEmpresa]);
 
-  async function avanca() {
+  function avanca() {
     setErro("");
-    // A empresa nova nasce aqui, e não no fim: sem ela o agente não tem onde nascer.
-    if (passo === 0 && !dados.empresaId && dados.empresaNova.trim()) {
-      setSalvando(true);
-      try {
-        const criada = await api.criaEmpresa(dados.empresaNova.trim());
-        setListaDeEmpresas((antes) => [...antes, criada]);
-        muda("empresaId", criada.id);
-      } catch (problema) {
-        setErro(problema instanceof ErroDaApi ? problema.message : String(problema));
-        return;
-      } finally {
-        setSalvando(false);
-      }
-    }
     setPasso((p) => Math.min(p + 1, PASSOS.length - 1));
   }
 
@@ -179,23 +158,34 @@ export function Onboarding({
     setErro("");
     setSalvando(true);
     try {
-      const agente = await api.criaAgente(dados.empresaId, {
+      // A empresa nasce aqui, e não no passo dela: criar antes deixava empresa órfã toda vez que o
+      // operador desistia no meio.
+      let empresaId = dados.empresaId;
+      if (!empresaId) {
+        const existente = listaDeEmpresas.find(
+          (e) => e.nome.trim().toLowerCase() === nomeDaEmpresa.trim().toLowerCase(),
+        );
+        const empresa = existente ?? (await api.criaEmpresa(nomeDaEmpresa.trim()));
+        if (!existente) setListaDeEmpresas((antes) => [...antes, empresa]);
+        empresaId = empresa.id;
+      }
+
+      const agente = await api.criaAgente(empresaId, {
         nome: dados.nome.trim(),
-        canal: dados.canal,
+        // Todo agente nasce no painel e no terminal. Canal externo vem depois, na ficha.
+        canal: "nativo",
         emojis: dados.emojis,
         max_mensagens_por_resposta: dados.partes,
         buffer_segundos: dados.buffer,
         ferramentas: dados.ferramentas,
         modelo_conversa: dados.modelo,
       });
-      if (dados.funcao || dados.publico || dados.site || dados.sobre) {
-        await api.gravaPerfil(agente.id, {
-          funcao: dados.funcao as "suporte" | "vendas" | "atendimento",
-          publico: dados.publico || null,
-          site: dados.site || null,
-          sobre_empresa: dados.sobre || null,
-        });
-      }
+      await api.gravaPerfil(agente.id, {
+        funcao: dados.funcao as "suporte" | "vendas" | "atendimento",
+        site: dados.site || null,
+        sobre_empresa: dados.sobre || null,
+      });
+
       localStorage.removeItem(RASCUNHO);
       setDados(VAZIO);
       setCriado(agente);
@@ -206,60 +196,15 @@ export function Onboarding({
     }
   }
 
-  // Fecha direto: o rascunho é gravado no navegador a cada mudança e o popup reabre onde parou.
-  // Havia um `window.confirm` aqui, e onde o navegador suprime a caixa nativa ela devolve "não" e
-  // o popup não fechava, com o X parecendo morto. Diálogo nativo não tem lugar num painel desenhado.
-  function sai() {
-    aoFechar();
-  }
-
-  // O fim não é um "pronto": é falar com o agente antes de sair da tela.
-  if (criado) {
-    return (
-      <Modal
-        titulo={`${criado.nome} está pronto`}
-        subtitulo={`em ${criado.empresa}, ${CANAIS[criado.canal]?.rotulo ?? criado.canal}`}
-        aoFechar={() => aoCriar(criado)}
-        largura="max-w-3xl"
-        rodape={
-          <>
-            <Botao pequeno onClick={() => aoCriar(criado)}>
-              Ver a ficha
-            </Botao>
-            <Botao
-              tom="solido"
-              pequeno
-              icone="act-add"
-              onClick={() => {
-                setCriado(null);
-                setPasso(0);
-              }}
-            >
-              Criar outro
-            </Botao>
-          </>
-        }
-      >
-        <p className="mb-5 max-w-[62ch] text-sm text-muted">
-          {criado.canal === "nativo"
-            ? "Fale com ele agora. Ele ainda não atende ninguém de fora: conecte a um canal pela ficha quando quiser."
-            : `Fale com ele agora. Para conectar ao canal, a ficha dele pede ${CANAIS[criado.canal]?.exige ?? "o acesso do canal"}.`}
-        </p>
-
-        <Teste
-          agenteId={criado.id}
-          agente={criado.nome}
-          primeiraMensagem="Oi, tudo bem? Queria tirar uma dúvida."
-        />
-      </Modal>
-    );
-  }
+  // O fim não é um "pronto": é escolher o próximo passo, e falar com ele é o primeiro deles.
+  if (criado) return <Pronto agente={criado} aoFechar={() => aoCriar(criado)} />;
 
   return (
     <Modal
       titulo="Novo agente"
       subtitulo={`Passo ${passo + 1} de ${PASSOS.length}: ${PASSOS[passo]}`}
-      aoFechar={sai}
+      aoFechar={aoFechar}
+      largura="max-w-4xl"
       rodape={
         <>
           {passo > 0 && (
@@ -268,121 +213,38 @@ export function Onboarding({
             </Botao>
           )}
           {passo < PASSOS.length - 1 ? (
-            <Botao tom="solido" pequeno onClick={avanca} ocupado={salvando} disabled={!podeAvancar}>
+            <Botao tom="acento" pequeno disabled={!podeAvancar} onClick={avanca}>
               Continuar
             </Botao>
           ) : (
-            <Botao tom="acento" pequeno icone="act-save" onClick={cria} ocupado={salvando}>
+            <Botao
+              tom="solido"
+              pequeno
+              icone="act-check"
+              ocupado={salvando}
+              disabled={!podeAvancar}
+              onClick={cria}
+            >
               Criar agente
             </Botao>
           )}
         </>
       }
     >
-      <div className="grid gap-8 lg:grid-cols-[10rem_1fr_18rem]">
+      <div className="grid gap-8 lg:grid-cols-[11rem_1fr]">
         <Passos passos={PASSOS} atual={passo} aoIr={(i) => setPasso(i)} />
 
         <div className="min-w-0">
           {erro && (
-            <div className="mb-6">
-              <Aviso tom="erro" titulo="não deu para continuar">
-                {erro}
+            <div className="mb-5">
+              <Aviso tom="erro" titulo="não deu para criar o agente">
+                <p>{erro}</p>
               </Aviso>
             </div>
           )}
 
           {passo === 0 && (
-            <Pergunta
-              titulo="De qual empresa é este agente?"
-              ajuda={
-                listaDeEmpresas.length > 1
-                  ? "Cada empresa tem os próprios agentes e conversas, separados das outras."
-                  : ""
-              }
-            >
-              {listaDeEmpresas.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  {listaDeEmpresas.map((e) => (
-                    <Escolha
-                      key={e.id}
-                      marcada={dados.empresaId === e.id}
-                      aoMarcar={() => {
-                        muda("empresaId", e.id);
-                        muda("empresaNova", "");
-                      }}
-                    >
-                      {e.nome}
-                    </Escolha>
-                  ))}
-                </div>
-              )}
-              <div className="mt-6 border-t border-borda pt-6">
-                <Campo
-                  rotulo="Ou crie uma empresa"
-                  placeholder="Nome da empresa"
-                  value={dados.empresaNova}
-                  onChange={(e) => {
-                    muda("empresaNova", e.target.value);
-                    if (e.target.value) muda("empresaId", "");
-                  }}
-                />
-              </div>
-            </Pergunta>
-          )}
-
-          {passo === 1 && (
-            <Pergunta titulo="Por onde ele vai atender?" ajuda="">
-              {canais.length === 0 ? (
-                <Carregando tipo="pontos" o_que="buscando os canais" />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {canais.map((c) => {
-                    const texto = CANAIS[c.nome];
-                    const marcado = dados.canal === c.nome;
-                    return (
-                      <button
-                        key={c.nome}
-                        onClick={() => muda("canal", c.nome)}
-                        className={`relative flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
-                          marcado ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
-                        }`}
-                      >
-                        <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${
-                            marcado ? "border-ciano/40 text-ciano" : "border-borda text-muted"
-                          }`}
-                        >
-                          {texto && <Marca nome={texto.marca} tamanho={20} />}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-start gap-2">
-                            <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-texto">
-                              {texto?.rotulo ?? c.nome}
-                            </span>
-                            {/* O aviso é só o ícone: aberto, ele ocupava mais linha que a
-                                descrição do canal. O texto abre no hover e no foco. */}
-                            {texto?.atencao && <Dica texto={texto.atencao} />}
-                          </span>
-                          <span className="mt-1 block text-sm leading-snug text-muted">
-                            {texto?.serve}
-                          </span>
-                          <span className="mt-1 block text-xs leading-snug text-dim">
-                            Precisa: {texto?.exige ?? "nada"}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </Pergunta>
-          )}
-
-          {passo === 2 && (
-            <Pergunta
-              titulo="Como ele se chama, e o que ele faz?"
-              ajuda="O nome aparece para quem conversa com ele."
-            >
+            <Pergunta titulo="Como ele se chama?" ajuda="O nome aparece para quem conversa com ele.">
               <Campo
                 rotulo="Nome do agente"
                 placeholder="Ana"
@@ -390,33 +252,78 @@ export function Onboarding({
                 onChange={(e) => muda("nome", e.target.value)}
                 autoFocus
               />
-              <div className="mt-6 flex flex-col gap-2">
-                {FUNCOES.map((f) => (
-                  <Escolha
-                    key={f.valor}
-                    marcada={dados.funcao === f.valor}
-                    aoMarcar={() => muda("funcao", f.valor)}
-                    explica={f.explica}
-                  >
-                    {f.rotulo}
-                  </Escolha>
-                ))}
+            </Pergunta>
+          )}
+
+          {passo === 1 && (
+            <Pergunta titulo={`Qual o objetivo de ${dados.nome.trim() || "ele"}?`} ajuda="">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {FUNCOES.map((f) => {
+                  const marcada = dados.funcao === f.valor;
+                  return (
+                    <button
+                      key={f.valor}
+                      onClick={() => muda("funcao", f.valor)}
+                      aria-pressed={marcada}
+                      className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors ${
+                        marcada ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-10 w-10 items-center justify-center rounded-md border ${
+                          marcada ? "border-ciano/40 text-ciano" : "border-borda text-muted"
+                        }`}
+                      >
+                        <Icone nome={f.icone} tamanho={18} />
+                      </span>
+                      <span className="text-sm font-semibold text-texto">{f.rotulo}</span>
+                      <span className="text-sm leading-snug text-muted">{f.explica}</span>
+                    </button>
+                  );
+                })}
               </div>
             </Pergunta>
           )}
 
-          {passo === 3 && (
+          {passo === 2 && (
             <Pergunta
-              titulo={`O que o agente precisa saber sobre ${empresaEscolhida?.nome ?? "a empresa"}?`}
-              ajuda="Isto vira o prompt dele. Pode pular e escrever depois."
+              titulo={`Onde ${dados.nome.trim() || "ele"} vai trabalhar?`}
+              ajuda="A empresa que ele atende. Cada uma tem os próprios agentes e conversas."
             >
               <Campo
-                rotulo="Quem fala com ele"
-                placeholder="quem procura tênis de corrida"
-                value={dados.publico}
-                onChange={(e) => muda("publico", e.target.value)}
+                rotulo="Nome da empresa"
+                placeholder="Loja Exemplo"
+                autoFocus
+                value={nomeDaEmpresa}
+                onChange={(e) => {
+                  muda("empresaId", "");
+                  muda("empresaNova", e.target.value);
+                }}
               />
-              <div className="mt-4">
+
+              {listaDeEmpresas.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {listaDeEmpresas.map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => {
+                        muda("empresaId", e.id);
+                        muda("empresaNova", "");
+                      }}
+                      aria-pressed={dados.empresaId === e.id}
+                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                        dados.empresaId === e.id
+                          ? "border-ciano text-ciano"
+                          : "border-borda text-muted hover:text-texto"
+                      }`}
+                    >
+                      {e.nome}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-5">
                 <Campo
                   rotulo="Site (opcional)"
                   placeholder="https://"
@@ -424,160 +331,241 @@ export function Onboarding({
                   onChange={(e) => muda("site", e.target.value)}
                 />
               </div>
-              <label className="mt-6 block">
-                <span className="rotulo">Sobre a empresa</span>
-                <textarea
-                  rows={5}
-                  value={dados.sobre}
-                  onChange={(e) => muda("sobre", e.target.value)}
-                  placeholder="O que ela vende, desde quando, o que a diferencia."
-                  className="mt-2 w-full rounded-md border border-borda bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none focus:ring-1 focus:ring-ciano"
-                />
-              </label>
             </Pergunta>
+          )}
+
+          {passo === 3 && (
+            <Sobre empresa={nomeDaEmpresa} texto={dados.sobre} aoMudar={(t) => muda("sobre", t)} />
           )}
 
           {passo === 4 && (
-            <Pergunta
-              titulo="Como ele fala?"
-              ajuda="Emoji e tamanho da resposta mudam o jeito de falar."
-            >
-              <p className="rotulo">Emoji</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {EMOJIS.map((e) => (
-                  <button
-                    key={e.valor}
-                    onClick={() => muda("emojis", e.valor)}
-                    className={`rounded-md border px-4 py-2 text-sm transition-colors ${
-                      dados.emojis === e.valor
-                        ? "border-ciano text-ciano"
-                        : "border-borda text-muted hover:text-texto"
-                    }`}
-                  >
-                    {e.rotulo}
-                  </button>
+            <Pergunta titulo="Ajustes do agente" ajuda="">
+              <div className="flex flex-col">
+                <Interruptor
+                  ligado
+                  desligado
+                  aoMudar={() => {}}
+                  rotulo="Passar a conversa para uma pessoa"
+                  descricao="Sempre ligada. Ele chama gente quando o contato pede ou quando trava."
+                />
+                {ferramentas.map((f) => (
+                  <Interruptor
+                    key={f.nome}
+                    ligado={dados.ferramentas.includes(f.nome)}
+                    aoMudar={(ligado) =>
+                      muda(
+                        "ferramentas",
+                        ligado
+                          ? [...dados.ferramentas, f.nome]
+                          : dados.ferramentas.filter((n) => n !== f.nome),
+                      )
+                    }
+                    rotulo={f.rotulo}
+                    descricao={f.descricao}
+                  />
                 ))}
               </div>
 
-              <div className="mt-6">
-                <Deslizante
-                  rotulo="Dividir a resposta em até"
-                  valor={dados.partes}
-                  min={1}
-                  max={5}
-                  unidade={dados.partes === 1 ? "mensagem" : "mensagens"}
-                  aoMudar={(v) => muda("partes", v)}
-                />
-              </div>
-              <div className="mt-6">
-                <Deslizante
-                  rotulo="Esperar antes de responder"
-                  valor={dados.buffer}
-                  min={1}
-                  max={30}
-                  unidade="segundos"
-                  aoMudar={(v) => muda("buffer", v)}
-                  ajuda="Tempo para a pessoa terminar de escrever antes de o agente responder."
-                />
-              </div>
-            </Pergunta>
-          )}
-
-          {passo === 5 && (
-            <Pergunta
-              titulo="O que ele pode usar?"
-              ajuda="Cada ferramenta ligada deixa a resposta um pouco mais cara. Ele nasce sem nenhuma."
-            >
-              {ferramentas.length === 0 ? (
-                <Carregando tipo="pontos" o_que="buscando o catálogo" />
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {ferramentas.map((f) => (
-                    <Interruptor
-                      key={f.nome}
-                      ligado={dados.ferramentas.includes(f.nome)}
-                      aoMudar={(ligado) =>
-                        muda(
-                          "ferramentas",
-                          ligado
-                            ? [...dados.ferramentas, f.nome]
-                            : dados.ferramentas.filter((n) => n !== f.nome),
-                        )
-                      }
-                      rotulo={f.rotulo}
-                      descricao={f.descricao}
-                    />
-                  ))}
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                <div>
+                  <p className="rotulo">Emoji nas respostas</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {EMOJIS.map((e) => (
+                      <button
+                        key={e.valor}
+                        onClick={() => muda("emojis", e.valor)}
+                        aria-pressed={dados.emojis === e.valor}
+                        className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                          dados.emojis === e.valor
+                            ? "border-ciano bg-ciano/5 text-ciano"
+                            : "border-borda text-muted hover:text-texto"
+                        }`}
+                      >
+                        {e.rotulo}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-              <p className="mt-6 text-sm text-dim">
-                Passar a conversa para uma pessoa está sempre ligado.
-              </p>
-            </Pergunta>
-          )}
 
-          {passo === 6 && (
-            <Pergunta
-              titulo="Qual IA responde por ele?"
-              ajuda="Vale para a resposta ao contato. O resto segue este provedor e muda na ficha."
-            >
-              <EscolheIA funcao="conversa" valor={dados.modelo} aoMudar={(m) => muda("modelo", m)} />
-              {dados.modelo.startsWith("anthropic:") && (
-                <p className="mt-5 text-sm text-atencao">
-                  A Anthropic não transcreve áudio. Para o agente ouvir áudio, guarde também a chave
-                  da OpenAI, da Groq ou do Gemini.
-                </p>
-              )}
-            </Pergunta>
-          )}
+                <label className="block">
+                  <span className="rotulo">Dividir a resposta em até</span>
+                  <select
+                    value={dados.partes}
+                    onChange={(e) => muda("partes", Number(e.target.value))}
+                    className="mt-2 w-full rounded-md border border-borda bg-surface px-3 py-2 text-sm text-texto focus:border-ciano focus:outline-none"
+                  >
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>
+                        {n} {n === 1 ? "mensagem" : "mensagens"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-          {passo === 7 && (
-            <Pergunta
-              titulo="Confira antes de criar"
-              ajuda="Nada foi gravado ainda."
-            >
-              <dl className="flex flex-col divide-y divide-borda rounded-lg border border-borda px-4">
-                <Linha rotulo="Empresa">{empresaEscolhida?.nome ?? dados.empresaNova}</Linha>
-                <Linha rotulo="Canal">{CANAIS[dados.canal]?.rotulo ?? dados.canal}</Linha>
-                <Linha rotulo="Nome">{dados.nome}</Linha>
-                <Linha rotulo="Função">
-                  {FUNCOES.find((f) => f.valor === dados.funcao)?.rotulo ?? "sem função"}
-                </Linha>
-                <Linha rotulo="IA">{dados.modelo || "não escolhida"}</Linha>
-                <Linha rotulo="Emoji">{EMOJIS.find((e) => e.valor === dados.emojis)?.rotulo}</Linha>
-                <Linha rotulo="Ferramentas">
-                  {dados.ferramentas.length === 0
-                    ? "nenhuma"
-                    : dados.ferramentas
-                        .map((n) => ferramentas.find((f) => f.nome === n)?.rotulo ?? n)
-                        .join(", ")}
-                </Linha>
-              </dl>
-              {CANAIS[dados.canal] && dados.canal !== "nativo" && (
-                <p className="mt-6 text-sm leading-snug text-muted">
-                  O agente nasce inativo. Você o conecta pela ficha dele, quando tiver em mãos:{" "}
-                  {CANAIS[dados.canal].exige}
-                </p>
-              )}
+              <div className="mt-6 border-t border-borda pt-5">
+                <p className="rotulo">IA que responde</p>
+                <div className="mt-3">
+                  <EscolheIA
+                    funcao="conversa"
+                    valor={dados.modelo}
+                    aoMudar={(m) => muda("modelo", m)}
+                  />
+                </div>
+              </div>
             </Pergunta>
           )}
         </div>
 
-        <div className="hidden lg:block">
-          <Previa
-            escolhas={{
-              nome: dados.nome,
-              empresa: empresaEscolhida?.nome ?? dados.empresaNova,
-              funcao: dados.funcao,
-              emojis: dados.emojis,
-              partes: dados.partes,
-              buffer: dados.buffer,
-              busca: dados.ferramentas.some((f) => f.includes("busca") || f.includes("web")),
-            }}
-          />
-        </div>
       </div>
     </Modal>
+  );
+}
+
+/** O passo da descrição, com o botão que pede à IA para reescrever o que o operador digitou. */
+function Sobre({
+  empresa,
+  texto,
+  aoMudar,
+}: {
+  empresa: string;
+  texto: string;
+  aoMudar: (texto: string) => void;
+}) {
+  const [melhorando, setMelhorando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function melhora() {
+    setErro("");
+    setMelhorando(true);
+    try {
+      const { texto: melhorado } = await api.melhoraTexto(texto, empresa);
+      aoMudar(melhorado);
+    } catch (problema) {
+      // Falhou, o operador não perde o que escreveu: o campo continua com o texto dele.
+      setErro(problema instanceof ErroDaApi ? problema.message : String(problema));
+    } finally {
+      setMelhorando(false);
+    }
+  }
+
+  return (
+    <Pergunta
+      titulo={`O que ${empresa || "a empresa"} faz?`}
+      ajuda="Isto vira o prompt dele. Pode pular e escrever depois."
+    >
+      <textarea
+        rows={7}
+        autoFocus
+        value={texto}
+        onChange={(e) => aoMudar(e.target.value)}
+        placeholder="O que ela vende, para quem, desde quando, o que a diferencia."
+        className="w-full rounded-md border border-borda bg-surface px-3 py-2 text-sm leading-relaxed text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none focus:ring-1 focus:ring-ciano"
+      />
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Botao
+          pequeno
+          icone="sys-girando"
+          ocupado={melhorando}
+          disabled={!texto.trim()}
+          onClick={melhora}
+        >
+          Melhorar com IA
+        </Botao>
+        <span className="text-xs text-dim">
+          Escreva do seu jeito e a IA arruma. Ela não inventa o que você não escreveu.
+        </span>
+      </div>
+
+      {erro && (
+        <div className="mt-4">
+          <Aviso tom="atencao" titulo="não deu para melhorar agora">
+            <p>{erro}</p>
+          </Aviso>
+        </div>
+      )}
+    </Pergunta>
+  );
+}
+
+/** A tela do fim: três caminhos, e falar com o agente é o primeiro deles. */
+function Pronto({ agente, aoFechar }: { agente: Agente; aoFechar: () => void }) {
+  const [conversando, setConversando] = useState(false);
+
+  return (
+    <Modal
+      titulo={`${agente.nome} está pronto`}
+      subtitulo={`em ${agente.empresa}, respondendo aqui no painel`}
+      aoFechar={aoFechar}
+      largura="max-w-2xl"
+      rodape={
+        conversando ? (
+          <Botao pequeno onClick={aoFechar}>
+            Ver a ficha
+          </Botao>
+        ) : undefined
+      }
+    >
+      {conversando ? (
+        <Teste
+          agenteId={agente.id}
+          agente={agente.nome}
+          primeiraMensagem="Oi, tudo bem? Queria tirar uma dúvida."
+        />
+      ) : (
+        <ul className="flex flex-col gap-2">
+          <Caminho
+            icone="comm-chat"
+            titulo="Conversar com ele agora"
+            explica="Veja como ele responde antes de qualquer outra coisa."
+            aoIr={() => setConversando(true)}
+          />
+          <Caminho
+            icone="cont-link"
+            titulo="Conectar a um canal"
+            explica="WhatsApp ou Chatwoot. Até lá, ele atende só aqui."
+            aoIr={aoFechar}
+          />
+          <Caminho
+            icone="nav-settings"
+            titulo="Ajustar a ficha dele"
+            explica="Prompt, ferramentas, modelos e ritmo das respostas."
+            aoIr={aoFechar}
+          />
+        </ul>
+      )}
+    </Modal>
+  );
+}
+
+function Caminho({
+  icone,
+  titulo,
+  explica,
+  aoIr,
+}: {
+  icone: "comm-chat" | "cont-link" | "nav-settings";
+  titulo: string;
+  explica: string;
+  aoIr: () => void;
+}) {
+  return (
+    <li>
+      <button
+        onClick={aoIr}
+        className="flex w-full items-center gap-3 rounded-lg border border-borda p-4 text-left transition-colors hover:border-dim hover:bg-surface"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-borda text-muted">
+          <Icone nome={icone} tamanho={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-texto">{titulo}</span>
+          <span className="block text-sm leading-snug text-muted">{explica}</span>
+        </span>
+        <Icone nome="sys-chevron" tamanho={16} className="text-dim" />
+      </button>
+    </li>
   );
 }
 
@@ -596,86 +584,5 @@ function Pergunta({
       {ajuda && <p className="mt-1 max-w-[60ch] text-sm text-muted">{ajuda}</p>}
       <div className="mt-5">{children}</div>
     </section>
-  );
-}
-
-function Escolha({
-  marcada,
-  aoMarcar,
-  explica,
-  children,
-}: {
-  marcada: boolean;
-  aoMarcar: () => void;
-  explica?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={aoMarcar}
-      aria-pressed={marcada}
-      className={`flex items-start gap-3 rounded-md border p-3 text-left transition-colors ${
-        marcada ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
-      }`}
-    >
-      <span
-        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
-          marcada ? "border-ciano" : "border-dim"
-        }`}
-      >
-        {marcada && <span className="h-2 w-2 bg-ciano" />}
-      </span>
-      <span>
-        <span className="block text-sm text-texto">{children}</span>
-        {explica && <span className="mt-0.5 block text-sm text-muted">{explica}</span>}
-      </span>
-    </button>
-  );
-}
-
-function Deslizante({
-  rotulo,
-  valor,
-  min,
-  max,
-  unidade,
-  ajuda,
-  aoMudar,
-}: {
-  rotulo: string;
-  valor: number;
-  min: number;
-  max: number;
-  unidade: string;
-  ajuda?: string;
-  aoMudar: (v: number) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="flex items-baseline justify-between gap-4">
-        <span className="rotulo">{rotulo}</span>
-        <span className="font-mono text-sm text-texto">
-          {valor} {unidade}
-        </span>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={valor}
-        onChange={(e) => aoMudar(Number(e.target.value))}
-        className="mt-3 w-full accent-ciano"
-      />
-      {ajuda && <span className="mt-1 block text-sm text-dim">{ajuda}</span>}
-    </label>
-  );
-}
-
-function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-6 py-3">
-      <dt className="rotulo">{rotulo}</dt>
-      <dd className="text-right text-sm text-texto">{children}</dd>
-    </div>
   );
 }

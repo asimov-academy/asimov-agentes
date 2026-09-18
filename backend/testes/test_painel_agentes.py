@@ -377,3 +377,49 @@ async def test_teste_de_agente_que_nao_existe_e_404(dentro: httpx.AsyncClient, f
 async def test_teste_sem_sessao_nao_passa(painel: httpx.AsyncClient):
     resposta = await painel.post(f"/painel/api/agentes/{uuid.uuid4()}/teste", json={"texto": "oi"})
     assert resposta.status_code == 401
+
+
+# Melhorar texto com a IA
+
+
+async def test_melhorar_texto_devolve_a_versao_da_ia(dentro, monkeypatch):
+    """O botão de estrelinha do onboarding. O texto do operador vai como material, não como ordem."""
+    from pydantic_ai.models.function import FunctionModel
+    from pydantic_ai.messages import ModelResponse, TextPart
+
+    recebido: dict[str, str] = {}
+
+    def responde(mensagens, info):
+        recebido["prompt"] = str(mensagens[-1].parts[-1].content)
+        return ModelResponse(parts=[TextPart("A Loja Exemplo vende tênis de corrida.")])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+
+    resposta = await dentro.post(
+        "/painel/api/texto/melhorar",
+        json={"texto": "vendemos tenis pra corrida", "empresa": "Loja Exemplo"},
+    )
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["texto"] == "A Loja Exemplo vende tênis de corrida."
+    # O que o operador escreveu chega delimitado, para não virar instrução para o modelo.
+    assert "<material>" in recebido["prompt"]
+    assert "vendemos tenis pra corrida" in recebido["prompt"]
+
+
+async def test_melhorar_texto_sem_chave_de_ia_diz_onde_resolver(dentro, monkeypatch):
+    from app.ia import chaves
+
+    monkeypatch.setattr(chaves, "chave_do_provedor", lambda provedor, cfg=None: "")
+    resposta = await dentro.post("/painel/api/texto/melhorar", json={"texto": "oi"})
+    assert resposta.status_code == 422
+    assert "Configurações" in resposta.json()["detail"]
+
+
+async def test_melhorar_texto_com_provedor_fora_do_ar_nao_derruba_o_onboarding(dentro, monkeypatch):
+    def explode(nome):
+        raise RuntimeError("provedor fora do ar")
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", explode)
+    resposta = await dentro.post("/painel/api/texto/melhorar", json={"texto": "oi"})
+    assert resposta.status_code == 502
+    assert "tente de novo" in resposta.json()["detail"]
