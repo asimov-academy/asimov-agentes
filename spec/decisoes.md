@@ -2,6 +2,103 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Correções dos P2 e P3 da auditoria, e segurança do painel
+
+Continuação da entrada anterior. Todos os achados com sonda viraram regressão da suíte normal
+(`backend/testes/test_auditoria_p1.py` e `test_auditoria_p2.py`), e o arquivo de sondas foi
+removido: não sobrou defeito descrito lá.
+
+Segurança:
+
+- **A11, nada do cadastro vira HTML ativo.** Nome de empresa, de agente e contato entram escapados
+  na página pública de privacidade. Antes, um `<script>` no nome virava script de verdade.
+- **A14, token de webhook não vai para log nenhum.** O caminho é saneado (`/webhook/chatwoot/…`),
+  todo erro interno ganha uma referência curta que aparece na resposta e no log, e o access log do
+  uvicorn foi desligado no Dockerfile: era ele que registrava a URL inteira, com o token dentro.
+- **A13, segredo não passa por argumento de processo.** O corpo do `curl` foi para arquivo com
+  permissão 600 e os `jq --arg` com token viraram `env.VAR`: `ps` é legível por qualquer usuário
+  da máquina, `/proc/PID/environ` não.
+- **`.env` com permissão afrouxada volta para 600** a cada execução do setup, com aviso. A spec
+  prometia recusar iniciar, o que trava o operador sem saída; consertar e avisar é mais útil.
+- **Painel, conta única garantida pelo banco** (migração `0015`), com a corrida tratada, e o código
+  de primeiro acesso passou a ser gasto **depois** de a conta existir: falha no meio não deixava o
+  operador sem código e sem conta.
+
+Confiabilidade:
+
+- **A07, entrega recusada pela Meta vira falha visível.** `status: failed` chegava depois do envio
+  aceito e era descartado junto com o recibo comum. Virou `Acao.ENTREGA_RECUSADA` com o código do
+  erro em Ver consumo e falhas. O reenvio automático por template fora da janela continua pendente:
+  exige rastrear a mensagem enviada e o contexto dela.
+- **A08, lote da Cloud API.** O contrato do canal ganhou `interpretar_todos`, e o webhook processa
+  todos os eventos do envelope. Só a primeira mensagem era lida; a segunda sumia com o webhook
+  confirmado.
+- **A09, rajada não esconde pergunta.** O histórico continua limitado, mas as falas ainda não
+  respondidas vêm por consulta própria, e passar do teto registra falha em vez de sumir.
+- **A10, retomada por tempo usa o canal da conversa**, não o do agente: a conversa de teste no
+  terminal é nativa até em agente de Chatwoot ou WhatsApp.
+- **A12, modelo obrigatório vazio é recusado** com 422. Só o fallback pode ficar sem modelo.
+- **A17, limpeza de mídia em lotes até esgotar**, com teto de segurança e falha registrada quando
+  sobra fila. Parava em 500 por dia, e o disco enchia devagar.
+- **A18, PDF é lido em thread e para no teto de páginas.** Era CPU dentro do laço de eventos: um
+  arquivo pesado deixava as outras conversas esperando.
+- **A20, `/health` inclui o worker.** Pulso de minuto em minuto no Redis; sem ele a saúde reprova.
+  `aguardando` é a instalação que ainda não viu o worker subir, e não derruba nada: é o estado
+  normal durante a própria instalação.
+- **A19, desistir da criação do primeiro agente** não marca mais a etapa como concluída.
+- **A15, atualização guarda o que foi personalizado.** Antes de extrair, `modelos/` e `deploy/`
+  vão para `~/.asimov/antes-da-atualizacao/<data>`.
+
+Organização:
+
+- **A22**: CI em `.github/workflows/testes.yml` (testes com Postgres e Redis, ciclo completo das
+  migrações, shellcheck e onboarding simulado), barreira que recusa rodar a suíte destrutiva fora
+  de banco de teste, e `caixa.bin` (dump de terminal de depuração) removido do repositório.
+- **A21**: a regra de camadas no `AGENTS.md` passou a descrever o que o código faz (leitura simples
+  pode chamar o repo; orquestração e escrita, não) e as exceções legítimas ao `cliente_id`.
+  Mover a orquestração que sobrou nas rotas para os serviços fica para um passo próprio.
+- **Nome de empresa que parecia real** (`BecomApp`, `Contour`) saiu da simulação de onboarding.
+  O repositório é público e a regra é antiga; ninguém tinha pego.
+- **Armadilha nova no `AGENTS.md`**: item novo no menu muda a numeração de `respostas.txt` e
+  descarrila a simulação no meio. Conferir que a saída é 0, não só que a tela abriu.
+
+## 2026-09-18: Correções dos seis P1 da auditoria
+
+Auditoria em `docs/auditoria-2026-09-18.md` (22 achados). Os seis P1 foram conferidos um a um no
+código antes de mexer, corrigidos e transformados em regressão da suíte normal
+(`backend/testes/test_auditoria_p1.py`, 16 testes). As sondas que descreviam esses defeitos saíram
+de `backend/testes/auditoria_2026_09_18.py`, que ficou só com os P2 abertos.
+
+- **A01, reentrega recupera turno perdido.** O webhook grava e depois agenda; com o Redis fora do
+  ar ele responde 500 de propósito, mas a reentrega caía na deduplicação e voltava 200 sem agendar
+  nada, deixando a mensagem gravada e sem turno para sempre. Agora a reentrega reagenda **quando
+  não há nada agendado nem rodando** e existe fala do contato sem resposta. Reentrega comum, com o
+  turno já na fila, continua não virando segundo job: o canal repete bastante.
+- **A02, envio que não saiu não conta como respondido.** `_envia` parava na primeira falha e o
+  turno avançava `respondido_ate` mesmo com zero envios, escondendo a pergunta do contato do turno
+  seguinte. Zero enviadas agora devolve `nao_enviado` e não marca nada; envio parcial marca (repetir
+  duplicaria o que já chegou) e registra `resposta_incompleta` em Ver consumo e falhas.
+- **A03, prazo do token não é mensagem nova.** O token do buffer durava 80 s com buffer de 8, e
+  fila lenta ou modelo demorado faziam a resposta ser descartada como se tivesse chegado mensagem
+  nova, sem ninguém para refazê-la. Chave ausente passou a valer como "não substituído", e o prazo
+  virou buffer + lock + 300 s. Só um token **diferente** descarta o turno.
+- **A04, humano que assume cala o agente na hora.** O direito de falar era consultado uma vez, no
+  início. Agora é conferido antes de cada mensagem e dos dois lados da espera da digitação, lendo o
+  status numa sessão nova (quem pausou foi o webhook, noutra transação) e perguntando ao canal.
+- **A05, prompt não passa de uma empresa para outra.** O slug volta a ficar livre quando a empresa
+  é removida, e os arquivos ficam no disco de propósito; empresa nova com o mesmo nome herdava as
+  instruções da anterior. A pasta agora tem dono (`.cliente`) e, quando o dono é outro, **quem sai
+  é a pasta antiga**, para `<slug>-<8 do dono antigo>`. A empresa viva fica sempre em
+  `<slug>/<agente>` porque esse caminho também é a URL pública da política de privacidade, que
+  quebraria se a pasta nova ganhasse sufixo. Pasta sem dono marcado é adotada por quem a usa:
+  instalação no ar não muda de caminho.
+- **A06, exclusividade durante todo o efeito externo.** O lock durava 240 s e o `job_timeout` do
+  worker, 300: existia uma janela em que outro turno entrava na conversa com o primeiro ainda
+  enviando. O lock passou a 360 s (maior que o job, quem interrompe job longo é o arq) e o turno
+  confere a posse antes de cada mensagem.
+
+Aberto e não tocado aqui: os 14 P2 e 2 P3 do relatório, com as três sondas que restaram.
+
 ## 2026-09-18: Nível de emoji por agente (v0.17.0)
 
 - **Pedido do operador, depois do primeiro teste no WhatsApp oficial** (áudio entendido e digitando convincente): uma pergunta em todo canal sobre emoji, com nível, "tipo o seletor de effort". `Agente.emojis` com `nenhum`, `pouco`, `medio` e `muito`, perguntado na criação dos quatro canais (é jeito de escrever, não canal) e editável em Editar agente > Emoji.

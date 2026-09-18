@@ -57,6 +57,9 @@ mostra_resumo() {
   fi
   campo "Versão" "$VERSAO"
   campo "Plataforma" "https://$sub/health"
+  if painel_ligado; then
+    campo "Painel" "$(painel_endereco)"
+  fi
   campo "Projeto" "$RAIZ_PROJETO"
   campo "Uso" "$([ "$(env_get MODO_INSTALACAO)" = revenda ] && echo 'revenda para empresas clientes' || echo 'só a minha empresa')"
   campo "Resposta" "$(env_get MODELO_CONVERSA)${fallback:+ ${CINZA}→ $fallback${NORMAL}}"
@@ -69,6 +72,8 @@ mostra_resumo() {
   printf '    %sasimov%s               %smenu: criar, editar e remover agentes, ver consumo%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov novo-agente%s   %soutro agente, para empresa nova ou existente%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %sasimov conversar%s     %sconversa de teste com um agente aqui no terminal%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %sasimov painel%s        %s%s%s\n' "$CIANO" "$NORMAL" "$CINZA" \
+    "$(painel_ligado && echo 'código de acesso ao painel no navegador' || echo 'administrar pelo navegador, em app.<domínio>')" "$NORMAL"
   printf '    %sasimov ajuda%s         %stodos os comandos%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
   printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
   echo

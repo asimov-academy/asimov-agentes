@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>WhatsApp · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1>WhatsApp</h1>
+      <p class="sub">Números pareados, sessões da WAHA e webhooks na Meta.</p>
+    </div>
+  </div>
+
+  <div id="lista"></div>
+
+  <div class="carta">
+    <h2>WAHA</h2>
+    <dl class="ficha">
+      <dt>Contêiner</dt><dd><span class="selo ok"><i class="bolinha"></i>no ar</span></dd>
+      <dt>Versão</dt><dd class="mono">gows-2026.8.2</dd>
+      <dt>Atualização</dt><dd>automática, domingo de madrugada · última conferida em 15/09</dd>
+    </dl>
+    <p style="margin-bottom:0">
+      <button class="botao pequeno" onclick="torrada('Procura versão nova agora.')">Procurar versão nova</button>
+      <button class="botao pequeno" onclick="torrada('Lista sessões e deixa apagar as órfãs.')">Conferir sessões</button>
+    </p>
+  </div>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("whatsapp");
+
+(async () => {
+  const agentes = (await api.agentes()).filter((a) => a.canal === "waha" || a.canal === "whatsapp");
+
+  $("#lista").innerHTML = agentes.map((a) => {
+    const pareado = a.canal === "waha" && a.waha && a.waha.status === "WORKING";
+    return `<div class="carta">
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <h2 style="margin-bottom:4px">${esc(a.nome)}
+            <span class="rotulo" style="font-weight:400">· ${esc(a.cliente)}</span></h2>
+          <dl class="ficha">
+            <dt>Canal</dt><dd>${CANAIS[a.canal]}</dd>
+            <dt>Número</dt><dd class="mono">${esc((a.waha && a.waha.numero) || a.conta)}</dd>
+            <dt>Situação</dt><dd>${
+              a.canal === "whatsapp"
+                ? '<span class="selo ok"><i class="bolinha"></i>webhook apontado no número</span>'
+                : pareado
+                ? '<span class="selo ok"><i class="bolinha"></i>conectado</span>'
+                : '<span class="selo alerta"><i class="bolinha pisca"></i>aguardando QR</span>'
+            }</dd>
+            <dt>Handoff</dt><dd>${esc(a.handoff_destino.nome || a.handoff_destino.numero)}</dd>
+          </dl>
+          <p style="margin-bottom:0;margin-top:12px">
+            <a class="botao pequeno" href="agente.html?id=${a.id}">Abrir agente</a>
+            ${a.canal === "waha"
+              ? `<button class="botao pequeno" onclick="torrada('POST .../waha/reiniciar')">Trocar de número</button>`
+              : `<button class="botao pequeno" onclick="torrada('POST .../whatsapp/webhook')">Refazer webhook</button>`}
+          </p>
+        </div>
+        ${!pareado && a.canal === "waha" ? `<pre class="qr">${QR_EXEMPLO}</pre>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+})();
+</script>
+</body>
+</html>

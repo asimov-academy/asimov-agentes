@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Consumo · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+<style>
+  .barras { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin: 8px 0 0; }
+  .barras div { flex: 1; background: var(--acento); border-radius: 4px 4px 0 0; opacity: .85; position: relative; }
+  .barras div:hover { opacity: 1; }
+  .barras span { position: absolute; bottom: -20px; left: 0; right: 0; text-align: center;
+    font-size: 11px; color: var(--fraco); }
+</style>
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1>Consumo</h1>
+      <p class="sub">Turnos, tokens e custo estimado por agente.</p>
+    </div>
+    <div class="acoes">
+      <select id="dias" style="width:auto">
+        <option value="7">7 dias</option>
+        <option value="30">30 dias</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grade g4" id="numeros"></div>
+
+  <div class="carta" style="margin-top:16px">
+    <h2>Turnos por dia</h2>
+    <div class="barras" id="barras"></div>
+    <div style="height:22px"></div>
+  </div>
+
+  <div class="carta">
+    <h2>Por agente</h2>
+    <div class="tabela-rola"><table id="tabela"></table></div>
+  </div>
+
+  <p class="rotulo" style="margin-top:14px">
+    Fonte: <span class="mono">GET /admin/consumo?cliente_id=&amp;agente_id=&amp;dias=</span>, que já existe.
+    Custo é estimativa pela tabela de preços do provedor; chamada sem preço aparece separada.
+  </p>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("consumo");
+
+(async () => {
+  const c = await api.consumo();
+
+  $("#numeros").innerHTML = [
+    [mil(c.total.turnos), "turnos"],
+    [mil(c.total.chamadas), "chamadas ao modelo"],
+    [(c.total.tokens / 1e6).toFixed(2) + " M", "tokens"],
+    [reais(c.total.custo), "custo estimado"],
+  ].map(([n, r]) => `<div class="carta"><div class="numero">${n}</div><div class="rotulo">${r}</div></div>`).join("");
+
+  const teto = Math.max(...c.por_dia);
+  const dias = ["qui", "sex", "sáb", "dom", "seg", "ter", "qua"];
+  $("#barras").innerHTML = c.por_dia
+    .map((v, i) => `<div style="height:${(v / teto) * 100}%" title="${v} turnos"><span>${dias[i]}</span></div>`)
+    .join("");
+
+  $("#tabela").innerHTML = `
+    <thead><tr>
+      <th>Agente</th><th class="fim">Turnos</th><th class="fim">Chamadas</th>
+      <th class="fim">Tokens</th><th class="fim">Custo</th>
+    </tr></thead>
+    <tbody>${c.por_agente.map((a) => `
+      <tr>
+        <td><b>${esc(a.agente)}</b><br><span class="rotulo">${esc(a.cliente)}</span></td>
+        <td class="fim">${mil(a.turnos)}</td>
+        <td class="fim">${mil(a.chamadas)}</td>
+        <td class="fim">${(a.tokens / 1e6).toFixed(2)} M</td>
+        <td class="fim"><b>${reais(a.custo)}</b></td>
+      </tr>`).join("")}</tbody>`;
+})();
+</script>
+</body>
+</html>

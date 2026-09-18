@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Novo agente · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main style="max-width:720px">
+  <div id="cabeca">
+    <h1 id="titulo">Novo agente</h1>
+    <p class="sub" id="subtitulo"></p>
+  </div>
+
+  <div class="passos" id="passos"></div>
+  <div id="conteudo"></div>
+
+  <div style="display:flex;gap:8px;margin-top:20px" id="rodape-passos">
+    <button class="botao" id="voltar">Voltar</button>
+    <button class="botao forte" id="seguir" style="margin-left:auto">Continuar</button>
+  </div>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("agentes");
+
+/* No primeiro acesso, o painel abre direto aqui e não mostra a dash enquanto não houver
+   agente ativo. Depois, esta mesma tela é o "Novo agente". Sem coluna nova em banco:
+   o estado é "a instalação tem agente ativo?". */
+const PRIMEIRA_VEZ = new URLSearchParams(location.search).has("primeira");
+
+const PASSOS = ["Empresa", "Canal", "Conexão", "Jeito", "Handoff", "Teste"];
+let passo = 0;
+const novo = { cliente: "c1", canal: "chatwoot", nome: "", ferramentas: [], emoji: "pouco", buffer: 8 };
+
+function desenhaPassos() {
+  $("#passos").innerHTML = PASSOS.map((n, i) =>
+    `<div class="${i < passo ? "feito" : i === passo ? "agora" : ""}"><span>${n}</span></div>`).join("");
+}
+
+const telas = [
+  () => `
+    <div class="carta">
+      <h2>Para qual empresa?</h2>
+      <p class="rotulo" style="margin-top:-6px">Instalação em modo revenda: cada empresa só enxerga os próprios agentes e conversas.</p>
+      <div class="opcoes" style="margin-top:14px">
+        ${CLIENTES.map((c) => `
+          <label class="opcao ${novo.cliente === c.id ? "marcada" : ""}">
+            <input type="radio" name="cliente" value="${c.id}" ${novo.cliente === c.id ? "checked" : ""}>
+            <span><b>${esc(c.nome)}</b><span>${c.agentes} agente(s) · <span class="mono">${esc(c.slug)}</span></span></span>
+          </label>`).join("")}
+        <label class="opcao">
+          <input type="radio" name="cliente" value="nova">
+          <span><b>Criar empresa</b><span>Nome novo, slug gerado automaticamente.</span></span>
+        </label>
+      </div>
+    </div>`,
+
+  () => `
+    <div class="carta">
+      <h2>Por onde o agente atende?</h2>
+      <div class="opcoes" style="margin-top:14px">
+        ${[
+          ["chatwoot", "Chatwoot", "Caixa de um Chatwoot que você já tem. O agente vira um Agent Bot."],
+          ["whatsapp", "WhatsApp oficial", "Cloud API da Meta. Precisa de app, token permanente e chave secreta."],
+          ["waha", "WhatsApp pela WAHA", "Número pareado por QR code, na própria VPS. API não oficial."],
+          ["nativo", "Nativo", "Sem canal externo. Conversa aqui no painel, e depois pode ser conectado a um canal."],
+        ].map(([v, t, d]) => `
+          <label class="opcao ${novo.canal === v ? "marcada" : ""}">
+            <input type="radio" name="canal" value="${v}" ${novo.canal === v ? "checked" : ""}>
+            <span><b>${t}</b><span>${d}</span></span>
+          </label>`).join("")}
+      </div>
+    </div>`,
+
+  () => ({
+    chatwoot: `
+      <div class="carta">
+        <h2>Conectar ao Chatwoot</h2>
+        <div class="campo">
+          <label for="cw-url">Endereço do Chatwoot</label>
+          <input type="url" id="cw-url" placeholder="https://chat.exemplo.com.br">
+        </div>
+        <div class="campo">
+          <label for="cw-token">Token de administrador
+            <span class="dica">Pedido uma vez por endereço e guardado cifrado. Perfil > Access Token.</span></label>
+          <input type="password" id="cw-token">
+        </div>
+        <div class="campo">
+          <label for="cw-caixa">Caixa de entrada</label>
+          <select id="cw-caixa"><option>Descubra primeiro o que o token enxerga</option></select>
+        </div>
+        <button class="botao" onclick="torrada('POST /admin/canais/chatwoot/descobrir')">Descobrir contas e caixas</button>
+      </div>`,
+
+    whatsapp: `
+      <div class="carta">
+        <h2>Conectar o número oficial</h2>
+        <p class="rotulo" style="margin-top:-6px">
+          Três dados, e o setup descobre o resto perguntando à Meta. Passo a passo em
+          <span class="mono">docs/whatsapp-oficial.md</span>.
+        </p>
+        <div class="campo"><label for="w-app">ID do app</label><input type="text" id="w-app" class="mono"></div>
+        <div class="campo"><label for="w-token">Token permanente do usuário do sistema</label><input type="password" id="w-token"></div>
+        <div class="campo"><label for="w-seg">Chave secreta do app</label><input type="password" id="w-seg"></div>
+        <button class="botao" onclick="torrada('Pergunta à Meta quais contas o token alcança.')">Buscar contas e números</button>
+        <p class="aviso alerta" style="margin-top:16px">
+          Na primeira versão do painel isto pode ficar no terminal:
+          <span class="mono">asimov novo-agente</span> já trata token que não enxerga a conta, app sem
+          permissão e template recusado, e são 380 linhas de mensagens de erro já pagas.
+        </p>
+      </div>`,
+
+    waha: `
+      <div class="carta">
+        <h2>Parear o número</h2>
+        <p class="rotulo" style="margin-top:-6px">
+          O contêiner da WAHA sobe agora, na primeira vez. Abra o WhatsApp no celular em
+          Aparelhos conectados e leia o código.
+        </p>
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:14px">
+          <pre class="qr">${QR_EXEMPLO}</pre>
+          <div>
+            <span class="selo alerta"><i class="bolinha pisca"></i>esperando leitura</span>
+            <p class="rotulo" style="margin:10px 0 0">Some sozinho quando o número parear.</p>
+            <button class="botao pequeno" style="margin-top:8px" onclick="torrada('POST .../waha/reiniciar')">Gerar outro código</button>
+          </div>
+        </div>
+        <p class="aviso alerta" style="margin-top:16px">
+          API não oficial: o número pode ser bloqueado pelo WhatsApp. Use um chip só do agente,
+          nunca o celular pessoal de alguém.
+        </p>
+      </div>`,
+
+    nativo: `
+      <div class="carta">
+        <h2>Sem canal externo</h2>
+        <p class="rotulo" style="margin-top:-6px;margin-bottom:0">
+          O agente nativo conversa aqui no painel e no terminal. Serve para ajustar prompt e
+          ferramentas antes de ligar num canal, e depois pode ser conectado a um Chatwoot ou WhatsApp
+          sem perder prompt, ajustes e conversas.
+        </p>
+      </div>`,
+  })[novo.canal],
+
+  () => `
+    <div class="carta">
+      <h2>Como esse agente responde</h2>
+      <div class="campo">
+        <label for="n-nome">Nome<span class="dica">É o que o contato vê e o que aparece no canal.</span></label>
+        <input type="text" id="n-nome" value="${esc(novo.nome)}" placeholder="Ana">
+      </div>
+      <div class="campo">
+        <label for="n-prompt">Prompt<span class="dica">Uma linha já basta para começar. Dá para evoluir depois na ficha do agente.</span></label>
+        <textarea id="n-prompt" style="min-height:120px">Você é a atendente da Loja Exemplo. Responda curto, em português do Brasil.</textarea>
+      </div>
+    </div>
+    <div class="carta">
+      <h2>Ferramentas</h2>
+      <p class="rotulo" style="margin-top:-6px">Agente novo nasce sem nenhuma: cada uma custa tokens em todo turno.</p>
+      <div class="opcoes" style="margin-top:12px">
+        ${FERRAMENTAS.map((f) => `
+          <label class="opcao">
+            <input type="checkbox" name="ferr" value="${f.nome}">
+            <span><b>${esc(f.rotulo)}</b><span>${esc(f.descricao)}</span></span>
+          </label>`).join("")}
+      </div>
+    </div>
+    <div class="carta">
+      <h2>Emoji</h2>
+      <div class="opcoes">
+        ${["nenhum", "pouco", "medio", "muito"].map((n) => `
+          <label class="opcao ${novo.emoji === n ? "marcada" : ""}">
+            <input type="radio" name="emoji" value="${n}" ${novo.emoji === n ? "checked" : ""}>
+            <span><b>${EMOJIS[n]}</b></span>
+          </label>`).join("")}
+      </div>
+    </div>`,
+
+  () => `
+    <div class="carta">
+      <h2>Quando o agente passar para uma pessoa</h2>
+      <p class="rotulo" style="margin-top:-6px">
+        ${novo.canal === "nativo"
+          ? "No nativo o handoff aparece na própria conversa, com motivo, resumo e código."
+          : novo.canal === "chatwoot"
+          ? "No Chatwoot vira nota privada, atribuição e conversa aberta."
+          : "No WhatsApp o aviso vai para um número ou grupo, com resumo e código."}
+      </p>
+      ${novo.canal === "nativo" ? "" : `
+        <div class="campo">
+          <label for="h-destino">Destino do aviso</label>
+          <input type="text" id="h-destino" placeholder="${novo.canal === "chatwoot" ? "Equipe de vendas" : "55 51 9xxxx-0000 ou um grupo"}">
+        </div>`}
+      <div class="campo">
+        <label for="h-horas">Voltar sozinho depois de
+          <span class="dica">Vazio: só volta quando devolverem.</span></label>
+        <input type="number" id="h-horas" min="1" max="72" value="2">
+      </div>
+    </div>`,
+
+  () => `
+    <div class="carta">
+      <h2>Fale com ele antes de soltar</h2>
+      <p class="rotulo" style="margin-top:-6px">
+        A conversa de teste não passa pelo canal: nenhum contato recebe nada.
+      </p>
+      <div class="conversa" style="margin:16px 0">
+        <div class="balao de-contato"><div class="quem">Você</div>oi, quanto custa a entrega?<div class="hora">agora</div></div>
+        <div class="balao de-agente"><div class="quem">${esc(novo.nome || "Agente")}</div>Oi! Depende do CEP. Me manda o seu que eu calculo.<div class="hora">agora · 2,8 s · R$ 0,012</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="text" placeholder="Escreva uma mensagem de teste">
+        <button class="botao forte" onclick="torrada('POST .../terminal')">Enviar</button>
+      </div>
+    </div>`,
+];
+
+function desenha() {
+  desenhaPassos();
+  $("#conteudo").innerHTML = telas[passo]();
+  $("#voltar").style.visibility = passo === 0 ? "hidden" : "visible";
+  $("#seguir").textContent = passo === telas.length - 1 ? "Concluir" : "Continuar";
+  $("#subtitulo").textContent = PRIMEIRA_VEZ && passo === 0
+    ? "A plataforma já está no ar. Falta o primeiro agente."
+    : `Passo ${passo + 1} de ${PASSOS.length}: ${PASSOS[passo]}`;
+}
+
+$("#voltar").addEventListener("click", () => { if (passo > 0) { passo--; desenha(); } });
+$("#seguir").addEventListener("click", () => {
+  if (passo === 0) novo.cliente = ($("input[name=cliente]:checked") || {}).value || novo.cliente;
+  if (passo === 1) novo.canal = ($("input[name=canal]:checked") || {}).value || novo.canal;
+  if (passo === 3) {
+    novo.nome = $("#n-nome").value || "Ana";
+    novo.ferramentas = $$("input[name=ferr]:checked").map((i) => i.value);
+    novo.emoji = ($("input[name=emoji]:checked") || {}).value || novo.emoji;
+  }
+  if (passo === telas.length - 1) return pronto();
+  passo++;
+  desenha();
+});
+
+function pronto() {
+  $("#passos").innerHTML = "";
+  $("#rodape-passos").hidden = true;
+  $("#titulo").textContent = `${novo.nome || "Ana"} está no ar`;
+  $("#subtitulo").textContent = `${CANAIS[novo.canal]} · ${(CLIENTES.find((c) => c.id === novo.cliente) || CLIENTES[0]).nome}`;
+  $("#conteudo").innerHTML = `
+    <div class="aviso ok">Agente criado, canal conectado e webhook apontado.</div>
+    <div class="carta">
+      <h2>Endereços deste agente</h2>
+      <dl class="ficha">
+        <dt>Webhook</dt><dd class="mono" style="word-break:break-all">https://${INSTALACAO.subdominio_bot}/webhook/${novo.canal}/…</dd>
+        <dt>Privacidade</dt><dd class="mono" style="word-break:break-all">https://${INSTALACAO.subdominio_bot}/privacidade/loja-exemplo/${esc((novo.nome || "ana").toLowerCase())}</dd>
+      </dl>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <a class="botao forte" href="inicio.html">Ir para o painel</a>
+      <a class="botao" href="assistente.html">Criar outro agente</a>
+    </div>`;
+}
+
+desenha();
+</script>
+</body>
+</html>

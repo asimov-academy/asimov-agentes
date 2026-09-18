@@ -19,7 +19,9 @@ COPY . .
 RUN useradd --system --uid 1000 app && mkdir -p /app/prompts /var/lib/asimov/midia \
     && chown -R app /app /var/lib/asimov
 USER app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+# Sem access log: ele registra a URL inteira, e o token do webhook mora nela (auditoria de
+# 2026-09-18, A14). Todo webhook já registra o próprio desfecho em `webhook_aceito`/`webhook_ignorado`.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-access-log"]
 
 FROM base AS teste
 COPY pyproject.toml uv.lock ./

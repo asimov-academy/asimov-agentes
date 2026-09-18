@@ -69,6 +69,20 @@ env_set() {
   rm -f "$temp"
 }
 
+# O .env guarda as chaves da instalação e as credenciais cifradas dos canais. O setup sempre grava
+# com 600, mas nada impede alguém afrouxar depois: qualquer usuário da VPS passaria a ler tudo.
+# Conferido a cada execução, e corrigido em vez de recusar (auditoria de 2026-09-18, A22 e spec).
+confere_permissao_env() {
+  [ -f "$ARQ_ENV" ] || return 0
+  local modo
+  modo=$(stat -c '%a' "$ARQ_ENV" 2>/dev/null || stat -f '%OLp' "$ARQ_ENV" 2>/dev/null || true)
+  [ -n "$modo" ] || return 0
+  if [ "$modo" != "600" ]; then
+    chmod 600 "$ARQ_ENV"
+    aviso "O .env estava com permissão $modo e voltou para 600: ele guarda as chaves da instalação."
+  fi
+}
+
 # env_set_se_vazio CHAVE VALOR: não troca segredo já gerado numa execução anterior.
 env_set_se_vazio() {
   [ -n "$(env_get "$1")" ] || env_set "$1" "$2"

@@ -9,7 +9,7 @@
 # Se o projeto já existe, só roda o setup (retomada ou resumo).
 set -euo pipefail
 
-VERSAO="${ASIMOV_VERSAO:-v0.17.0}"
+VERSAO="${ASIMOV_VERSAO:-v0.18.0}"
 PACOTE="${ASIMOV_PACOTE:-https://codeload.github.com/asimov-academy/asimov-agentes/tar.gz/$VERSAO}"
 SHA256="${ASIMOV_SHA256:-}"
 DESTINO="${ASIMOV_DIR:-$HOME/asimov-agentes}"
@@ -33,7 +33,20 @@ if [ -n "$SHA256" ]; then
   }
 fi
 
-[ -f "$DESTINO/setup/instalar.sh" ] && echo "Atualizando o código em $DESTINO (.env, prompts e progresso ficam)."
+# Atualizar sobrescreve os arquivos distribuídos, e alguns o operador é orientado a editar
+# (modelos/privacidade.html, modelos/prompts, modelos/AGENTS.md.tmpl). Antes de extrair, uma cópia
+# do que existe vai para ~/.asimov/antes-da-atualizacao/<data>, para nada se perder sem volta
+# (auditoria de 2026-09-18, A15). O .env, os prompts dos agentes e o progresso nunca são tocados.
+if [ -f "$DESTINO/setup/instalar.sh" ]; then
+  echo "Atualizando o código em $DESTINO (.env, prompts e progresso ficam)."
+  guardado="$HOME/.asimov/antes-da-atualizacao/$(date +%Y%m%d-%H%M%S)"
+  if mkdir -p "$guardado" 2>/dev/null; then
+    for pasta in modelos deploy; do
+      [ -d "$DESTINO/$pasta" ] && cp -a "$DESTINO/$pasta" "$guardado/" 2>/dev/null || true
+    done
+    echo "Cópia do que havia em modelos/ e deploy/: $guardado"
+  fi
+fi
 mkdir -p "$DESTINO"
 tar -xzf "$temp/pacote.tar.gz" -C "$DESTINO" --strip-components=1 --no-same-owner
 exec bash "$DESTINO/setup/instalar.sh"

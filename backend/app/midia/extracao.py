@@ -4,6 +4,7 @@ O texto devolvido é conteúdo do contato. Quem mostra ao modelo de resposta rot
 (ver `ia/agente.py`). Os prompts daqui só descrevem a tarefa; nada do agente entra neles.
 """
 
+import asyncio
 from dataclasses import dataclass, field
 from decimal import Decimal
 from io import BytesIO
@@ -133,23 +134,39 @@ async def ler_documento(nome_modelo: str, conteudo: bytes, tipo_mime: str) -> Ex
     if tipo_mime != "application/pdf":
         raise MidiaNaoSuportada(tipo_mime)
 
-    leitor = PdfReader(BytesIO(conteudo))
-    paginas = len(leitor.pages)
-    texto = "\n\n".join((pagina.extract_text() or "").strip() for pagina in leitor.pages).strip()
+    # PDF é CPU, não espera de rede: sem thread, um arquivo pesado trava o worker inteiro e as
+    # outras conversas ficam sem resposta enquanto ele é lido (auditoria de 2026-09-18, A18).
+    # O limite de bytes do download não limita custo de CPU: PDF comprimido cabe no limite e
+    # explode ao abrir. Por isso a leitura também para no teto de páginas.
+    paginas, texto, conteudo = await asyncio.to_thread(_le_pdf, conteudo)
     if len(texto) >= MINIMO_CARACTERES_POR_PAGINA * max(paginas, 1):
         return Extracao(texto=texto, metadados={"paginas": paginas, "leitura": "texto"})
 
     limite = config().midia_paginas_pdf_visao
+    extracao = await _com_modelo(nome_modelo, PROMPT_VISAO, conteudo, tipo_mime)
+    extracao.metadados = {"paginas": paginas, "paginas_lidas": min(paginas, limite), "leitura": "visao"}
+    return extracao
+
+
+def _le_pdf(conteudo: bytes) -> tuple[int, str, bytes]:
+    """Roda numa thread. Devolve o número de páginas, o texto lido e o PDF cortado para a visão.
+
+    Só as primeiras páginas são lidas: o que passa do teto não entra no texto nem vai para o
+    modelo, e um arquivo de mil páginas não vira minutos de CPU.
+    """
+    leitor = PdfReader(BytesIO(conteudo))
+    paginas = len(leitor.pages)
+    limite = config().midia_paginas_pdf_visao
+    lidas = leitor.pages[:limite]
+    texto = "\n\n".join((pagina.extract_text() or "").strip() for pagina in lidas).strip()
     if paginas > limite:
         escritor = PdfWriter()
-        for pagina in leitor.pages[:limite]:
+        for pagina in lidas:
             escritor.add_page(pagina)
         saida = BytesIO()
         escritor.write(saida)
         conteudo = saida.getvalue()
-    extracao = await _com_modelo(nome_modelo, PROMPT_VISAO, conteudo, tipo_mime)
-    extracao.metadados = {"paginas": paginas, "paginas_lidas": min(paginas, limite), "leitura": "visao"}
-    return extracao
+    return paginas, texto, conteudo
 
 
 async def _com_modelo(nome_modelo: str, prompt: str, conteudo: bytes, tipo_mime: str) -> Extracao:

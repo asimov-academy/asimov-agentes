@@ -22,6 +22,11 @@ dc run --rm api alembic upgrade head
 
 echo "==> Subindo serviços"
 dc up -d api worker caddy
+# O Caddyfile é montado: `up -d` não recria o contêiner quando só o arquivo muda, e o Caddy segue
+# com a configuração que já carregou. Sem isto, caminho público novo responde 404 até alguém
+# reiniciar na mão (auditoria de 2026-09-18, A16; mesma armadilha corrigida no setup na v0.16.1).
+dc exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile ||
+  dc restart caddy || true
 
 echo "==> Health check"
 for _ in $(seq 1 30); do

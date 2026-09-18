@@ -211,6 +211,10 @@ def _salva(destino: Path, conteudo: bytes) -> None:
     temporario.replace(destino)
 
 
+LOTES_MAXIMOS_DA_LIMPEZA = 40
+"""Com 500 por lote, 20 mil arquivos por passada: teto de segurança, não orçamento esperado."""
+
+
 async def limpa_arquivos_antigos(sessao: AsyncSession) -> int:
     """Apaga do disco o arquivo que já virou texto. Devolve quantos saíram.
 
@@ -221,16 +225,35 @@ async def limpa_arquivos_antigos(sessao: AsyncSession) -> int:
     cfg = config()
     limite = agora() - timedelta(hours=cfg.midia_horas_no_disco)
     apagados = 0
-    for midia in await repo.com_arquivo_antigo(sessao, limite):
-        caminho = cfg.diretorio_midia / midia.caminho_arquivo
-        try:
-            await asyncio.to_thread(caminho.unlink, True)
-        except OSError as erro:
-            log.warning("midia_nao_apagada", erro=repr(erro), midia_id=str(midia.id))
-            continue
-        midia.arquivo_apagado_em = agora()
-        apagados += 1
-    if apagados:
+    travados = 0
+    # Em lotes, até esgotar: parar no primeiro lote deixava o disco encher devagar quando entrava
+    # mais arquivo por dia do que o lote apagava (auditoria de 2026-09-18, A17).
+    for _ in range(LOTES_MAXIMOS_DA_LIMPEZA):
+        lote = await repo.com_arquivo_antigo(sessao, limite)
+        if not lote:
+            break
+        for midia in lote:
+            caminho = cfg.diretorio_midia / midia.caminho_arquivo
+            try:
+                await asyncio.to_thread(caminho.unlink, True)
+            except OSError as erro:
+                log.warning("midia_nao_apagada", erro=repr(erro), midia_id=str(midia.id))
+                travados += 1
+                continue
+            midia.arquivo_apagado_em = agora()
+            apagados += 1
         await sessao.commit()
+        # Lote inteiro travado não anda: sair evita rodar em círculo pelas mesmas linhas.
+        if travados >= len(lote):
+            break
+        travados = 0
+    else:
+        # Chegou ao teto de lotes: sobrou fila para amanhã, e isso precisa aparecer.
+        log.warning("midia_limpeza_incompleta", apagados=apagados)
+        await registra_falha(
+            "midia_limpeza_incompleta",
+            {"erro": f"{apagados} arquivos apagados e ainda sobrou fila; confira o espaço em disco"},
+        )
+    if apagados:
         log.info("midia_limpa", arquivos=apagados, horas=cfg.midia_horas_no_disco)
     return apagados

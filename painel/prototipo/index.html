@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Entrar · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main class="entrar">
+  <div class="marca" style="justify-content:center;margin-bottom:22px">
+    <span class="ponto">A</span>
+    <span>Asimov Agentes<small id="dominio"></small></span>
+  </div>
+
+  <div class="carta">
+    <h2>Entrar</h2>
+    <form id="form">
+      <div class="campo">
+        <label for="senha">Senha do operador</label>
+        <input type="password" id="senha" autocomplete="current-password" autofocus>
+      </div>
+      <div class="campo">
+        <button class="botao forte" style="width:100%" type="submit">Entrar</button>
+      </div>
+      <p id="erro" class="aviso erro" hidden>Senha incorreta. Restam 4 tentativas antes da espera.</p>
+    </form>
+  </div>
+
+  <p class="rotulo" style="text-align:center;margin-top:18px">
+    Primeira vez aqui? <a href="primeiro-acesso.html">Use o código do terminal</a><br>
+    Esqueceu a senha? Rode <span class="mono">asimov painel</span> na VPS.
+  </p>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+  $("#dominio").textContent = INSTALACAO.subdominio_app;
+  // POST /painel/entrar (senha em Argon2id, sessão no Redis, cookie HttpOnly)
+  $("#form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if ($("#senha").value.trim() === "") { $("#erro").hidden = false; return; }
+    location.href = "inicio.html";
+  });
+</script>
+</body>
+</html>

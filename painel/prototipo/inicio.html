@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Início · Asimov Agentes</title>
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main>
+  <div class="cabeca">
+    <div>
+      <h1>Início</h1>
+      <p class="sub">O que está acontecendo agora na instalação.</p>
+    </div>
+    <div class="acoes"><span id="saude"></span></div>
+  </div>
+
+  <div class="grade g4" id="numeros"></div>
+
+  <div class="grade g2" style="margin-top:16px;grid-template-columns:1.35fr 1fr">
+    <div class="carta">
+      <h2>Conversas agora</h2>
+      <div class="tabela-rola"><table id="conversas"></table></div>
+      <p style="margin:14px 0 0"><a href="conversas.html">Ver todas</a></p>
+    </div>
+
+    <div>
+      <div class="carta">
+        <h2>Precisa de atenção</h2>
+        <div id="atencao"></div>
+      </div>
+      <div class="carta">
+        <h2>Últimas falhas</h2>
+        <div id="falhas"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="dados.js"></script>
+<script src="painel.js"></script>
+<script>
+montaCasca("inicio");
+
+(async () => {
+  const [inst, agentes, conversas, consumo, falhas] = await Promise.all([
+    api.instalacao(), api.agentes(), api.conversas(), api.consumo(), api.falhas(),
+  ]);
+
+  const tudoOk = Object.values(inst.saude).every((v) => v === "ok");
+  $("#saude").innerHTML = tudoOk
+    ? '<span class="selo ok"><i class="bolinha"></i>tudo no ar</span>'
+    : '<span class="selo erro"><i class="bolinha"></i>algo fora do ar</span>';
+
+  const ativas = conversas.filter((c) => c.status === "agente").length;
+  const emHandoff = conversas.filter((c) => c.status === "humano");
+
+  $("#numeros").innerHTML = [
+    [ativas, "conversas com o agente", "conversas.html"],
+    [emHandoff.length, "com atendente", "conversas.html?status=humano"],
+    [agentes.length, "agentes ativos", "agentes.html"],
+    [reais(consumo.total.custo), `custo em ${consumo.dias} dias`, "consumo.html"],
+  ].map(([n, r, url]) => `
+    <a class="carta" href="${url}" style="color:inherit">
+      <div class="numero">${n}</div>
+      <div class="rotulo">${r}</div>
+    </a>`).join("");
+
+  $("#conversas").innerHTML = `
+    <thead><tr><th>Contato</th><th>Agente</th><th>Situação</th><th class="fim">Última</th></tr></thead>
+    <tbody>${conversas.slice(0, 5).map((c) => `
+      <tr class="clicavel" onclick="location.href='conversa.html?id=${c.id}'">
+        <td><b>${esc(c.contato)}</b><br><span class="rotulo mono">${esc(c.telefone)}</span></td>
+        <td>${esc(c.agente)}<br><span class="rotulo">${CANAIS[c.canal]}</span></td>
+        <td>${seloStatus(c.status, c.respondendo)}</td>
+        <td class="fim rotulo">${horaCurta(c.ultima)}</td>
+      </tr>`).join("")}</tbody>`;
+
+  $("#atencao").innerHTML = emHandoff.length === 0
+    ? '<p class="vazio">Nada parado. Todas as conversas estão com o agente.</p>'
+    : emHandoff.map((c) => `
+        <div class="aviso alerta" style="margin-bottom:8px">
+          <b>${esc(c.contato)}</b> está com ${esc(c.handoff.destino)} desde ${horaCurta(c.handoff.aberto_em)}.<br>
+          Motivo: ${esc(c.handoff.motivo)} · código <span class="mono">${c.handoff.codigo}</span>
+          <div style="margin-top:8px">
+            <a class="botao pequeno" href="conversa.html?id=${c.id}">Abrir</a>
+            <button class="botao pequeno" onclick="devolver('${c.id}')">Devolver ao agente</button>
+          </div>
+        </div>`).join("");
+
+  $("#falhas").innerHTML = falhas.map((f) => `
+    <div style="padding:9px 0;border-top:1px solid var(--borda)">
+      <span class="selo erro">${esc(f.tipo)}</span>
+      <span class="rotulo" style="float:right">${horaCurta(f.quando)} · ${esc(f.agente)}</span>
+      <div style="margin-top:6px;font-size:13.5px">${esc(f.detalhe)}</div>
+    </div>`).join("");
+})();
+
+async function devolver(id) {
+  await api.retomar(id);
+  torrada("Conversa devolvida ao agente.");
+  setTimeout(() => location.reload(), 700);
+}
+</script>
+</body>
+</html>

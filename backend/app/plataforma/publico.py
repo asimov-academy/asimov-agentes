@@ -14,6 +14,7 @@ navegador em vez de tirar o arquivo da VPS com `scp`.
 """
 
 from datetime import date
+from html import escape
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
@@ -38,6 +39,12 @@ def _por_extenso(dia: date) -> str:
 
 
 def pagina(empresa: str, agente: str = "") -> str:
+    """Monta a página a partir de `modelos/privacidade.html`.
+
+    Nome de empresa, de agente e contato são escapados: são dados administrativos, mas entram numa
+    página pública, e um `<script>` no nome viraria script de verdade (auditoria de 2026-09-18,
+    A11). O texto continua aparecendo como foi escrito.
+    """
     cfg = config()
     arquivo = cfg.diretorio_modelos / "privacidade.html"
     if not arquivo.is_file():
@@ -54,10 +61,10 @@ def pagina(empresa: str, agente: str = "") -> str:
     )
     return (
         arquivo.read_text(encoding="utf-8")
-        .replace("{{EMPRESA}}", empresa)
-        .replace("{{AGENTE}}", f" · atendimento de {agente}" if agente else "")
-        .replace("{{DOMINIO}}", cfg.subdominio_bot)
-        .replace("{{CONTATO}}", contato)
+        .replace("{{EMPRESA}}", escape(empresa))
+        .replace("{{AGENTE}}", f" · atendimento de {escape(agente)}" if agente else "")
+        .replace("{{DOMINIO}}", escape(cfg.subdominio_bot))
+        .replace("{{CONTATO}}", escape(contato))
         .replace("{{ATUALIZADO_EM}}", _por_extenso(date.today()))
     )
 

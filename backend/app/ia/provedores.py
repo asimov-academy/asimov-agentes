@@ -39,11 +39,22 @@ def provedor_de(nome_modelo: str) -> str:
     return provedor
 
 
+# Só o fallback pode ficar sem modelo: é o segundo provedor, e nem toda instalação quer um.
+MODELOS_OPCIONAIS = frozenset({"modelo_fallback"})
+
+
 def valida_modelos(modelos: dict[str, str | None], cfg: Config | None = None) -> None:
+    """Recusa modelo de provedor sem chave e campo obrigatório vazio.
+
+    Vazio passava direto e era gravado: o agente ficava com `modelo_conversa: ""`, que não resolve
+    modelo nenhum, e só dava erro no turno seguinte (auditoria de 2026-09-18, A12).
+    """
     cfg = cfg or config()
     for campo, nome in modelos.items():
-        if not nome:
-            continue
+        if nome is None or not str(nome).strip():
+            if campo in MODELOS_OPCIONAIS:
+                continue
+            raise ModeloInvalido(f"{campo} não pode ficar vazio")
         provedor = provedor_de(nome)
         if campo == "modelo_transcricao" and provedor not in PROVEDORES_TRANSCRICAO:
             raise ModeloInvalido(f"{provedor} não transcreve áudio; use openai, gemini ou groq")

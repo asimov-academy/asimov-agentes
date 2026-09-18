@@ -6,6 +6,11 @@ leitura das mídias pendentes, modelo, envio mensagem a mensagem com digitando, 
 Mensagem nova do contato antes do envio descarta a resposta: o turno dela responde tudo junto.
 Depois que o envio começou, o que chegar é respondido no turno seguinte.
 
+Antes de cada mensagem o turno confere de novo se pode falar: humano que assume durante a geração
+ou entre duas mensagens cala o agente na hora, e turno que perdeu o lock para de enviar (auditoria
+de 2026-09-18, A04 e A06). Envio que não saiu não conta como entrada respondida, senão a pergunta
+do contato ficava sem resposta e sem ninguém para refazê-la (A02).
+
 Handoff acontece no fim, depois do envio: pedido pelo modelo, por arquivo grande demais ou por
 falha do modelo depois das tentativas (aí com mensagem fixa de expectativa).
 """
@@ -82,7 +87,7 @@ async def processar_turno(ctx: dict[str, Any], cliente_id: str, conversa_id: str
     cid, conv_id = uuid.UUID(cliente_id), uuid.UUID(conversa_id)
     structlog.contextvars.bind_contextvars(cliente_id=cliente_id, conversa_id=conversa_id)
 
-    if not await buffer.token_ainda_vale(redis, conv_id, token):
+    if not await buffer.nao_foi_substituido(redis, conv_id, token):
         return "substituido"
     if not await buffer.adquire_lock(redis, conv_id, token, config().lock_ttl_segundos):
         await redis.enqueue_job(
@@ -91,13 +96,21 @@ async def processar_turno(ctx: dict[str, Any], cliente_id: str, conversa_id: str
         return "ocupado"
 
     try:
-        return await _turno(cid, conv_id, lambda: buffer.token_ainda_vale(redis, conv_id, token))
+        return await _turno(
+            cid,
+            conv_id,
+            lambda: buffer.nao_foi_substituido(redis, conv_id, token),
+            lambda: buffer.lock_e_meu(redis, conv_id, token),
+        )
     finally:
         await buffer.libera_lock(redis, conv_id, token)
 
 
 async def _turno(
-    cliente_id: uuid.UUID, conversa_id: uuid.UUID, sem_mensagem_nova: Callable[[], Awaitable[bool]]
+    cliente_id: uuid.UUID,
+    conversa_id: uuid.UUID,
+    sem_mensagem_nova: Callable[[], Awaitable[bool]],
+    lock_e_meu: Callable[[], Awaitable[bool]] | None = None,
 ) -> str:
     comeco = time.monotonic()
     async with fabrica_sessao()() as s:
@@ -111,13 +124,40 @@ async def _turno(
         canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
         if not await canal.agente_pode_falar(credenciais, conversa.id_externo, conversa.status):
             return "humano_conduz"
+
+        async def pode_falar_agora() -> bool:
+            """Relido antes de cada mensagem: humano pode ter assumido no meio do turno.
+
+            O status vem de uma sessão nova porque quem pausou foi o webhook, noutra transação, e
+            a sessão deste turno já carregou a conversa. O canal também é consultado: no Chatwoot
+            quem manda é o Chatwoot.
+            """
+            if lock_e_meu is not None and not await lock_e_meu():
+                log.warning("envio_interrompido", motivo="lock da conversa não é mais deste turno")
+                return False
+            async with fabrica_sessao()() as leitura:
+                atual = await repo.obter_conversa(leitura, cliente_id, conversa_id)
+            if atual is None or atual.status != "agente":
+                log.info("envio_interrompido", motivo="conversa com humano")
+                return False
+            return await canal.agente_pode_falar(credenciais, conversa.id_externo, atual.status)
+
         # O canal diz que o agente conduz: handoff ainda aberto é devolução que não chegou.
         if conversa.status == "humano" and await handoff.retomar(
             s, cliente_id, conversa_id, conversa.canal
         ):
             await s.commit()
 
-        mensagens = await repo.ultimas_mensagens(s, cliente_id, conversa_id)
+        mensagens, rajada = await repo.mensagens_do_turno(s, cliente_id, conversa_id, conversa.respondido_ate)
+        if rajada:
+            # Mais mensagens sem resposta do que o turno lê de uma vez: as mais antigas ficam de
+            # fora e isso precisa aparecer, em vez de sumir no limite da consulta (A09).
+            await registra_falha(
+                "rajada_de_mensagens",
+                {"erro": "mensagens demais sem resposta; o turno respondeu as mais recentes"},
+                cliente_id,
+                agente.id,
+            )
         anteriores, pendentes = separa_pendentes(mensagens, conversa.respondido_ate)
         if not pendentes:
             return "nada_pendente"
@@ -150,7 +190,15 @@ async def _turno(
             await s.commit()
             await registra_falha("turno_modelo_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id)
             await _envia(
-                s, canal, credenciais, agente, conversa, [handoff.MENSAGEM_DE_EXPECTATIVA], comeco, ultima
+                s,
+                canal,
+                credenciais,
+                agente,
+                conversa,
+                [handoff.MENSAGEM_DE_EXPECTATIVA],
+                comeco,
+                ultima,
+                pode_falar_agora,
             )
             await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
             await handoff.transferir(s, agente, canal, credenciais, conversa, handoff.MOTIVO_FALHA_NO_TURNO)
@@ -176,16 +224,38 @@ async def _turno(
             await _digitando(canal, credenciais, conversa.id_externo, False, ultima)
             log.info("resposta_descartada")
             return "substituido"
+        textos = limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta)
         enviadas = await _envia(
-            s,
-            canal,
-            credenciais,
-            agente,
-            conversa,
-            limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta),
-            comeco,
-            ultima,
+            s, canal, credenciais, agente, conversa, textos, comeco, ultima, pode_falar_agora
         )
+        if enviadas == 0 and textos:
+            # Nada chegou ao contato: a pergunta dele continua pendente, e marcar como respondida
+            # a esconderia do próximo turno para sempre (A02).
+            await grava_turno(
+                s,
+                Turno(
+                    cliente_id=cliente_id,
+                    conversa_id=conversa_id,
+                    modelo=agente.modelo_conversa,
+                    tokens_entrada=resultado.tokens_entrada,
+                    tokens_saida=resultado.tokens_saida,
+                    custo_estimado=resultado.custo_estimado,
+                    latencia_ms=latencia,
+                    erro="nenhuma mensagem chegou ao contato",
+                ),
+            )
+            await s.commit()
+            log.warning("turno_sem_envio")
+            return "nao_enviado"
+        if enviadas < len(textos):
+            # Parte saiu: a entrada conta como respondida (repetir duplicaria o que já chegou),
+            # mas a falha fica visível em Ver consumo e falhas.
+            await registra_falha(
+                "resposta_incompleta",
+                {"erro": f"{enviadas} de {len(textos)} mensagens enviadas"},
+                cliente_id,
+                agente.id,
+            )
         await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
 
         await grava_turno(
@@ -230,10 +300,13 @@ async def _envia(
     textos: list[str],
     comeco: float,
     ultima_recebida: str | None = None,
+    pode_falar_agora: Callable[[], Awaitable[bool]] | None = None,
 ) -> int:
     """Envia na ordem com digitando antes de cada uma; para na primeira que falhar.
 
-    O digitando dura o tempo de uma pessoa digitar a mensagem (`tempos_de_digitacao`).
+    O digitando dura o tempo de uma pessoa digitar a mensagem (`tempos_de_digitacao`), e antes de
+    cada uma o direito de falar é conferido de novo: a espera da digitação é justamente quando
+    alguém assume a conversa pelo aparelho ou pelo Chatwoot.
     """
     tempos = tempos_de_digitacao(
         textos,
@@ -244,8 +317,12 @@ async def _envia(
     )
     enviadas = 0
     for texto, segundos in zip(textos, tempos, strict=True):
+        if pode_falar_agora is not None and not await pode_falar_agora():
+            break
         await _digitando(canal, credenciais, conversa.id_externo, True, ultima_recebida)
         await asyncio.sleep(segundos)
+        if pode_falar_agora is not None and not await pode_falar_agora():
+            break
         try:
             id_externo = await canal.enviar_texto(credenciais, conversa.id_externo, texto)
         except Exception as erro:

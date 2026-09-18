@@ -19,6 +19,11 @@ class Config(BaseSettings):
     chave_api_admin: str
     chave_criptografia: str
 
+    # Painel do operador no navegador, em app.<dominio>. Nasce desligado: quem escolhe o terminal na
+    # instalação segue com a API exatamente como sempre foi, sem rota nova e sem host novo no Caddy.
+    painel_ativo: bool = False
+    subdominio_app: str = ""
+
     # Modelos padrão da instalação, no formato provedor:modelo, escolhidos no setup.
     modelo_conversa: str
     modelo_fallback: str = ""
@@ -44,8 +49,10 @@ class Config(BaseSettings):
     diretorio_midia: Path = Path("/var/lib/asimov/midia")
 
     log_nivel: str = "INFO"
-    # Cobre ler mídia e responder no mesmo turno; abaixo do job_timeout do worker.
-    lock_ttl_segundos: int = 240
+    # Cobre ler mídia e responder no mesmo turno, e passa do `job_timeout` do worker (300 s) de
+    # propósito: com o lock vencendo antes, outro turno entrava na mesma conversa enquanto o
+    # primeiro ainda enviava (auditoria de 2026-09-18, A06). Quem interrompe job longo é o arq.
+    lock_ttl_segundos: int = 360
     tentativas_extra_modelo: int = 2
     # Teto por turno: o gpt-5.1 chegou a chamar a tool de handoff 16 vezes num turno (102 mil tokens).
     limite_chamadas_modelo_por_turno: int = 6
