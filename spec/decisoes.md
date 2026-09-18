@@ -2,6 +2,213 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Um painel só, e três bugs que apareceram ao rodar de verdade
+
+Ao subir a aplicação inteira na máquina (Postgres, Redis, API e worker) para o operador testar, o
+que estava escondido apareceu.
+
+- **A tela de entrar era de outro sistema.** Ela vinha da parte 8.1, com fundo claro, cantos de 10 px
+  e acento azul, e era a primeira coisa que o operador via. Reescrita com os tokens do design
+  system. O `painel.css` é o **único lugar do projeto onde cor se escreve em hexadecimal**, porque
+  ele não passa pelo Tailwind; todas ficam no `:root` dele e em nenhum outro lugar. Inter e JetBrains
+  Mono passam a ser servidas pela API em `/painel/fontes/...`, de uma lista fechada de nomes, como
+  todo o resto: nada de CDN.
+- **Existiam dois painéis.** `/painel/inicio` e `/painel/agentes` eram as telas em Jinja2 de antes do
+  front, com o mesmo dado que o React mostra com muito mais coisa. Viraram desvio para
+  `/painel/app`, e os dois templates saíram. Os cinco testes que olhavam essas páginas passaram a
+  olhar a API, que é onde a garantia mora agora.
+- **Bug: a folha de estilo ficava em cache para sempre.** O nome do arquivo não muda entre versões,
+  então depois de um `asimov atualizar` o operador continuaria vendo o estilo da versão passada. O
+  endereço passou a carregar a versão (`painel.css?v=<mtime>`), e aí guardar à vontade é seguro.
+- **Bug, e era sério: a API do painel devolvia o detalhe cru da falha.** O `detalhe` guarda o que o
+  provedor respondeu, e um corpo de erro já veio com `api_key` dentro: chave de API indo para o
+  navegador. Agora sai só o resumo curto, o mesmo do terminal. Quem pegou foi um teste da parte 8.1
+  que eu teria apagado junto com a tela se não tivesse lido.
+- **Bug: a migração do perfil colidiu de número.** Ela nasceu como `0014`, que já era do
+  `usuario_painel`, e o Alembic recusou subir com duas cabeças. Renumerada para `0016`, depois da
+  `0015`. Nunca tinha sido aplicada em lugar nenhum, então renomear foi seguro; a regra de nunca
+  editar migração aplicada continua de pé.
+
+spec/frontend.md (seção 3.2), spec/arquitetura.md e spec/estado.md.
+
+## 2026-09-18: Painel completo, etapas 3 a 11, com o agente sempre em popup
+
+Construído numa passada só, a pedido do operador. Nada disso rodou em VPS.
+
+**A regra que organizou tudo**: toda configuração de agente acontece num popup grande no meio da
+tela, com o que está atrás embaçado e escurecido. Vale para criar e para a ficha inteira, que deixou
+de ser página. `Modal` novo em `design/`, montado com as primitivas do design system (o sistema não
+traz modal pronto): fundo `surface`, borda de 1px, os dois cantos marcados, `backdrop-blur` no fundo,
+Esc e clique no fundo fecham, o Tab não escapa para a lista atrás e a página para de rolar.
+
+O que entrou, por etapa:
+
+- **3. Lista e onboarding.** Onboarding em sete passos, na ordem do terminal, com o stepper do design
+  system à esquerda e a **prévia viva** à direita: uma conversa de mentira, montada no navegador, em
+  que o agente já responde com o que foi escolhido (emoji, função, partes da resposta, busca). A tela
+  diz que é de mentira e que nada foi cobrado. Rascunho no navegador. Só empresa, canal e nome
+  travam. O cartão de cada canal diz **o que você vai precisar ter na mão** antes de começar, que é a
+  informação que faltava em todo onboarding. A criação é uma chamada só no fim.
+- **4 a 7. Ficha em seis abas**, cada seção com o próprio salvar, e o salvar diz o que mudou
+  ("salvei o nível de emoji, as partes da resposta"), não um "pronto" genérico.
+- **8. Canais.** Uma linha por agente com a resposta do canal agora. Cada canal é perguntado em
+  separado no backend: o que não responder vira linha vermelha em vez de derrubar a tela. QR code da
+  WAHA desenhado no navegador (a própria WAHA devolve o PNG; o terminal continua com o texto cru e o
+  `qrencode`).
+- **9. Chat** em duas colunas, com o histórico, quem falou, o custo de cada turno e o devolver ao
+  agente. **10. Contatos** com busca por nome ou telefone, inclusive digitado com pontuação.
+- **11.** Tela da base de conhecimento dizendo o que ela vai fazer, rota inexistente com caminho de
+  volta, e a passada de acessibilidade e celular.
+
+Mudanças de spec no caminho, todas registradas nos arquivos afetados:
+
+- **A migração do `perfil` saiu da etapa 5 para a 3**: o onboarding pergunta sobre a empresa no passo
+  4, e sem a coluna ele não teria onde guardar. Migração `0014`, aditiva, com `perfil` (JSONB) e
+  `assina_nome` no agente. O `persona.md` passa a ser escrito a partir dela, e editar à mão continua
+  valendo.
+- **A conversa de teste virou aba do agente**, não da tela de Chat: falar com o agente é como se
+  confere uma mudança antes de ela chegar em alguém.
+- **`cliente_id` nas rotas de um agente sai da linha do agente lida do banco**, não da URL nem do
+  corpo: é a mesma garantia com uma URL curta, que é o que a lista precisa para abrir o popup com um
+  clique. Criar continua recebendo a empresa na URL, conferida no banco.
+
+spec/frontend.md, seções 4, 5.1, 5.2.1, 5.3, 5.5 e 6, mais a tabela de etapas.
+
+## 2026-09-18: A Visão geral virou triagem, não relatório
+
+Passagem de direção de arte sobre a tela pronta, com uma regra dura: **o design system é a fonte de
+cor, tipografia e espaçamento, e nada disso se toca**. O que mudou foi hierarquia, layout e texto.
+
+- **A pergunta da tela estava errada.** Ela respondia "quais são os números", com seis cartões
+  iguais, e o veredito ("está tudo bem?") era um ponto de 2px no rodapé do menu. Quem abre o painel
+  é o operador, que já tem `asimov consumo` no terminal: ele vem aqui para triagem. A ordem virou
+  veredito, o que espera por ele, o ritmo, e o dinheiro por último.
+- **O herói virou uma frase.** "Número grande com rótulo pequeno" é o tratamento padrão de qualquer
+  painel. Agora a primeira coisa da tela é uma frase em português direto, com a régua de estado do
+  `Aviso` à esquerda, em escala de título. A cor mora na régua, não numa palavra destacada.
+- **Cartão só onde separa coisas diferentes.** De seis caixas iguais para quatro tratamentos:
+  frase, lista que some quando está vazia, números soltos sobre o fundo com a curva atravessando, e
+  cartão nas duas listas e no dinheiro.
+- **Texto reescrito do ponto de vista de quem lê.** `turno_modelo_falhou` virou "O modelo não
+  respondeu" com o tipo cru embaixo em letra pequena (é por ele que se procura no log). O código do
+  handoff virou `/retomar H3K9QP`, que se explica sozinho. Nome de agente e identificador de modelo
+  saíram da caixa alta: a caixa alta em mono é do design system para rótulo de dado, e é só para
+  isso. Canal virou "no WhatsApp", não "no waha".
+- **Saíram os padrões genéricos**: a corda de meta com ponto do meio (`A · B · C`), o rótulo em caixa
+  alta acima de cada número, os marcadores numerados de seção (o conteúdo não é sequência), a
+  entrada com fade em cada cartão (ficou só a curva que se desenha uma vez) e o selo "passou do
+  prazo" repetindo o que a régua vermelha e o tempo em vermelho já diziam.
+
+spec/frontend.md, seção 5.1. `Progresso` ganhou o modo de escrita do rótulo (dado, nome ou token).
+
+## 2026-09-18: A Visão geral refeita, com a espera e a composição do design system
+
+O operador olhou a primeira versão da tela e apontou três coisas, todas certas.
+
+- **A tela carregava com uma roda genérica.** O design system tem dez estados de espera (KINETIC,
+  seção 3) e nenhum estava em uso. Agora cada cartão espera com a forma do que vai aparecer nele:
+  o ritmo com as barras, o gasto com o anel, a proporção com o porcento, a lista de agentes com os
+  pontos, as falhas com o pulso e os handoffs com o digitando. `Carregando` passou a ter seis
+  formas, portadas do original com as animações em SMIL e os keyframes `radar` e `anel`.
+- **Os dados não estavam apresentados, só listados.** Eram cinco caixas iguais com um número dentro
+  cada, sem comparação nenhuma. Passou para a composição da AXIS (seção 2): grade de três colunas,
+  gráfico de ritmo ocupando duas, e **todo número com o mesmo número do período anterior ao lado**,
+  em por cento. Entraram três leituras novas na API para isso: o período anterior inteiro
+  (`variacao`), quantas conversas o agente fechou sem chamar gente (`resolucao`, que virou o
+  ponteiro da AXIS) e turnos por agente (`agentes`, que virou barra de proporção). Sem período
+  anterior a resposta é "sem comparação", nunca um "+100%" sobre zero.
+- **O seletor de empresa não fazia sentido na barra do topo.** Ali ele parecia trocar a instalação
+  inteira, e trocava só os números de uma tela. Regra nova: **filtro de tela mora na tela**. Ele foi
+  para o cabeçalho da Visão geral, ao lado do período. A barra do topo ficou com o que vale para o
+  painel inteiro: busca e situação da plataforma.
+
+Componentes novos: `Progresso` (o "System Health" da AXIS: rótulo, valor e barra sobre trilho de
+1px) e o ponteiro (gauge) dentro do `Grafico`. spec/frontend.md, seções 3.1, 4 e 5.1.
+
+**O menu lateral ficou parado de verdade**: a página deixou de rolar e a rolagem passou para o
+conteúdo da direita. Com `sticky` o menu grudava no topo mas continuava participando da rolagem da
+página; agora ele é um bloco comum de uma linha que não rola, e não tem como se mexer. Altura em
+`h-dvh` em vez de `h-screen`, porque no celular a barra do navegador some e volta.
+
+**A barra do topo saiu inteira**, na mesma revisão. Uma faixa fixa atravessando a página só se paga
+se carregar algo de uso constante, e ela tinha uma busca desligada e um ponto de situação. A busca
+passa a nascer na tela de Agentes, onde existe o que procurar; a situação da plataforma foi para o
+rodapé do menu lateral, junto do operador e do sair, porque é informação da instalação; e no celular
+sobrou só o abridor da gaveta, solto sobre o conteúdo. A tela agora começa no conteúdo.
+spec/frontend.md, seção 4.
+
+## 2026-09-18: O painel usa o design system inteiro, e criar agente vira onboarding
+
+- **O design system é a única fonte de interface**, e o painel passa a usar as seis seções, não só a
+  de componentes. Nenhuma biblioteca de interface de fora entra no `frontend/`: sem Radix, shadcn,
+  Headless UI, Chart.js, Recharts, Framer Motion, lucide ou heroicons. Peça que o design system não
+  traz pronta (Abas, Tabela, Modal) é montada com as primitivas dele. Um teste novo trava a lista de
+  dependências do `package.json`. spec/frontend.md, seção 3.1, com o mapa de qual seção alimenta o
+  quê: AXIS vira o `Grafico` em SVG puro, KINETIC vira os estados de carregando e as
+  microinterações, ONYX decorativo entra em tela vazia e no topo do onboarding.
+- **Criar agente deixa de ser um modal e vira onboarding em tela cheia** (`/agentes/novo`): passos à
+  esquerda, uma pergunta por vez no meio e prévia viva à direita, em que o agente já responde com as
+  escolhas aplicadas. Motivo: no terminal são sete perguntas seguidas em que o operador só descobre
+  o efeito de cada resposta depois, conversando em produção. Só empresa, canal e nome travam; o
+  resto tem padrão e pode ser pulado, e o passo de conectar pode ficar para depois (agente nasce
+  inativo, com "falta conectar" na lista). Termina abrindo a conversa de teste pelo canal nativo, com
+  a primeira mensagem sugerida. Criação continua sendo uma chamada só no fim: passo nenhum grava
+  pela metade. spec/frontend.md, seção 5.2.1, e a etapa 3 da tabela de etapas.
+
+- **A situação da barra do topo não é o `asimov diagnostico`.** A spec do front pedia "o mesmo
+  critério do `asimov diagnostico`", que pergunta o código HTTP de cada endereço da instalação por
+  dentro da VPS: coisa que o terminal faz e a API não. A barra responde a mesma pergunta pelo que a
+  API sabe: falha `canal_fora_do_ar` no período é vermelho, outra falha recente ou handoff vencido é
+  amarelo, nada é verde. Quem quiser o código HTTP de cada endereço continua tendo `asimov
+  diagnostico`. spec/frontend.md, seção 4.
+- **Dinheiro sai da API como texto, não como número.** A rota da visão geral responde por modelo do
+  Pydantic, com `Decimal`: `jsonable_encoder` transformava `0.06` em `0.059999999999999997`, e no
+  painel isso viraria custo errado na tela.
+
+## 2026-09-18: Painel do operador ganha front próprio em `frontend/`
+
+O operador pediu o painel com a arquitetura de informação do GPT Maker (menu lateral fixo, lista de
+agentes à direita, ficha do agente em abas) e a aparência do design system guardado em
+`designsystem/`. Duas decisões saíram daí:
+
+- **O front vira um SPA em `frontend/`** (React, TypeScript, Vite, Tailwind), servido pela própria
+  API em `/painel/app` e construído num estágio `node` do `backend/Dockerfile`. A regra do
+  `AGENTS.md` "não existe `frontend/` na primeira versão" cai. O que não muda: nada de CDN, nada de
+  container novo, `/admin` segue sem sair da VPS e entrar, primeiro acesso e sair continuam nas
+  páginas Jinja2 já testadas. A alternativa (seguir em Jinja2 com HTMX) custava menos, mas as telas
+  pedidas (chat com histórico, ficha em abas com salvar por seção) valem o SPA.
+- **A seção Trabalho vira campo no banco e escreve o `persona.md`.** Migração aditiva com
+  `agente.perfil` (função, público, site, sobre a empresa) e `agente.assina_nome`. O arquivo continua
+  sendo a fonte do prompt de sistema: o formulário preenche o modelo e grava, e editar à mão segue
+  valendo. O `perfil` é por agente, não por empresa, para não repetir o achado A05 da auditoria
+  (prompt atravessando de uma empresa para outra).
+
+Spec do front, com telas, contrato da API e as onze etapas de construção: `spec/frontend.md`.
+Atualizados spec/fases.md (Fase 8), spec/arquitetura.md (seções 1 e 2), spec/estado.md e `AGENTS.md`.
+
+Ajustes decididos ao construir a Etapa 1:
+
+- **O contexto do `docker build` passou de `backend/` para a raiz**, com `.dockerignore` novo, que é
+  o que permite o estágio `node` construir `frontend/` na mesma imagem. O `.env` está na primeira
+  linha do `.dockerignore`: com a raiz no contexto, ele chegaria ao daemon sem isso.
+- **Entrar e criar o primeiro acesso passam a levar para `/painel/app`**, não mais para a tela Jinja2
+  de início. As páginas Jinja2 de `inicio` e `agentes` continuam no ar e testadas até as Etapas 2 e 3
+  as substituírem.
+- **CSRF derivado da sessão por HMAC**, sem chave nova no Redis. O cookie é `HttpOnly`, então o único
+  jeito de o front saber o token é ter lido `GET /painel/api/eu` com a sessão válida.
+- **Sessão, origem e CSRF saíram de `rotas.py` para `painel/acesso.py`**, usados tanto pelas páginas
+  Jinja2 quanto pelo `painel/api.py`. A regra passou a existir em um lugar só.
+- **As fontes vêm dos pacotes `@fontsource`** e entram no build, em vez de arquivos soltos em
+  `public/`. Continuam servidas da VPS.
+
+**Correção feita na mesma etapa, depois que o operador apontou:** a primeira versão dos componentes
+tinha pegado do design system só as cores e as fontes, e inventado o resto. Três erros concretos:
+a hierarquia dos botões estava invertida (lime cheio como principal, quando no original o cheio é
+branco e o lime é contorno), o campo tinha moldura inteira em vez de só a borda de baixo, e os 50
+ícones do sprite da seção 1 não estavam sendo usados em lugar nenhum. Os componentes foram refeitos
+a partir do markup do design system, e a tabela da seção 3 de `spec/frontend.md` passou a registrar
+o que cada um copia e de que seção veio, para a próxima etapa não repetir o atalho.
+
 ## 2026-09-18: Correções dos P2 e P3 da auditoria, e segurança do painel
 
 Continuação da entrada anterior. Todos os achados com sonda viraram regressão da suíte normal

@@ -164,6 +164,25 @@ async def qr_code(nome: str) -> str | None:
     return valor.get("value") if isinstance(valor, dict) else None
 
 
+async def qr_code_imagem(nome: str) -> str | None:
+    """O mesmo QR code, mas como PNG em base64, para o painel desenhar no navegador.
+
+    O terminal usa o texto cru com o `qrencode`; o navegador não tem como desenhar a matriz sem
+    biblioteca de fora, e o painel não instala nenhuma. Quem já sabe desenhar é a própria WAHA, que
+    responde a imagem quando não se pede `format=raw`.
+    """
+    import base64
+
+    try:
+        async with _http() as http:
+            resposta = await http.get(f"/api/{nome}/auth/qr", headers={"Accept": "image/png"})
+    except httpx.HTTPError as erro:
+        raise _erro("ler o QR code", erro) from erro
+    if resposta.status_code >= 400 or not resposta.content:
+        return None
+    return base64.b64encode(resposta.content).decode()
+
+
 LIMITE_GRUPOS = 200
 
 

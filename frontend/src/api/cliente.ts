@@ -1,0 +1,422 @@
+/** Único lugar que sabe falar com a API. Tela nenhuma chama `fetch` direto.
+ *
+ * A sessão é o cookie `HttpOnly` que o login em Jinja2 já grava: o front não guarda token, não lê
+ * `localStorage` e não conhece a `CHAVE_API_ADMIN`. Escrita leva o `X-Painel-CSRF` que veio do
+ * `GET /painel/api/eu`, que só chega para quem tem a sessão.
+ */
+
+export const RAIZ = "/painel/api";
+export const ENTRAR = "/painel/entrar";
+
+export class SemSessao extends Error {}
+
+export class ErroDaApi extends Error {
+  constructor(
+    readonly codigo: number,
+    mensagem: string,
+    readonly referencia?: string,
+  ) {
+    super(mensagem);
+  }
+}
+
+let csrf = "";
+
+export function guardaCsrf(token: string): void {
+  csrf = token;
+}
+
+async function chama<T>(caminho: string, opcoes: RequestInit = {}): Promise<T> {
+  const escrita = (opcoes.method ?? "GET").toUpperCase() !== "GET";
+  const resposta = await fetch(RAIZ + caminho, {
+    ...opcoes,
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      ...(escrita ? { "Content-Type": "application/json", "X-Painel-CSRF": csrf } : {}),
+      ...opcoes.headers,
+    },
+  });
+
+  if (resposta.status === 401) throw new SemSessao("a sessão terminou");
+  if (!resposta.ok) {
+    const corpo = await resposta.json().catch(() => ({}));
+    throw new ErroDaApi(
+      resposta.status,
+      corpo.detail ?? `a API respondeu ${resposta.status}`,
+      corpo.referencia,
+    );
+  }
+  return (await resposta.json()) as T;
+}
+
+export const api = {
+  /** Quem está logado, o que a instalação tem e o token de escrita. */
+  eu: () => chama<Eu>("/eu"),
+
+  /** Empresas da instalação, para o seletor da barra do topo. */
+  empresas: () => chama<Empresa[]>("/empresas"),
+
+  /** A tela de abertura. Sem empresa, a instalação inteira; o filtro viaja na URL, nunca no corpo. */
+  visaoGeral: (dias: Periodo, empresa?: string) =>
+    chama<VisaoGeral>(
+      `/visao-geral?dias=${dias}` + (empresa ? `&cliente_id=${encodeURIComponent(empresa)}` : ""),
+    ),
+
+  criaEmpresa: (nome: string) =>
+    chama<Empresa>("/empresas", { method: "POST", body: JSON.stringify({ nome }) }),
+
+  /** Lista de agentes. `ativo` sem valor traz todos. */
+  agentes: (empresa?: string, ativo?: boolean) => {
+    const busca = new URLSearchParams();
+    if (empresa) busca.set("cliente_id", empresa);
+    if (ativo !== undefined) busca.set("ativo", String(ativo));
+    const query = busca.toString();
+    return chama<Agente[]>("/agentes" + (query ? `?${query}` : ""));
+  },
+
+  agente: (id: string) => chama<Agente>(`/agentes/${id}`),
+
+  /** A criação é uma chamada só, no fim do onboarding: passo nenhum grava pela metade. */
+  criaAgente: (empresa: string, dados: NovoAgente) =>
+    chama<Agente>(`/empresas/${empresa}/agentes`, {
+      method: "POST",
+      body: JSON.stringify(dados),
+    }),
+
+  editaAgente: (id: string, mudancas: Partial<EdicaoDoAgente>) =>
+    chama<Agente>(`/agentes/${id}`, { method: "PATCH", body: JSON.stringify(mudancas) }),
+
+  removeAgente: (id: string, confirmacao: string) =>
+    chama<{ removido: boolean; canal_desconectado: boolean }>(`/agentes/${id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmacao }),
+    }),
+
+  /** As respostas da aba Trabalho. Gravar reescreve o `persona.md` a partir delas. */
+  gravaPerfil: (id: string, perfil: PerfilDoAgente) =>
+    chama<{ agente: Agente; prompt: string }>(`/agentes/${id}/perfil`, {
+      method: "PUT",
+      body: JSON.stringify(perfil),
+    }),
+
+  prompt: (id: string) => chama<Prompt>(`/agentes/${id}/prompt`),
+
+  gravaPrompt: (id: string, texto: string) =>
+    chama<{ texto: string }>(`/agentes/${id}/prompt`, {
+      method: "PUT",
+      body: JSON.stringify({ texto }),
+    }),
+
+  ferramentas: () => chama<Ferramenta[]>("/ferramentas"),
+  modelos: () => chama<Modelos>("/modelos"),
+  canais: () => chama<CanalDisponivel[]>("/canais"),
+
+  /** A situação de cada canal, uma linha por agente. */
+  situacaoDosCanais: (empresa?: string) =>
+    chama<LinhaDeCanal[]>("/canais/situacao" + (empresa ? `?cliente_id=${empresa}` : "")),
+
+  acaoNoCanal: (id: string, acao: "reiniciar" | "qr") =>
+    chama<{ situacao?: SituacaoDoCanal; qr?: string | null }>(`/agentes/${id}/canal/acao`, {
+      method: "POST",
+      body: JSON.stringify({ acao }),
+    }),
+
+  conversas: (filtros: { empresa?: string; agente?: string; status?: string } = {}) => {
+    const busca = new URLSearchParams();
+    if (filtros.empresa) busca.set("cliente_id", filtros.empresa);
+    if (filtros.agente) busca.set("agente_id", filtros.agente);
+    if (filtros.status) busca.set("status", filtros.status);
+    const query = busca.toString();
+    return chama<Conversa[]>("/conversas" + (query ? `?${query}` : ""));
+  },
+
+  conversa: (id: string) => chama<ConversaAberta>(`/conversas/${id}`),
+
+  retomaConversa: (id: string) =>
+    chama<{ retomado: boolean }>(`/conversas/${id}/retomar`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+
+  contatos: (busca: string, empresa?: string) => {
+    const query = new URLSearchParams();
+    if (busca) query.set("busca", busca);
+    if (empresa) query.set("cliente_id", empresa);
+    const texto = query.toString();
+    return chama<Contato[]>("/contatos" + (texto ? `?${texto}` : ""));
+  },
+
+  contato: (id: string) => chama<ContatoAberto>(`/contatos/${id}`),
+
+  /** Conversa de teste pelo canal nativo: o mesmo `asimov conversar` do terminal. */
+  mandaTeste: (id: string, texto: string, conversa?: string) =>
+    chama<{ conversa: string; conversa_id: string; agendada: boolean }>(`/agentes/${id}/teste`, {
+      method: "POST",
+      body: JSON.stringify({ texto, conversa: conversa ?? null }),
+    }),
+
+  leTeste: (id: string, conversa: string, depois: number) =>
+    chama<LeituraDoTeste>(`/agentes/${id}/teste/${encodeURIComponent(conversa)}?depois=${depois}`),
+};
+
+export type Eu = {
+  operador: { criado_em: string; ultimo_acesso_em: string | null };
+  instalacao: { subdominio_bot: string; subdominio_app: string };
+  empresas: number;
+  agentes: number;
+  csrf: string;
+};
+
+export type Empresa = { id: string; nome: string; slug: string; ativo: boolean };
+
+/** Os três períodos que o backend aceita. Qualquer outro vira 422 lá, de propósito. */
+export const PERIODOS = [1, 7, 30] as const;
+export type Periodo = (typeof PERIODOS)[number];
+
+export type Ponto = { quando: string; turnos: number };
+
+export type GastoDoModelo = { modelo: string; chamadas: number; tokens: number; custo: string };
+
+export type FalhaDoPainel = {
+  criado_em: string;
+  tipo: string;
+  /** O resumo curto que o backend monta. O detalhe cru do provedor nunca sai de lá. */
+  resumo: string;
+  cliente: string | null;
+  agente: string | null;
+};
+
+export type HandoffAberto = {
+  id: string;
+  conversa_id: string;
+  codigo: string;
+  motivo: string;
+  canal: string;
+  iniciado_em: string;
+  retomar_em: string | null;
+  vencido: boolean;
+  cliente: string;
+  agente: string;
+};
+
+/** Quanto cada número mudou do período anterior, em por cento. `null` é "sem comparação". */
+export type Variacao = {
+  conversas: number | null;
+  turnos: number | null;
+  custo: number | null;
+  falhas: number | null;
+};
+
+export type Resolucao = {
+  conversas: number;
+  com_gente: number;
+  sozinho: number;
+  porcento: number | null;
+};
+
+export type TurnosDoAgente = { agente: string; cliente: string; turnos: number; custo: string };
+
+export type VisaoGeral = {
+  dias: number;
+  desde: string;
+  totais: {
+    conversas: number;
+    turnos: number;
+    /** Decimal em texto: dinheiro não vira float no caminho. */
+    custo: string;
+    custo_parcial: boolean;
+    falhas: number;
+    handoffs_vencidos: number;
+  };
+  variacao: Variacao;
+  serie: { por: "hour" | "day"; pontos: Ponto[] };
+  modelos: GastoDoModelo[];
+  resolucao: Resolucao;
+  agentes: TurnosDoAgente[];
+  falhas: FalhaDoPainel[];
+  handoffs: HandoffAberto[];
+  situacao: { cor: "ok" | "atencao" | "perigo"; texto: string };
+};
+
+export type Agente = {
+  id: string;
+  cliente_id: string;
+  empresa: string;
+  nome: string;
+  slug: string;
+  canal: string;
+  ativo: boolean;
+  criado_em: string;
+  /** Só na ficha: ele carrega o token do webhook dentro. */
+  url_webhook: string | null;
+  credenciais: Record<string, unknown>;
+  modelo_conversa: string;
+  modelo_fallback: string | null;
+  modelo_auxiliar: string;
+  modelo_visao: string;
+  modelo_transcricao: string;
+  buffer_segundos: number;
+  max_mensagens_por_resposta: number;
+  digitacao_caracteres_por_segundo: number;
+  digitacao_maximo_segundos: number;
+  ferramentas: string[];
+  emojis: string;
+  contatos_permitidos: string[];
+  handoff_destino: Record<string, unknown> | null;
+  retomada_automatica_horas: number | null;
+  perfil: Record<string, string>;
+  assina_nome: boolean;
+};
+
+export type NivelDeEmoji = "nenhum" | "pouco" | "medio" | "muito";
+
+export type NovoAgente = {
+  nome: string;
+  canal: string;
+  conexao?: Record<string, unknown>;
+  handoff_destino?: Record<string, unknown> | null;
+  retomada_automatica_horas?: number | null;
+  buffer_segundos?: number;
+  max_mensagens_por_resposta?: number;
+  digitacao_caracteres_por_segundo?: number;
+  digitacao_maximo_segundos?: number;
+  ferramentas?: string[];
+  emojis?: NivelDeEmoji;
+  contatos_permitidos?: string[];
+};
+
+export type EdicaoDoAgente = {
+  nome: string;
+  ativo: boolean;
+  emojis: NivelDeEmoji | "livre";
+  buffer_segundos: number;
+  max_mensagens_por_resposta: number;
+  digitacao_caracteres_por_segundo: number;
+  digitacao_maximo_segundos: number;
+  ferramentas: string[];
+  contatos_permitidos: string[];
+  retomada_automatica_horas: number | null;
+  handoff_destino: Record<string, unknown> | null;
+  modelo_conversa: string;
+  modelo_fallback: string | null;
+  modelo_auxiliar: string;
+  modelo_visao: string;
+  modelo_transcricao: string;
+};
+
+export type Ferramenta = { nome: string; rotulo: string; descricao: string; padrao: boolean };
+
+export type Modelos = {
+  provedores: string[];
+  provedores_transcricao: string[];
+  funcoes: { campo: string; rotulo: string; obrigatorio: boolean }[];
+  padroes: Record<string, string | null>;
+};
+
+export type CanalDisponivel = { nome: string; externo: boolean };
+
+export type PerfilDoAgente = {
+  funcao?: "suporte" | "vendas" | "atendimento" | null;
+  publico?: string | null;
+  site?: string | null;
+  sobre_empresa?: string | null;
+  assina_nome?: boolean;
+};
+
+export type Prompt = {
+  /** O texto que o modelo recebe hoje. */
+  texto: string;
+  /** O que o formulário escreveria no lugar dele. */
+  gerado: string;
+  arquivo: string;
+  perfil: Record<string, string>;
+};
+
+export type SituacaoDoCanal = {
+  cor: "ok" | "atencao" | "perigo" | "neutro";
+  resumo: string;
+  erro?: string;
+  status?: string;
+  pareado?: boolean;
+  numero?: string | null;
+  nome?: string | null;
+  url?: string;
+  caixas?: number[];
+  pode_reiniciar?: boolean;
+  pode_refazer_webhook?: boolean;
+};
+
+export type LinhaDeCanal = {
+  agente_id: string;
+  agente: string;
+  empresa: string;
+  canal: string;
+  ativo: boolean;
+  situacao: SituacaoDoCanal;
+};
+
+export type Conversa = {
+  id: string;
+  canal: string;
+  status: string;
+  criado_em: string;
+  atualizado_em: string;
+  empresa: string;
+  agente: string;
+  agente_id: string;
+  contato_id: string;
+  contato: string | null;
+  telefone: string | null;
+};
+
+export type MensagemDaConversa = {
+  id: string;
+  criado_em: string;
+  direcao: string;
+  autor: string;
+  tipo: string;
+  texto: string | null;
+  texto_extraido: string | null;
+  anexo: Record<string, unknown> | null;
+};
+
+export type TurnoDaConversa = {
+  criado_em: string;
+  modelo: string;
+  funcao: string;
+  tokens_entrada: number;
+  tokens_saida: number;
+  custo_estimado: string | null;
+  latencia_ms: number;
+  erro: string | null;
+};
+
+export type ConversaAberta = Conversa & {
+  mensagens: MensagemDaConversa[];
+  turnos: TurnoDaConversa[];
+};
+
+export type Contato = {
+  id: string;
+  nome: string | null;
+  telefone: string | null;
+  ultima_mensagem_em: string;
+  empresa: string;
+  agente: string;
+};
+
+export type ContatoAberto = Contato & {
+  id_externo: string;
+  criado_em: string;
+  conversas: { id: string; canal: string; status: string; criado_em: string; atualizado_em: string }[];
+};
+
+export type LeituraDoTeste = {
+  mensagens: { texto?: string | null }[];
+  proxima: number;
+  digitando: boolean;
+  respondendo: boolean;
+  turno: Record<string, unknown> | null;
+  handoff: Record<string, unknown> | null;
+};

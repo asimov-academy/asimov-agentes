@@ -14,6 +14,7 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 - **Passa para uma pessoa**: quando o contato pede, o agente transfere a conversa no Chatwoot para o atendente ou time escolhido, com um resumo em nota privada. Devolver a conversa para Pendente faz o agente voltar. No WhatsApp direto, o número ou grupo que você escolher recebe o aviso com o resumo e um código. Se alguém da equipe simplesmente responder pelo celular, o agente cala sozinho na hora. Para devolver a conversa a ele, reaja com 👍 em qualquer mensagem ou mande `/retomar <código>`; sem nada disso, ele volta no prazo que você definir.
 - **Modelo por função**: resposta, fallback, visão e transcrição, cada um com seu provedor (OpenAI, Anthropic, Gemini ou Groq). Se o modelo principal cair, o fallback responde.
 - **Uma empresa ou várias**: use só para a sua empresa ou revenda agentes para empresas clientes, com os dados de cada uma isolados.
+- **Painel no navegador, se você quiser**: em `app.<seu-domínio>`, com visão geral, agentes, canais, conversas e contatos. Criar e configurar agente acontece num popup guiado, com prévia do jeito que ele vai falar e uma conversa de teste no fim. Nasce desligado: quem prefere o terminal continua com a API exatamente como sempre foi.
 - **Pronto para vibecoding**: projeto com testes, `AGENTS.md` e `CLAUDE.md` para o agente de código entender e evoluir.
 
 ## Antes de começar
@@ -58,11 +59,27 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde. Com um a
 | `asimov remover` | Remove um agente, apagando o bot dele no Chatwoot ou desconectando o número do WhatsApp |
 | `asimov consumo` | Turnos, tokens, custo estimado e falhas dos últimos 7 e 30 dias |
 | `asimov handoff` | Troca quem recebe a conversa passada pelo agente |
+| `asimov painel` | Liga ou desliga o painel no navegador e gera o código do primeiro acesso |
+| `asimov diagnostico` | Diz a versão instalada e se cada endereço está respondendo |
 | `asimov atualizar` | Baixa a versão nova e republica |
 
 **Personalidade do agente:** edite `~/asimov-agentes/prompts/<empresa>/<agente>/persona.md`. O resumo que vai para o atendente no handoff segue `resumo_handoff.md`, na mesma pasta. A mudança vale na próxima mensagem.
 
 **Handoff no Chatwoot:** enquanto a conversa está Aberta, o agente fica calado. Para devolver, marque a conversa como Pendente.
+
+**Painel no navegador (opcional):** ligue com `asimov painel`. Ele pede o registro DNS de
+`app.<seu-domínio>` e mostra um código de uso único para você criar a senha na primeira vez. Lá dentro:
+
+| Tela | O que faz |
+|---|---|
+| Visão geral | Se está tudo de pé, o que passou do prazo, turnos, custo e quanto o agente resolveu sozinho, comparado com o período anterior |
+| Agentes | Lista e o popup do agente: criar em sete passos, e depois perfil, comunicação, trabalho (o prompt), ferramentas, modelos e uma conversa de teste |
+| Canais | Se cada canal respondeu agora, com o QR code do WhatsApp e reiniciar a sessão |
+| Chat | As conversas, o histórico, quem falou, o custo de cada turno e devolver ao agente uma conversa que está com uma pessoa |
+| Contatos | Quem já falou com algum agente, por nome ou telefone |
+
+Tudo que se faz no painel também se faz no terminal, e o contrário: a operação nasce na API e os dois
+consomem a mesma rota. O painel nunca fala com `/admin`, e `app.<domínio>/admin` e `/webhook` respondem 404.
 
 **Evoluir com vibecoding:**
 
@@ -88,13 +105,16 @@ Chatwoot ◄──────────────────── respost
 
 - `setup/`: instalador e comando `asimov`
 - `backend/`: API (FastAPI), worker (arq), agente (PydanticAI), Postgres e Redis
+- `frontend/`: painel do operador no navegador (React, Vite, Tailwind), construído dentro da imagem e servido pela própria API
 - `prompts/`: prompts de cada agente
 - `deploy/`: Docker Compose, Caddy (HTTPS automático) e scripts de publicação
 
+Nada é carregado de CDN: fonte, CSS e JavaScript saem da sua VPS.
+
 ## O que vem por aí
 
-- WhatsApp oficial (Cloud API da Meta)
-- Base de conhecimento (RAG) por agente
+- Base de conhecimento (RAG) por agente: subir documento e o agente responder com base nele
+- Backup e limpeza automática de mídia antiga
 
 ## Licença
 

@@ -1,0 +1,27 @@
+# O contexto do build é a raiz do repositório. Fora dele:
+.env
+.env.*
+!.env.example
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.DS_Store
+
+# Do operador, montado como volume ou gerado na VPS: nunca dentro da imagem.
+prompts/
+backups/
+*.dump
+
+# Só de desenvolvimento.
+spec/
+docs/
+designsystem/
+painel/prototipo/
+setup/testes/
+
+# O build do front acontece dentro da imagem; o que estiver na máquina não entra.
+frontend/node_modules/
+frontend/dist/

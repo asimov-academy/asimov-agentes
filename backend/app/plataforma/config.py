@@ -23,6 +23,10 @@ class Config(BaseSettings):
     # instalação segue com a API exatamente como sempre foi, sem rota nova e sem host novo no Caddy.
     painel_ativo: bool = False
     subdominio_app: str = ""
+    # Onde mora o front construído (`frontend/dist`, copiado para cá no Dockerfile). Caminho relativo
+    # conta a partir do pacote `app/`. Vazio, o painel responde que o front não foi construído em vez
+    # de quebrar: é o que se vê rodando a API na máquina de desenvolvimento sem `npm run build`.
+    diretorio_painel_app: str = "painel/estaticos/app"
 
     # Modelos padrão da instalação, no formato provedor:modelo, escolhidos no setup.
     modelo_conversa: str

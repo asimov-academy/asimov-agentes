@@ -38,6 +38,16 @@ os.environ["LOG_NIVEL"] = "DEBUG"
 # O painel nasce desligado na instalação; nos testes ele sobe para as telas serem exercitadas.
 os.environ["PAINEL_ATIVO"] = "1"
 os.environ["SUBDOMINIO_APP"] = "app.teste.local"
+# Front do painel: os testes não rodam `npm run build`, então usam uma cópia mínima com a mesma
+# forma do que o Vite gera (um `index.html` e um arquivo em `assets/`).
+_BASE_FRONT = Path(tempfile.mkdtemp(prefix="painel-"))
+# Um arquivo fora da pasta do build, para o teste de travessia ter o que tentar roubar.
+(_BASE_FRONT / "nao-deve-sair.txt").write_text("ISTO-NAO-PODE-SAIR")
+_FRONT = _BASE_FRONT / "app"
+(_FRONT / "assets").mkdir(parents=True)
+(_FRONT / "index.html").write_text("<!doctype html><title>Painel</title><div id=raiz></div>")
+(_FRONT / "assets" / "index-teste.js").write_text("console.log('painel')")
+os.environ["DIRETORIO_PAINEL_APP"] = str(_FRONT)
 
 def _confere_que_e_banco_de_teste() -> None:
     """As fixtures apagam tudo: apontar para o banco errado destruiria uma instalação de verdade.
@@ -276,6 +286,27 @@ async def http() -> Any:
 @pytest.fixture
 def sessao() -> Any:
     return fabrica_sessao()
+
+
+async def limpa_o_redis_do_painel() -> None:
+    """Sessão, código e contador de erro vivem no Redis, que o `banco_limpo` não alcança."""
+    from app.painel import servico as painel_servico
+
+    async with painel_servico.conexao() as r:
+        chaves = await r.keys("painel:*")
+        if chaves:
+            await r.delete(*chaves)
+
+
+@pytest.fixture
+async def painel(http: httpx.AsyncClient) -> Any:
+    """Cliente próprio em https: o cookie da sessão é `Secure` e não viaja em http."""
+    await limpa_o_redis_do_painel()
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=http._transport.app),  # type: ignore[attr-defined]
+        base_url="https://painel.teste",
+    ) as c:
+        yield c
 
 
 async def cria_cliente_e_agente(http: httpx.AsyncClient, nome_cliente: str, nome_agente: str, **extra: Any) -> dict[str, Any]:

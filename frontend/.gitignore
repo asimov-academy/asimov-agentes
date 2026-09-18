@@ -1,0 +1,5 @@
+node_modules/
+dist/
+
+# Cache do tsc, que muda a cada build e não serve para ninguém.
+tsconfig.tsbuildinfo

@@ -4,14 +4,17 @@
 {% block titulo %}Entrar{% endblock %}
 
 {% block conteudo %}
-<div class="marca" style="justify-content:center;margin-bottom:22px">
+<div class="marca" style="margin-bottom:32px">
   <span class="ponto">A</span>
-  <span>Asimov Agentes<small>{{ cfg.subdominio_app or cfg.subdominio_bot }}</small></span>
+  <span>Asimov<small>{{ cfg.subdominio_app or cfg.subdominio_bot }}</small></span>
 </div>
 
 <div class="carta">
   <h2>Entrar</h2>
+  <p class="rotulo" style="margin:0 0 8px">painel do operador</p>
+
   {% if erro %}<p class="aviso erro">{{ erro }}</p>{% endif %}
+
   <form method="post" action="/painel/entrar">
     <div class="campo">
       <label for="senha">Senha do operador</label>
@@ -23,7 +26,8 @@
   </form>
 </div>
 
-<p class="rotulo" style="text-align:center;margin-top:18px">
-  Esqueceu a senha? Rode <span class="mono">asimov painel</span> na VPS.
+<p class="rotulo" style="margin-top:24px;text-transform:none;letter-spacing:normal;font-family:var(--sans);font-size:13px;color:var(--muted)">
+  Perdeu a senha? Rode <span class="mono" style="color:var(--texto)">asimov painel</span> na VPS para
+  criar um acesso novo.
 </p>
 {% endblock %}
