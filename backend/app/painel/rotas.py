@@ -26,6 +26,7 @@ from app.painel import repo, servico
 from app.painel.acesso import COOKIE, exige_sessao, mesma_origem, poe_cookie, quem_chama
 from app.painel.api import router as api
 from app.painel.api_agentes import router as api_agentes
+from app.painel.api_oportunidades import router as api_oportunidades
 from app.painel.api_conversas import router as api_conversas
 from app.plataforma.banco import sessao
 from app.plataforma.config import config
@@ -300,3 +301,4 @@ async def front(request: Request, caminho: str = "") -> Response:
 router.include_router(api)
 router.include_router(api_agentes)
 router.include_router(api_conversas)
+router.include_router(api_oportunidades)

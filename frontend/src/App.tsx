@@ -9,6 +9,7 @@ import { Canais } from "./telas/Canais";
 import { Chat } from "./telas/Chat";
 import { Configuracoes } from "./telas/Configuracoes";
 import { Contatos } from "./telas/Contatos";
+import { Funil } from "./telas/Funil";
 import { EmBreve, NaoEncontrada } from "./telas/EmBreve";
 import { VisaoGeral } from "./telas/VisaoGeral";
 
@@ -98,6 +99,12 @@ export function App() {
           <Route
             path="/contatos"
             element={<Contatos empresas={empresas} empresa={empresa} aoTrocarEmpresa={setEmpresa} />}
+          />
+          <Route
+            path="/oportunidades"
+            element={
+              <Funil empresas={empresas} empresa={empresa} aoTrocarEmpresa={setEmpresa} />
+            }
           />
           <Route path="/conhecimento" element={<EmBreve titulo="Conhecimento" />} />
           <Route path="/configuracoes" element={<Configuracoes eu={eu} aoMudarConta={releEu} />} />

@@ -113,8 +113,6 @@ function veredito(dados: Dados, dias: Periodo): string {
   return "Tudo no ar";
 }
 
-const PONTO = { ok: "bg-ok", atencao: "bg-atencao", perigo: "bg-perigo" };
-
 export function VisaoGeral({
   empresas,
   empresa,
@@ -172,17 +170,11 @@ export function VisaoGeral({
       <Cabecalho
         titulo="Visão geral"
         contexto={
-          <span className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className={`h-2 w-2 shrink-0 rounded-full ${dados ? PONTO[dados.situacao.cor] : "bg-dim"}`}
-            />
-            {erro
-              ? "O painel não conseguiu somar o período"
-              : esperando
-                ? "Somando o período"
-                : veredito(dados, dias)}
-          </span>
+          erro
+            ? "O painel não conseguiu somar o período"
+            : esperando
+              ? "Somando o período"
+              : veredito(dados, dias)
         }
         acoes={
           <>

@@ -19,6 +19,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
       { para: "/", texto: "Visão geral", icone: "nav-dashboard", fim: true },
       { para: "/agentes", texto: "Agentes", icone: "nav-team" },
       { para: "/canais", texto: "Canais", icone: "cont-link" },
+      { para: "/oportunidades", texto: "Oportunidades", icone: "nav-reports" },
     ],
   },
   {
@@ -91,7 +92,7 @@ export function Casca({
         <div className={`flex items-center gap-2.5 px-3 py-4 ${recolhido ? "justify-center" : ""}`}>
           <span
             className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-ciano text-sm font-bold text-void"
-            title={recolhido && situacao ? situacao.texto : undefined}
+            title={situacao ? `Situação da instalação: ${situacao.texto}` : undefined}
           >
             {sigla}
             {situacao && (
@@ -104,18 +105,8 @@ export function Casca({
             )}
           </span>
           {!recolhido && (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold tracking-[0.08em] text-texto">
-                {nomeDoEspaco}
-              </span>
-              {situacao && (
-                <span
-                  className="block truncate text-xs text-muted"
-                  aria-label={`Situação da instalação: ${situacao.texto}`}
-                >
-                  {situacao.texto}
-                </span>
-              )}
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-[0.08em] text-texto">
+              {nomeDoEspaco}
             </span>
           )}
           <button
