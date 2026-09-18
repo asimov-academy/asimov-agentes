@@ -2,6 +2,31 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O passo Jeito depois de o operador usar
+
+Três correções vindas de olhar o passo 5 da criação numa instalação de verdade.
+
+**Emoji vira faixa.** Eram quatro botões lado a lado, e botão não mostra que existe ordem entre as
+opções: o operador lia os quatro rótulos para descobrir que "pouco" é menos que "médio". Virou uma
+faixa que se arrasta, como o volume, no componente novo `frontend/src/design/Faixa.tsx`, que serve
+toda escolha de grau (o ritmo da fase 10 vai usar o mesmo). Agente criado antes de a escolha existir
+(`emojis: livre`) ganha "Como quiser" como primeira posição, senão salvar outro campo da aba trocaria
+o emoji dele sem ninguém pedir.
+
+**Falar só de assuntos da empresa nasce ligado.** Quem contrata um agente de atendimento não quer o
+modelo respondendo qualquer coisa em nome da empresa, e quem queria o contrário desliga num toque. O
+`server_default` continua `false`, como o do emoji: agente que já existe não muda de comportamento
+sozinho, e só o agente novo nasce com a restrição.
+
+**A IA que responde sai da criação.** Mesmo motivo da ferramenta, que saiu na v0.26.0: escolher
+provedor e modelo antes de ver o agente falar é decidir sem informação. O nome do campo também não
+ajudava ninguém. Agora o agente nasce com a IA que a instalação já tem (o primeiro provedor com
+chave, em `ia/chaves.completa`) e o operador troca na aba Configurações da ficha. Instalação sem
+chave nenhuma é a única exceção: aí o passo pede uma, senão o agente nasceria sem conseguir falar.
+O terminal continua perguntando na criação, e isso é divergência a resolver.
+
+Atualizados: `spec/frontend.md` (passo 5 e aba Comunicação).
+
 ## 2026-09-18: Humanização vira a fase 10
 
 O operador trouxe três pesquisas sobre humanização de agentes de atendimento (práticas de mercado,

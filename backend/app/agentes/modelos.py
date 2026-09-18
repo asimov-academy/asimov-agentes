@@ -50,8 +50,12 @@ class Agente(ComId, ComCriacao, Base):
     """Com isto desligado, a tool de handoff nem é oferecida ao modelo: o agente atende sozinho até
     o fim. Quem vende sem equipe de atendimento não quer o agente prometendo uma pessoa que não existe."""
 
-    restringe_temas: Mapped[bool] = mapped_column(default=False, server_default="false")
-    """O agente só fala do que é da empresa dele e devolve qualquer outro assunto para o atendimento."""
+    restringe_temas: Mapped[bool] = mapped_column(default=True, server_default="false")
+    """O agente só fala do que é da empresa dele e devolve qualquer outro assunto para o atendimento.
+
+    Nasce ligado: quem contrata um agente de atendimento não quer o modelo respondendo receita de
+    bolo em nome da empresa. O `server_default` segue `false` de propósito, como o do emoji: agente
+    criado antes disto continua do jeito que nasceu, e só muda se o operador desligar ou ligar."""
 
     emojis: Mapped[str] = mapped_column(String(10), default="nenhum", server_default="livre")
     """Quanto o agente usa emoji: `nenhum`, `pouco`, `medio` ou `muito`. `livre` é o que os agentes

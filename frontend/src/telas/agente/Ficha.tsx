@@ -13,6 +13,7 @@ import {
 import { Aviso } from "../../design/Aviso";
 import { Botao } from "../../design/Botao";
 import { Campo } from "../../design/Campo";
+import { Faixa } from "../../design/Faixa";
 import { Carregando } from "../../design/Carregando";
 import { Icone } from "../../design/Icone";
 import { Interruptor } from "../../design/Interruptor";
@@ -60,11 +61,19 @@ const TONS: { valor: TomDeVoz; rotulo: string; explica: string }[] = [
   { valor: "descontraido", rotulo: "Descontraído", explica: "Leve e próximo, sem perder o profissional." },
 ];
 
-const EMOJIS: { valor: NivelDeEmoji; rotulo: string }[] = [
+type Emoji = NivelDeEmoji | "livre";
+
+const EMOJIS: { valor: Emoji; rotulo: string }[] = [
   { valor: "nenhum", rotulo: "Nenhum" },
   { valor: "pouco", rotulo: "Pouco" },
   { valor: "medio", rotulo: "Médio" },
   { valor: "muito", rotulo: "Muito" },
+];
+
+/** `livre` é o agente criado antes da escolha existir: entra na faixa só para ele. */
+const EMOJIS_COM_LIVRE: { valor: Emoji; rotulo: string }[] = [
+  { valor: "livre", rotulo: "Como quiser" },
+  ...EMOJIS,
 ];
 
 const FUNCOES = [
@@ -377,7 +386,7 @@ function Perfil({
 }
 
 function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) => void }) {
-  const [emojis, setEmojis] = useState<NivelDeEmoji>(agente.emojis as NivelDeEmoji);
+  const [emojis, setEmojis] = useState<Emoji>(agente.emojis as Emoji);
   const [tom, setTom] = useState<TomDeVoz>(agente.tom);
   const [humano, setHumano] = useState(agente.transfere_para_humano);
   const [soDaEmpresa, setSoDaEmpresa] = useState(agente.restringe_temas);
@@ -410,26 +419,21 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
         ))}
       </div>
 
-      <p className="rotulo mt-8">Emoji</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {EMOJIS.map((e) => (
-          <button
-            key={e.valor}
-            onClick={() => setEmojis(e.valor)}
-            className={`rounded-md border px-4 py-2 text-sm transition-colors ${
-              emojis === e.valor ? "border-ciano text-ciano" : "border-borda text-muted hover:text-texto"
-            }`}
-          >
-            {e.rotulo}
-          </button>
-        ))}
+      <div className="mt-8">
+        {/* Agente anterior à escolha entra na faixa com a posição que ele tem hoje, "Como quiser",
+            para salvar outro campo desta aba não mudar o emoji dele sem ninguém pedir. */}
+        <Faixa
+          rotulo="Emoji"
+          opcoes={agente.emojis === "livre" ? EMOJIS_COM_LIVRE : EMOJIS}
+          valor={emojis}
+          aoMudar={(nivel) => setEmojis(nivel)}
+          ajuda={
+            agente.emojis === "livre"
+              ? "Criado antes desta escolha, ele usa emoji como quiser. O que você escolher vale na próxima resposta."
+              : undefined
+          }
+        />
       </div>
-      {agente.emojis === "livre" && (
-        <p className="mt-2 text-sm text-dim">
-          Criado antes desta escolha, ele usa emoji como quiser. O que você escolher vale na próxima
-          resposta.
-        </p>
-      )}
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <Numero

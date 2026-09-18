@@ -169,6 +169,10 @@ def completa(modelos: dict[str, str | None], cfg: Config | None = None) -> dict[
     Resumo, visão e áudio nascem no mesmo provedor da resposta, com a primeira sugestão de cada
     função; áudio cai em outro provedor com chave quando o da resposta não transcreve (Anthropic).
     Padrão do `.env` de instalação antiga vem antes disso.
+
+    Sem modelo de resposta escolhido, o agente nasce com a IA que a instalação já tem: escolher
+    provedor e modelo deixou de ser pergunta da criação no painel (o operador não tem como decidir
+    isso antes de ver o agente falar) e virou item da ficha, onde ele troca depois.
     """
     from app.ia.provedores import provedor_de
 
@@ -181,9 +185,11 @@ def completa(modelos: dict[str, str | None], cfg: Config | None = None) -> dict[
         "modelo_transcricao": cfg.modelo_transcricao or None,
         **{c: v for c, v in modelos.items() if v},
     }
-    conversa = final["modelo_conversa"]
+    conversa = final["modelo_conversa"] = final["modelo_conversa"] or _primeiro_com_chave(cfg)
     if not conversa:
-        raise ModeloInvalido("escolha o modelo de resposta do agente")
+        raise ModeloInvalido(
+            "nenhuma chave de IA guardada nesta instalação: guarde a chave de um provedor antes de criar o agente"
+        )
     provedor = provedor_de(conversa)
     # Instalação antiga: o resumo sempre foi o modelo de resposta. Só a nova sugere um mais barato.
     if not final["modelo_auxiliar"]:
@@ -197,6 +203,14 @@ def completa(modelos: dict[str, str | None], cfg: Config | None = None) -> dict[
                 final["modelo_transcricao"] = _sugestao(candidato, "transcricao")
                 break
     return final
+
+
+def _primeiro_com_chave(cfg: Config) -> str | None:
+    """Modelo de resposta do primeiro provedor com chave, na ordem de `PROVEDORES`."""
+    for provedor in PROVEDORES:
+        if chave_do_provedor(provedor, cfg):
+            return _sugestao(provedor, "conversa")
+    return None
 
 
 def _sugestao(provedor: str, funcao: str) -> str | None:

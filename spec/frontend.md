@@ -316,8 +316,14 @@ popup reabre com ele.
    pela assinatura do operador; sem vínculo, a chave de provedor da instalação (`ia/redacao.py`).
    Falhando, ele não perde o que escreveu e a mensagem diz o porquê.
 5. **Jeito**: o tom (formal, normal ou descontraído), o emoji, em quantas mensagens dividir a
-   resposta, se ele pode passar a conversa para uma pessoa, se fala só de assuntos da empresa, e a
-   IA que responde.
+   resposta, se ele pode passar a conversa para uma pessoa e se fala só de assuntos da empresa
+   (que nasce ligado).
+
+**A IA que responde saiu da criação** em 2026-09-18, pelo mesmo motivo da ferramenta: escolher
+provedor e modelo antes de ver o agente falar é decidir sem informação, e o nome do campo ("IA que
+responde") não dizia nada a quem nunca comparou dois modelos. O agente nasce com a IA que a
+instalação já tem (o primeiro provedor com chave) e troca na aba Configurações da ficha. Exceção:
+instalação sem chave nenhuma, em que o passo pede uma, senão o agente nasceria sem conseguir falar.
 
 **Ferramenta não se escolhe na criação.** Ela saiu daqui em 2026-09-18: o agente nasce cru, o
 operador vê como ele fala, e ferramenta e material entram depois, no treinamento. Escolher
@@ -355,7 +361,10 @@ mostra o que mudou, não um "pronto" genérico.
 (mostrado uma vez, com copiar) e remover agente.
 
 **Comunicação**: o jeito do agente, e é a mesma lista do passo 5 da criação. Tom (formal, normal ou
-descontraído), emoji (nenhum, pouco, médio, muito), dividir resposta em partes (até quantas), tempo
+descontraído), emoji numa **faixa que se arrasta** (nenhum, pouco, médio, muito), pelo componente
+`design/Faixa.tsx`: escolha de grau tem ordem, e quatro botões lado a lado escondem a ordem. Agente
+criado antes da escolha existir ganha "Como quiser" como primeira posição da faixa, para salvar
+outro campo da aba não trocar o emoji dele sem ninguém pedir. Mais dividir resposta em partes (até quantas), tempo
 de espera antes de responder (buffer, em segundos), velocidade de digitação e teto do digitando, e
 dois interruptores: **passar a conversa para uma pessoa** e **falar só de assuntos da empresa**.
 Desligar o primeiro desliga o handoff inteiro, inclusive o automático: a tool não é oferecida ao
