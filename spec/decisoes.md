@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: `/retomar` do número do agente vale em qualquer conversa (v0.13.5)
+
+- **O log fechou o caso**: `acao: pausar, de: 1151135133847@lid`. O operador escreveu o `/retomar` pelo WhatsApp Web do número do agente, dentro da conversa do contato, e aquilo era lido como ele assumindo a conversa.
+- **Quem escreve do número do agente é o operador falando com o sistema**, e o código diz qual conversa devolver: o comando passou a valer em qualquer chat, não só no de quem recebeu o aviso. Conversa comum escrita do aparelho continua sendo intervenção humana, que é o que o operador espera.
+- **O aviso de handoff ficou explícito** sobre os dois caminhos, em vez de "reaja com 👍 na conversa ou mande /retomar aqui", que lia como se os dois fossem no mesmo lugar: 1) joinha na conversa com o contato; 2) `/retomar <código>` respondendo o aviso.
+- Custou quatro rodadas de teste porque cada versão anterior cobria um caminho que não era o que o operador usava. A lição, já aplicada nas v0.13.3 e v0.13.4: nenhuma saída do webhook sem log, com o remetente.
+
 ## 2026-09-18: `/retomar` do aparelho do agente, e nada mais some calado (v0.13.4)
 
 - **Ponto cego achado ao investigar o `/retomar` que não funcionava**: fala de saída numa conversa que o agente ainda não atendeu devolvia 200 sem uma linha de log. A WAHA registrava o envio com 200 e do nosso lado não havia nada, o que torna o diagnóstico impossível. Agora toda saída do webhook tem log.

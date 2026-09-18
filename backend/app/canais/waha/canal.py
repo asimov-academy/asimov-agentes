@@ -364,18 +364,18 @@ class Waha:
         `source` da WAHA separa os dois: `api` é o agente falando, `app` é uma pessoa da empresa
         que abriu o WhatsApp e respondeu. Nesse caso o agente cala até o joinha ou o prazo.
 
-        Exceção: `/retomar <código>` escrito no chat de quem recebeu o handoff é comando, não
-        conversa. O operador responde o aviso do aparelho do agente com a mesma naturalidade com
-        que responderia do próprio celular.
+        Exceção: `/retomar <código>` escrito do próprio número é comando, em qualquer conversa.
+        Quem escreve do aparelho do agente é o operador falando com o sistema, seja no chat de quem
+        recebeu o aviso, seja na conversa do contato. O código diz qual conversa devolver.
         """
         if mensagem.get("source") == "api":
             return Evento(Acao.IGNORAR, "mensagem enviada pelo próprio agente", chat)
         texto_saindo = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
         comando = COMANDO_RETOMAR.match(texto_saindo or "")
-        if comando and chat == _texto_do_destino(destino):
+        if comando:
             return Evento(
                 Acao.RETOMAR_POR_CODIGO,
-                "/retomar escrito no chat do handoff",
+                "/retomar escrito do número do agente",
                 codigo=comando.group(1).upper(),
             )
         if chat.endswith(SUFIXO_DE_GRUPO):
@@ -438,8 +438,9 @@ class Waha:
         aviso = (
             f"Assumi a conversa com {contato or numero_legivel(conversa_externa)} e o agente parou de responder.\n\n"
             f"{nota}\n\n"
-            f"Quando terminar, devolva ao agente: reaja com {JOINHA} em qualquer mensagem da conversa "
-            f"ou mande /retomar {codigo} aqui."
+            f"Quando terminar, devolva ao agente de um destes jeitos:\n"
+            f"1) reaja com {JOINHA} em qualquer mensagem da conversa com o contato;\n"
+            f"2) responda aqui com /retomar {codigo}."
         )
         try:
             await api.envia_texto(credenciais["sessao"], chat, aviso)

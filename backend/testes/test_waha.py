@@ -827,3 +827,34 @@ async def test_fala_do_aparelho_em_conversa_desconhecida_nao_some_calada(http, f
     assert resposta.status_code == 200
     async with sessao() as s:
         assert list(await s.scalars(select(Conversa))) == []
+
+
+async def test_retomar_escrito_na_conversa_do_contato_pelo_aparelho_do_agente(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """Quem escreve do número do agente é o operador falando com o sistema, em qualquer conversa."""
+    agente = await cria_waha(http)
+    codigo = await transfere(http, fila, redis, waha, agente)
+
+    resposta = await manda(
+        http,
+        agente,
+        waha,
+        payload_waha(f"/retomar {codigo}", de=CONTATO, minha=True, id_mensagem="true_contato_NNN"),
+    )
+
+    assert resposta.status_code == 200
+    async with sessao() as s:
+        fechado = (await s.scalars(select(Handoff))).one()
+        conversa = (await s.scalars(select(Conversa).where(Conversa.id_externo == CONTATO))).one()
+    assert fechado.retomado_em is not None and fechado.retomado_por == "comando"
+    assert conversa.status == "agente"
+
+
+async def test_conversa_comum_do_aparelho_continua_pausando(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
+    """Só o comando é comando: responder o contato continua sendo assumir a conversa."""
+    agente = await cria_waha(http)
+    await manda(http, agente, waha, payload_waha("oi"))
+
+    await manda(http, agente, waha, payload_waha("eu respondo, obrigado", minha=True, id_mensagem="true_x_OOO"))
+
+    async with sessao() as s:
+        assert (await s.scalars(select(Handoff))).one().motivo == handoff.MOTIVO_PESSOA_RESPONDEU
