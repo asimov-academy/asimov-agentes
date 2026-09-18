@@ -191,8 +191,9 @@ superior esquerdo. Itens, nesta ordem:
 | Conhecimento | `/conhecimento` | em breve, item apagado com selo |
 | Perfil e configurações | `/configuracoes` | ativo, no rodapé do menu, com avatar e o endereço da instalação |
 
-**O recolher fica no topo**, ao lado da marca, que é onde se procura por ele; no rodapé ele ficava
-solto embaixo do sair. **A área da conta fica no rodapé**: a situação da instalação, o avatar do
+**O recolher é um botão redondo na borda do menu**, na altura da marca. No rodapé ele ficava solto
+embaixo do sair, e ao lado da marca ele espremia a faixa recolhida e saía do eixo dos ícones. Na
+borda ele não disputa largura em nenhum dos dois estados. **A área da conta fica no rodapé**: a situação da instalação, o avatar do
 operador e o endereço, levando a `/configuracoes`. O sair mora lá dentro, como em todo painel com
 área de conta.
 

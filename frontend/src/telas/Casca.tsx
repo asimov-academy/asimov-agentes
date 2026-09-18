@@ -78,12 +78,15 @@ export function Casca({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col border-r border-borda bg-panel transition-all md:static md:h-full md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col border-r border-borda bg-panel transition-all md:relative md:z-30 md:h-full md:translate-x-0 ${
           gaveta ? "translate-x-0 shadow-alto" : "-translate-x-full"
         } ${recolhido ? "w-[4.5rem]" : "w-64"}`}
       >
+        {/* Recolhido, a faixa é estreita demais para a marca e o botão lado a lado: eles ficavam
+            apertados e fora do eixo dos ícones. Sobra a marca, centrada no mesmo eixo, e quem abre
+            o menu é o botão que flutua na borda, que não disputa largura nenhuma. */}
         <div className={`flex items-center gap-2 px-3 py-4 ${recolhido ? "justify-center" : ""}`}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-ciano text-sm font-bold text-void">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-ciano text-sm font-bold text-void">
             A
           </span>
           {!recolhido && (
@@ -91,20 +94,6 @@ export function Casca({
               ASIMOV
             </span>
           )}
-          {/* O recolher mora aqui, ao lado da marca, que é onde se procura por ele. No rodapé ele
-              ficava solto embaixo do sair. */}
-          <button
-            onClick={() => setRecolhido((antes) => !antes)}
-            aria-label={recolhido ? "Abrir o menu" : "Recolher o menu"}
-            title={recolhido ? "Abrir o menu" : "Recolher o menu"}
-            className="hidden rounded-md p-1.5 text-dim transition-colors hover:bg-surface hover:text-texto md:block"
-          >
-            <Icone
-              nome="sys-chevron"
-              tamanho={16}
-              className={`transition-transform ${recolhido ? "" : "rotate-180"}`}
-            />
-          </button>
           <button
             onClick={() => setGaveta(false)}
             aria-label="Fechar o menu"
@@ -113,6 +102,19 @@ export function Casca({
             <Icone nome="sys-close" tamanho={18} />
           </button>
         </div>
+
+        <button
+          onClick={() => setRecolhido((antes) => !antes)}
+          aria-label={recolhido ? "Abrir o menu" : "Recolher o menu"}
+          title={recolhido ? "Abrir o menu" : "Recolher o menu"}
+          className="absolute -right-3 top-7 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-borda bg-panel text-dim transition-colors hover:border-dim hover:text-texto md:flex"
+        >
+          <Icone
+            nome="sys-chevron"
+            tamanho={14}
+            className={`transition-transform ${recolhido ? "" : "rotate-180"}`}
+          />
+        </button>
 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {GRUPOS.map((grupo, i) => (
