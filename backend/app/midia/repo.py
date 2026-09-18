@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -34,3 +35,15 @@ async def grava(sessao: AsyncSession, midia: Midia) -> Midia:
     gravada = await por_hash(sessao, midia.cliente_id, midia.hash_sha256)
     assert gravada is not None
     return gravada
+
+
+async def com_arquivo_antigo(sessao: AsyncSession, limite: datetime, maximo: int = 500) -> list[Midia]:
+    """Mídia cujo arquivo já passou do prazo no disco e ainda não foi apagado."""
+    return list(
+        await sessao.scalars(
+            select(Midia)
+            .where(Midia.criado_em < limite, Midia.arquivo_apagado_em.is_(None))
+            .order_by(Midia.criado_em)
+            .limit(maximo)
+        )
+    )

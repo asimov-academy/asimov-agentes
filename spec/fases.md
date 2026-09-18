@@ -186,7 +186,7 @@ Objetivo: qualquer aluno instala pelo comando público e o critério de sucesso 
 
 O que entra:
 - `install.sh` publicado em página estática em `setup.<dominio>`, baixando a release marcada e conferindo checksum.
-- Backup diário com timer do systemd e retenção de 14 dias; job `limpar_midia` de 90 dias.
+- Backup diário com timer do systemd e retenção de 14 dias. O `limpar_midia` saiu daqui: entrou na v0.13.0, com 24 horas em vez de 90 dias.
 - Checagens finais do setup: memória e disco mínimos, aviso de proxy da Cloudflare, `.env` com permissão 600.
 - Revisão do texto da licença e do banner com o nome definitivo.
 - Revisão do `modelos/AGENTS.md.tmpl` contra o critério de até 100 linhas e só conteúdo não descobrível.

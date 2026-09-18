@@ -390,3 +390,55 @@ def test_conteudo_do_contato_nao_fecha_o_bloco_de_midia() -> None:
     texto = conteudo(mensagem)
 
     assert texto.count("</midia_do_contato>") == 1 and texto.endswith("</midia_do_contato>")
+
+
+async def test_arquivo_sai_do_disco_e_o_texto_fica(sessao, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """O que a IA usa é o texto; o arquivo é insumo e não precisa morar na VPS para sempre."""
+    from datetime import timedelta
+    from pathlib import Path
+
+    from sqlalchemy import select
+
+    from app.midia import servico as midia_servico
+    from app.midia.modelos import Midia
+    from app.plataforma.banco import agora
+    from app.plataforma.config import config
+
+    async with sessao() as s:
+        registro = Midia(
+            cliente_id=await _algum_cliente(s),
+            hash_sha256="a" * 64,
+            tipo_mime="audio/ogg",
+            tamanho_bytes=10,
+            caminho_arquivo="teste/audio.ogg",
+            resultado="quero trocar o produto",
+            metadados={},
+        )
+        s.add(registro)
+        await s.commit()
+        arquivo = config().diretorio_midia / registro.caminho_arquivo
+        arquivo.parent.mkdir(parents=True, exist_ok=True)
+        arquivo.write_bytes(b"conteudo")
+
+        # Ainda dentro das 24 horas: o arquivo fica.
+        assert await midia_servico.limpa_arquivos_antigos(s) == 0
+        assert arquivo.exists()
+
+        registro.criado_em = agora() - timedelta(hours=25)
+        await s.commit()
+        assert await midia_servico.limpa_arquivos_antigos(s) == 1
+
+        guardada = (await s.scalars(select(Midia).where(Midia.id == registro.id))).one()
+    assert not Path(arquivo).exists(), "o arquivo sai do disco"
+    assert guardada.resultado == "quero trocar o produto", "o texto fica"
+    assert guardada.arquivo_apagado_em is not None
+
+
+async def _algum_cliente(s: Any) -> Any:
+    """Mídia é por cliente: o teste precisa de um que exista de verdade."""
+    from app.clientes.modelos import Cliente
+
+    cliente = Cliente(nome="Loja Exemplo", slug="loja-exemplo")
+    s.add(cliente)
+    await s.commit()
+    return cliente.id

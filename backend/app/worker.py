@@ -7,6 +7,7 @@ from arq.connections import RedisSettings
 from app.canais.waha import vigia
 from app.conversas.turno import processar_turno
 from app.handoff import servico as handoff
+from app.midia import servico as midia
 from app.plataforma.banco import fabrica_sessao
 from app.plataforma.config import config
 from app.plataforma.log import configura_log
@@ -30,6 +31,12 @@ async def retomada_automatica(ctx: dict[str, Any]) -> int:
         return await handoff.retomada_automatica(s)
 
 
+async def limpar_midia(ctx: dict[str, Any]) -> int:
+    """De hora em hora: o arquivo de áudio, imagem e documento sai do disco depois de virar texto."""
+    async with fabrica_sessao()() as s:
+        return await midia.limpa_arquivos_antigos(s)
+
+
 async def confere_whatsapp(ctx: dict[str, Any]) -> int:
     """De dez em dez minutos: número desconectado do WhatsApp deixa o agente mudo, e isso precisa
     aparecer em Ver consumo e falhas mesmo quando o evento da WAHA não chega."""
@@ -42,6 +49,7 @@ class Configuracao:
     cron_jobs = [
         cron(retomada_automatica, second=0, run_at_startup=False),
         cron(confere_whatsapp, minute={0, 10, 20, 30, 40, 50}, second=30, run_at_startup=False),
+        cron(limpar_midia, minute=7, run_at_startup=False),
     ]
     on_startup = ao_iniciar
     redis_settings = RedisSettings.from_dsn(config().redis_url)

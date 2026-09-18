@@ -15,6 +15,7 @@ import hashlib
 import time
 import uuid
 from dataclasses import fields
+from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -29,6 +30,7 @@ from app.conversas import repo as conversas_repo
 from app.ia.provedores import ModeloInvalido
 from app.midia import extracao, repo
 from app.midia.modelos import Midia
+from app.plataforma.banco import agora
 from app.plataforma.config import config
 
 if TYPE_CHECKING:
@@ -207,3 +209,28 @@ def _salva(destino: Path, conteudo: bytes) -> None:
     temporario = destino.with_suffix(".parcial")
     temporario.write_bytes(conteudo)
     temporario.replace(destino)
+
+
+async def limpa_arquivos_antigos(sessao: AsyncSession) -> int:
+    """Apaga do disco o arquivo que já virou texto. Devolve quantos saíram.
+
+    O que a IA usa é o texto, guardado aqui e na mensagem; o arquivo é insumo e fica só o tempo de
+    conferir um atendimento estranho. Registro e hash ficam: o cache continua valendo, e um arquivo
+    reenviado não é lido de novo.
+    """
+    cfg = config()
+    limite = agora() - timedelta(hours=cfg.midia_horas_no_disco)
+    apagados = 0
+    for midia in await repo.com_arquivo_antigo(sessao, limite):
+        caminho = cfg.diretorio_midia / midia.caminho_arquivo
+        try:
+            await asyncio.to_thread(caminho.unlink, True)
+        except OSError as erro:
+            log.warning("midia_nao_apagada", erro=repr(erro), midia_id=str(midia.id))
+            continue
+        midia.arquivo_apagado_em = agora()
+        apagados += 1
+    if apagados:
+        await sessao.commit()
+        log.info("midia_limpa", arquivos=apagados, horas=cfg.midia_horas_no_disco)
+    return apagados
