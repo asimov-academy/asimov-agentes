@@ -84,10 +84,10 @@ atendimento
 5511977776666
 1
 
-220011
 770011
 EAAtoken-permanente
 segredo-do-app
+1
 1
 Sofia
 1

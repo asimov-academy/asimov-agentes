@@ -2,6 +2,15 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O setup descobre a conta de WhatsApp Business (v0.15.2)
+
+- **O operador travou no ID da conta de WhatsApp Business** e disse o essencial: "essa informação não é clara de onde pegar no onboarding". É verdade: o fluxo guiado novo da Meta não mostra o WABA ID em lugar óbvio, e ele se confunde com o ID do app e com o ID do número. Perguntar um dado escondido é errar de propósito.
+- **`descobrir` do canal virou dois passos**: sem `waba_id`, devolve `{contas: [...]}` com as contas que o token alcança; com `waba_id`, segue devolvendo números e templates. O setup pede app, token e chave secreta, lista as contas, e só pergunta o ID à mão quando não acha nenhuma (com a explicação de que aí o problema é o token, não o ID).
+- **Dois caminhos para descobrir, nesta ordem**: `GET /debug_token` traz, em `granular_scopes`, os `target_ids` dos escopos de WhatsApp (serve para token gerado por conta); token de usuário do sistema com controle do negócio inteiro **não** traz `target_ids`, e aí as contas saem de `/me/businesses` mais `owned_whatsapp_business_accounts` e `client_whatsapp_business_accounts`. O caso do operador é o segundo. Falha no segundo caminho não derruba nada: cai na pergunta à mão.
+- **O `debug_token` também confere o token** de graça, no primeiro passo: token de 24 horas ou sem permissão falha ali, com a mensagem da Meta, antes de o operador responder mais nada.
+- **O fluxo guiado da Meta pede webhook como primeira coisa, e isso se pula**: quem liga o webhook é a plataforma, e o endereço do agente ainda não existe naquele momento. Ficou escrito no documento, junto de onde o ID da conta fica, para quem quiser conferir.
+- Atualizados `docs/whatsapp-oficial.md` (três dados em vez de quatro, seção "onde fica o ID da conta", o que pular no painel) e spec/dados.md.
+
 ## 2026-09-18: Painel novo da Meta e as duas mudanças de 2026 no documento (v0.15.1)
 
 - **O painel da Meta trocou "Produtos" por "Casos de uso"** (o operador mandou a tela): a configuração do WhatsApp virou um fluxo guiado em **Casos de uso > Personalizar**, com **Etapa 1. Experimente**, **Etapa 2. Configuração da produção** e **Etapa 3. Verificação da empresa**, e uma escolha entre "Integrar com API" e "Torne-se um parceiro". A documentação da Meta ainda fala em "Produtos" e "Configuração da API" em várias páginas: o painel andou na frente dos docs. `docs/whatsapp-oficial.md` passou a seguir os nomes do painel, na ordem das etapas, e a dar link direto sempre que existe um, que é o que não muda de lugar quando a interface muda. Os docs da Meta também migraram de `/docs/whatsapp/cloud-api/` para `/documentation/business-messaging/whatsapp/`.

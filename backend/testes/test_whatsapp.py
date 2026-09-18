@@ -513,3 +513,107 @@ async def test_refazer_webhook_liga_as_tres_camadas_de_novo(http, meta) -> None:
     assert meta.assinado == (APP_ID, APP_SECRET, agente["url_webhook"])
     assert meta.inscritos == [WABA]
     assert meta.url_webhook == agente["url_webhook"]
+
+
+# ── Descobrir a conta de WhatsApp Business ─────────────────────────────────
+
+
+def _respostas_da_meta(monkeypatch: pytest.MonkeyPatch, mapa: dict[str, Any]) -> list[str]:
+    """Troca o `_chama` da Graph API por um mapa de caminho para resposta. Devolve os chamados."""
+    chamados: list[str] = []
+
+    async def chama(token: str, metodo: str, caminho: str, acao: str, **k: Any) -> dict[str, Any]:
+        chamados.append(caminho)
+        if caminho not in mapa:
+            raise api.CredencialInvalida(f"a Meta recusou {acao}")
+        return mapa[caminho]
+
+    monkeypatch.setattr(api, "_chama", chama)
+    return chamados
+
+
+async def test_conta_sai_dos_escopos_do_token(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Token gerado para contas específicas: o `debug_token` já diz quais são."""
+    _respostas_da_meta(
+        monkeypatch,
+        {
+            "/debug_token": {
+                "data": {
+                    "granular_scopes": [
+                        {"scope": "business_management"},
+                        {"scope": "whatsapp_business_management", "target_ids": [WABA]},
+                        {"scope": "whatsapp_business_messaging", "target_ids": [WABA]},
+                    ]
+                }
+            },
+            f"/{WABA}": {"name": "Loja Exemplo"},
+        },
+    )
+
+    contas = await api.contas_do_token(APP_ID, APP_SECRET, TOKEN_META)
+
+    assert contas == [{"waba_id": WABA, "nome": "Loja Exemplo"}]
+
+
+async def test_conta_sai_dos_negocios_quando_o_token_e_do_negocio_inteiro(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Usuário do sistema com controle do negócio não traz `target_ids`: a conta vem por outro lado."""
+    chamados = _respostas_da_meta(
+        monkeypatch,
+        {
+            "/debug_token": {"data": {"granular_scopes": [{"scope": "business_management"}]}},
+            "/me/businesses": {"data": [{"id": "990", "name": "Portfólio"}]},
+            "/990/owned_whatsapp_business_accounts": {
+                "data": [{"id": WABA, "name": "Loja Exemplo"}]
+            },
+        },
+    )
+
+    contas = await api.contas_do_token(APP_ID, APP_SECRET, TOKEN_META)
+
+    assert contas == [{"waba_id": WABA, "nome": "Loja Exemplo"}]
+    # A conta compartilhada também é procurada, e falhar nela não derruba nada.
+    assert "/990/client_whatsapp_business_accounts" in chamados
+
+
+async def test_token_recusado_no_descobrir_vira_422(http, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    async def recusa(app_id: str, app_secret: str, token: str) -> list[dict[str, Any]]:
+        raise api.CredencialInvalida("a Meta recusou o token de acesso: token inválido ou expirado")
+
+    monkeypatch.setattr(api, "contas_do_token", recusa)
+
+    resp = await http.post(
+        "/admin/canais/whatsapp/descobrir",
+        json={"conexao": {"app_id": APP_ID, "app_secret": APP_SECRET, "access_token": "errado"}},
+        headers=ADMIN,
+    )
+
+    assert resp.status_code == 422 and "token de acesso" in resp.json()["detail"]
+
+
+async def test_descobrir_sem_conta_lista_as_contas_e_com_conta_lista_os_numeros(http, meta, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    async def contas(app_id: str, app_secret: str, token: str) -> list[dict[str, Any]]:
+        assert (app_id, app_secret, token) == (APP_ID, APP_SECRET, TOKEN_META)
+        return [{"waba_id": WABA, "nome": "Loja Exemplo"}]
+
+    async def numeros_da_conta(token: str, waba_id: str) -> list[dict[str, Any]]:
+        return [{"phone_number_id": NUMERO_ID, "numero": "+55 11 3333-4444", "nome": "Loja"}]
+
+    async def templates(token: str, waba_id: str) -> list[dict[str, Any]]:
+        return []
+
+    monkeypatch.setattr(api, "contas_do_token", contas)
+    monkeypatch.setattr(api, "numeros_da_conta", numeros_da_conta)
+    monkeypatch.setattr(api, "templates", templates)
+    sem_conta = {k: v for k, v in CONEXAO.items() if k not in ("waba_id", "phone_number_id")}
+
+    primeiro = await http.post(
+        "/admin/canais/whatsapp/descobrir", json={"conexao": sem_conta}, headers=ADMIN
+    )
+    segundo = await http.post(
+        "/admin/canais/whatsapp/descobrir",
+        json={"conexao": {**sem_conta, "waba_id": WABA}},
+        headers=ADMIN,
+    )
+
+    assert primeiro.json() == {"contas": [{"waba_id": WABA, "nome": "Loja Exemplo"}]}
+    assert segundo.json()["numeros"][0]["phone_number_id"] == NUMERO_ID
