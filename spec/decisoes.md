@@ -5,7 +5,7 @@ Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arqu
 ## 2026-09-18: Arquivo de mídia dura 24 horas, o texto fica (v0.13.0)
 
 - **Observação do operador**: o modelo não ouve nem enxerga; o que chega nele é sempre o texto da transcrição ou da visão. Então o arquivo é insumo, não acervo.
-- **O arquivo sai do disco em 24 horas** (`midia_horas_no_disco`, job `limpar_midia` de hora em hora); o texto lido fica no registro de Mídia e na mensagem, enquanto a conversa existir. O registro e o hash continuam: o cache por hash segue valendo e um arquivo reenviado não é lido de novo, mesmo depois de o arquivo sumir.
+- **O arquivo sai do disco um dia depois de lido** (`midia_horas_no_disco`, job `limpar_midia` diário de madrugada); o texto lido fica no registro de Mídia e na mensagem, enquanto a conversa existir. Diário e não de hora em hora (correção do operador na revisão): o arquivo acaba durando de um a dois dias, e ninguém se importa com isso; o que importa é não guardar por semanas. O registro e o hash continuam: o cache por hash segue valendo e um arquivo reenviado não é lido de novo, mesmo depois de o arquivo sumir.
 - **Campo `arquivo_apagado_em`** (migração `0011`) em vez de deixar `caminho_arquivo` apontando para o vazio: quem lê o banco vê que o arquivo saiu, e não que ele se perdeu.
 - Substitui o `limpar_midia` de 90 dias previsto na fase 7. Menos dado de cliente parado na VPS e menos disco: numa VPS de 20 GB, áudio e foto de atendimento enchem rápido.
 

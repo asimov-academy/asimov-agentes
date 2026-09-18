@@ -32,7 +32,11 @@ async def retomada_automatica(ctx: dict[str, Any]) -> int:
 
 
 async def limpar_midia(ctx: dict[str, Any]) -> int:
-    """De hora em hora: o arquivo de áudio, imagem e documento sai do disco depois de virar texto."""
+    """Uma vez por dia, de madrugada: o arquivo que já virou texto sai do disco.
+
+    Diário e não de hora em hora: o arquivo acaba durando de um a dois dias em vez de 24 horas
+    cravadas, e ninguém se importa com isso. O que importa é não guardar por semanas.
+    """
     async with fabrica_sessao()() as s:
         return await midia.limpa_arquivos_antigos(s)
 
@@ -49,7 +53,7 @@ class Configuracao:
     cron_jobs = [
         cron(retomada_automatica, second=0, run_at_startup=False),
         cron(confere_whatsapp, minute={0, 10, 20, 30, 40, 50}, second=30, run_at_startup=False),
-        cron(limpar_midia, minute=7, run_at_startup=False),
+        cron(limpar_midia, hour=4, minute=7, run_at_startup=False),
     ]
     on_startup = ao_iniciar
     redis_settings = RedisSettings.from_dsn(config().redis_url)

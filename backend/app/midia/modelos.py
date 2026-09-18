@@ -21,6 +21,7 @@ class Midia(ComId, ComCriacao, Base):
     tamanho_bytes: Mapped[int]
     caminho_arquivo: Mapped[str] = mapped_column(String(500))
     arquivo_apagado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    """O arquivo some do disco em 24 horas; o texto lido dele fica. É o texto que a IA usa."""
+    """O arquivo some do disco na limpeza do dia seguinte; o texto lido dele fica, que é o que a
+    IA usa."""
     resultado: Mapped[str] = mapped_column(Text)
     metadados: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)

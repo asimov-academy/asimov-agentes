@@ -216,7 +216,7 @@ async def limpa_arquivos_antigos(sessao: AsyncSession) -> int:
 
     O que a IA usa é o texto, guardado aqui e na mensagem; o arquivo é insumo e fica só o tempo de
     conferir um atendimento estranho. Registro e hash ficam: o cache continua valendo, e um arquivo
-    reenviado não é lido de novo.
+    reenviado não é lido de novo. Roda uma vez por dia, então o arquivo dura de um a dois dias.
     """
     cfg = config()
     limite = agora() - timedelta(hours=cfg.midia_horas_no_disco)
