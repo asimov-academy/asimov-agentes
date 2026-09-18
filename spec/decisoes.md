@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O token precisa de duas permissões, não três
+
+- **O operador mostrou a tela de gerar token**: app criado pelo caso de uso "Conectar-se com clientes pelo WhatsApp" oferece `manage_app_solution`, `whatsapp_business_manage_events`, `whatsapp_business_management` e `whatsapp_business_messaging`. Não oferece `business_management`, que o documento mandava marcar.
+- **Conferido endpoint por endpoint: o agente usa duas.** `whatsapp_business_messaging` para enviar e baixar mídia; `whatsapp_business_management` para número, templates, `subscribed_apps` e `webhook_configuration`. A assinatura do webhook do app usa token do app (`{app_id}|{app_secret}`), que não depende de permissão de usuário.
+- **`business_management` serve só à descoberta da conta** por `/me/businesses`. Sem ela, `contas_do_token` ainda tenta os `target_ids` do `debug_token` e, se vier vazio, o setup pergunta o ID à mão. O caminho já degradava certo, então nada mudou no código: mudou o documento, que pedia permissão que o app nem lista.
+- Atualizados `docs/whatsapp-oficial.md` (duas permissões, com a explicação de por que a terceira não aparece e o que ela faria) e AGENTS.md (armadilha).
+
 ## 2026-09-18: O setup descobre a conta de WhatsApp Business (v0.15.2)
 
 - **O operador travou no ID da conta de WhatsApp Business** e disse o essencial: "essa informação não é clara de onde pegar no onboarding". É verdade: o fluxo guiado novo da Meta não mostra o WABA ID em lugar óbvio, e ele se confunde com o ID do app e com o ID do número. Perguntar um dado escondido é errar de propósito.
