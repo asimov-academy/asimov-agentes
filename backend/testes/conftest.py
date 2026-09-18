@@ -166,10 +166,18 @@ class FilaFalsa:
         self.chaves: dict[str, str] = {}
         self.falhar = falhar
 
-    async def set(self, chave: str, valor: str, ex: int | None = None) -> None:
+    async def set(self, chave: str, valor: str, ex: int | None = None, nx: bool = False) -> bool | None:
         if self.falhar:
             raise ConnectionError("redis fora do ar")
+        if nx and chave in self.chaves:
+            return None
         self.chaves[chave] = valor
+        return True
+
+    async def get(self, chave: str) -> str | None:
+        if self.falhar:
+            raise ConnectionError("redis fora do ar")
+        return self.chaves.get(chave)
 
     async def enqueue_job(self, nome: str, *args: Any, **kwargs: Any) -> None:
         self.jobs.append((nome, *args))

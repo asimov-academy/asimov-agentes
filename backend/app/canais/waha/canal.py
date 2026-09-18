@@ -17,6 +17,7 @@ import re
 import secrets
 import uuid
 from typing import Any, Literal
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -99,6 +100,20 @@ def numero_legivel(chat_id: str) -> str:
 
 
 TIPOS_POR_MIME = (("audio/", "audio"), ("image/", "imagem"), ("video/", "video"))
+HOSTS_DA_PROPRIA_MAQUINA = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
+
+
+def _url_do_arquivo(url: str) -> str:
+    """O arquivo mora na WAHA, e é pelo endereço dela na rede do Compose que se chega nele.
+
+    A WAHA anuncia `media.url` com o endereço que ela conhece de si mesma, que por padrão é
+    `localhost`; dentro do contêiner do worker, `localhost` é o próprio worker e a conexão morre.
+    """
+    partes = urlsplit(url)
+    if partes.hostname not in HOSTS_DA_PROPRIA_MAQUINA:
+        return url
+    daqui = urlsplit(api.raiz())
+    return urlunsplit((daqui.scheme, daqui.netloc, partes.path, partes.query, partes.fragment))
 
 
 def _anexos(mensagem: dict[str, Any]) -> tuple[Anexo, ...]:
@@ -118,7 +133,7 @@ def _anexos(mensagem: dict[str, Any]) -> tuple[Anexo, ...]:
     return (
         Anexo(
             tipo=tipo,
-            referencia=url,
+            referencia=_url_do_arquivo(url),
             tipo_mime=mime or None,
             nome=midia.get("filename") if isinstance(midia.get("filename"), str) else None,
         ),
