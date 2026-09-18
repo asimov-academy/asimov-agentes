@@ -12,18 +12,28 @@ Quer testar rápido, sem número próprio e sem verificar empresa? Vá para
 > páginas: é a mesma coisa com nome antigo. Por isso este documento dá o **link direto** sempre que
 > existe um, que é o que não muda de lugar.
 
-O setup pede quatro dados. Cada passo abaixo entrega um deles:
+O setup pede **três dados**, e descobre o resto sozinho:
 
 | Dado | Onde aparece | Passo |
 |---|---|---|
-| ID da conta de WhatsApp Business (WABA ID) | Casos de uso > Personalizar > Etapa 1 ou 2 | [4](#4-conta-de-whatsapp-business-e-número) |
 | ID do app | Configurações do app > Básico | [8](#8-id-do-app-e-chave-secreta) |
-| Token de acesso permanente | Configurações do negócio > Usuários do sistema | [7](#7-usuário-do-sistema-e-token-permanente) |
 | Chave secreta do app | Configurações do app > Básico | [8](#8-id-do-app-e-chave-secreta) |
+| Token de acesso permanente | Configurações do negócio > Usuários do sistema | [7](#7-usuário-do-sistema-e-token-permanente) |
 
-Você **não** precisa colar nenhuma URL de webhook no painel. Quem faz isso é a própria plataforma,
-quando o agente é criado: ela liga os webhooks do app, inscreve a conta e aponta o webhook daquele
-número para o endereço do agente.
+Com esses três, o setup pergunta à própria Meta quais contas de WhatsApp Business o token alcança e
+lista para você escolher, junto com os números e os templates da conta. Se precisar do ID da conta
+à mão, veja [onde fica o ID da conta](#onde-fica-o-id-da-conta-de-whatsapp-business).
+
+## Duas coisas que o painel pede e você pode pular
+
+**O webhook.** A primeira coisa que o fluxo guiado pede é configurar o webhook, com URL de retorno
+e token de verificação. **Pule.** Quem faz isso é a plataforma, quando o agente é criado: ela liga
+os webhooks do app, inscreve a conta e aponta o webhook daquele número para o endereço do agente.
+Configurar à mão ali só atrapalha, porque o endereço do agente ainda não existe.
+
+**O ID da conta de WhatsApp Business.** O painel não diz com clareza onde ele fica, e você não
+precisa dele: o setup descobre. Se quiser conferir, está em
+[onde fica o ID da conta](#onde-fica-o-id-da-conta-de-whatsapp-business).
 
 ## Duas mudanças recentes que valem ler antes
 
@@ -86,8 +96,7 @@ Referência: [primeiros passos da Cloud API](https://developers.facebook.com/doc
 A Meta dá um número de teste e um token de 24 horas para você mandar a primeira mensagem e ver a
 API funcionando. Leva uns 5 minutos e não compromete nada.
 
-Nesta tela já aparece o **ID da conta de WhatsApp Business (WABA ID)**. Anote: é o primeiro dado
-que o setup pede.
+Se o fluxo pedir para configurar o webhook nesta etapa, pule: a plataforma faz isso sozinha.
 
 Se quiser, pare aqui e vá para o [caminho rápido](#caminho-rápido-número-de-teste): dá para criar
 um agente de verdade com o número de teste.
@@ -220,6 +229,24 @@ template do passo 9.
 
 No fim, mande uma mensagem para o número e o agente responde.
 
+## Onde fica o ID da conta de WhatsApp Business
+
+O setup descobre sozinho, mas este é o dado que mais gera dúvida, então fica registrado. Ele tem 15
+ou 16 dígitos e **não** é o ID do app nem o ID do número.
+
+Dois caminhos:
+
+- [Configurações > Contas > Contas do WhatsApp](https://business.facebook.com/settings/whatsapp-business-accounts),
+  no Gerenciador de Negócios: o ID aparece embaixo do nome da conta. Clicando na conta, ele também
+  fica no alto à direita.
+- [WhatsApp Manager](https://business.facebook.com/wa/manage/): na página de contas, embaixo do
+  nome da conta.
+
+Se o setup disser que o token não enxerga nenhuma conta, o problema não é achar o ID: é o token. No
+[passo 7](#7-usuário-do-sistema-e-token-permanente), confira que o usuário do sistema tem a conta de
+WhatsApp Business como ativo e que o token saiu com `whatsapp_business_management` e
+`whatsapp_business_messaging`.
+
 ## Conferir se funcionou
 
 - `asimov agentes` mostra o agente, o canal e o webhook dele.
@@ -245,6 +272,8 @@ dizer que a mensagem chegou.
 | Só alguns números recebem resposta | número de teste com destinatários cadastrados | passo 4, use um número de produção |
 | Não consigo adicionar o número | ele está em uso no app do WhatsApp | apague a conta do WhatsApp naquele número e tente de novo |
 | Não acho "Produtos" no painel | virou **Casos de uso** em 2026 | Casos de uso > Personalizar |
+| Não acho o ID da conta de WhatsApp Business | o painel não mostra isso no fluxo guiado | não precisa: o setup descobre. Se quiser conferir, veja [onde fica](#onde-fica-o-id-da-conta-de-whatsapp-business) |
+| O setup diz que o token não enxerga nenhuma conta | usuário do sistema sem a conta como ativo, ou token sem as permissões de WhatsApp | passo 7 |
 
 ## Caminho rápido: número de teste
 

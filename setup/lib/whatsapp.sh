@@ -40,20 +40,14 @@ aviso_oficial() {
   confirma "Tenho isso em mãos. Continuar?"
 }
 
-# pede_credenciais_whatsapp: pergunta conta, token e segredo e confere na Meta.
-# Define WHATSAPP_CONEXAO (JSON sem o número) e WHATSAPP_ACHADO (números e templates).
+# pede_credenciais_whatsapp: pergunta app, token e chave secreta, descobre as contas de WhatsApp
+# que o token alcança e lista números e templates da escolhida.
+# Define WHATSAPP_CONEXAO (JSON com app_id, token, chave e waba_id) e WHATSAPP_ACHADO.
 pede_credenciais_whatsapp() {
-  local conta app token segredo corpo
+  local app token segredo
   echo
   dica "Passo a passo com links: docs/whatsapp-oficial.md, no repositório."
-  dica "Conta de WhatsApp Business (WABA ID): painel do app, em Casos de uso > Personalizar."
   while true; do
-    pergunta conta "ID da conta de WhatsApp Business" "$(estado_get whatsapp_waba)"
-    conta=$(tr -cd '0-9' <<<"$conta")
-    if [ -z "$conta" ]; then
-      falha "O ID da conta é só números."
-      continue
-    fi
     dica "ID do app: painel do app, em Configurações do app > Básico, no topo."
     pergunta app "ID do app" "$(estado_get whatsapp_app)"
     app=$(tr -cd '0-9' <<<"$app")
@@ -65,20 +59,70 @@ pede_credenciais_whatsapp() {
     pergunta_secreta token "Token de acesso"
     dica "Chave secreta do app: painel do app, em Configurações do app > Básico."
     pergunta_secreta segredo "Chave secreta do app"
-    corpo=$(jq -n --arg c "$conta" --arg a "$app" --arg t "$token" --arg s "$segredo" \
-      '{conexao: {waba_id: $c, app_id: $a, access_token: $t, app_secret: $s}}')
-    api_com_token POST /admin/canais/whatsapp/descobrir "$corpo" "Conferindo na Meta…"
-    if [ "$API_STATUS" = 200 ]; then
-      estado_set whatsapp_waba "$conta"
+    WHATSAPP_CONEXAO=$(jq -n --arg a "$app" --arg t "$token" --arg s "$segredo" \
+      '{app_id: $a, access_token: $t, app_secret: $s}')
+    unset token segredo
+
+    # O ID da conta de WhatsApp Business é o dado mais escondido do painel: em vez de mandar o
+    # operador procurar, pergunta ao próprio token quais contas ele alcança.
+    if ! descobre_whatsapp "Conferindo o token na Meta…"; then
+      falha "$(detalhe_erro "$API_RESPOSTA")"
+      continue
+    fi
+    escolhe_conta_whatsapp || continue
+    if descobre_whatsapp "Lendo a conta na Meta…"; then
       estado_set whatsapp_app "$app"
-      WHATSAPP_CONEXAO=$(jq -c '.conexao' <<<"$corpo")
-      WHATSAPP_ACHADO=$API_RESPOSTA
-      unset token segredo
       return 0
     fi
-    unset token segredo
     falha "$(detalhe_erro "$API_RESPOSTA")"
   done
+}
+
+# descobre_whatsapp "aguarde": chama o descobrir com o que já está em WHATSAPP_CONEXAO.
+# Devolve 1 quando a API recusou; o corpo fica em WHATSAPP_ACHADO.
+descobre_whatsapp() {
+  api_com_token POST /admin/canais/whatsapp/descobrir \
+    "$(jq -n --argjson c "$WHATSAPP_CONEXAO" '{conexao: $c}')" "$1"
+  [ "$API_STATUS" = 200 ] || return 1
+  WHATSAPP_ACHADO=$API_RESPOSTA
+  return 0
+}
+
+# escolhe_conta_whatsapp: põe o `waba_id` em WHATSAPP_CONEXAO, a partir do que o token alcança.
+# Sem nenhuma conta encontrada, pergunta o ID à mão. Devolve 1 para recomeçar as credenciais.
+escolhe_conta_whatsapp() {
+  local contas total op conta linha
+  local -a rotulos=()
+  contas=$(jq -c '.contas // []' <<<"$WHATSAPP_ACHADO")
+  total=$(jq 'length' <<<"$contas")
+  if [ "$total" -eq 0 ]; then
+    echo
+    aviso "Esse token não enxerga nenhuma conta de WhatsApp Business."
+    dica "Confira o passo 7 do docs/whatsapp-oficial.md: o usuário do sistema precisa ter a conta"
+    dica "como ativo, e o token precisa das permissões whatsapp_business_management e messaging."
+    dica "Se preferir, informe o ID da conta à mão: ele fica no Gerenciador de Negócios, em"
+    dica "Configurações > Contas > Contas do WhatsApp, ao lado do nome da conta."
+    echo
+    confirma "Informar o ID da conta à mão?" || return 1
+    pergunta conta "ID da conta de WhatsApp Business" "$(estado_get whatsapp_waba)"
+    conta=$(tr -cd '0-9' <<<"$conta")
+    if [ -z "$conta" ]; then
+      falha "O ID da conta é só números."
+      return 1
+    fi
+  elif [ "$total" -eq 1 ]; then
+    conta=$(jq -r '.[0].waba_id' <<<"$contas")
+    ok "Conta de WhatsApp Business: $(destaque "$(jq -r '.[0].nome // .[0].waba_id' <<<"$contas")")"
+  else
+    while IFS= read -r linha; do rotulos+=("$linha"); done \
+      < <(jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.[] | "\(.nome // .waba_id)  \($cinza)\(.waba_id)\($normal)"' <<<"$contas")
+    echo
+    escolha op "Conta de WhatsApp Business" "${rotulos[@]}"
+    conta=$(jq -r ".[$((op - 1))].waba_id" <<<"$contas")
+  fi
+  estado_set whatsapp_waba "$conta"
+  WHATSAPP_CONEXAO=$(jq -c --arg c "$conta" '. + {waba_id: $c}' <<<"$WHATSAPP_CONEXAO")
+  return 0
 }
 
 # escolhe_numero_whatsapp: põe o `phone_number_id` escolhido em WHATSAPP_CONEXAO.

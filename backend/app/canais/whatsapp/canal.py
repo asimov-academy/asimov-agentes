@@ -200,11 +200,21 @@ class WhatsApp:
         return f"{api.GRAPH}/{dados.get('waba_id') or '?'}"
 
     async def descobrir(self, dados: dict[str, Any]) -> dict[str, Any]:
-        """Com o token e a conta, lista os números e os templates aprovados para o aviso."""
+        """Sem a conta, descobre quais o token alcança. Com a conta, lista números e templates.
+
+        O ID da conta é o dado mais escondido do painel da Meta. Em vez de mandar o operador
+        procurar, o primeiro passo pergunta ao próprio token quais contas ele enxerga.
+        """
         token = str(dados.get("access_token") or "")
+        if not token:
+            raise CredencialInvalida("informe o token de acesso")
         conta = str(dados.get("waba_id") or "")
-        if not token or not conta:
-            raise CredencialInvalida("informe a conta de WhatsApp Business e o token de acesso")
+        if not conta:
+            app_id = str(dados.get("app_id") or "")
+            app_secret = str(dados.get("app_secret") or "")
+            if not app_id or not app_secret:
+                raise CredencialInvalida("informe o ID e a chave secreta do app")
+            return {"contas": await api.contas_do_token(app_id, app_secret, token)}
         numeros = await api.numeros_da_conta(token, conta)
         todos = await api.templates(token, conta)
         return {

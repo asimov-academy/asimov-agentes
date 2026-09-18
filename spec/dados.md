@@ -67,7 +67,7 @@ A empresa atendida pelo operador.
 
 Credenciais por canal:
 
-- WhatsApp oficial: waba_id (conta de WhatsApp Business), phone_number_id, app_id, access_token (permanente), app_secret, numero e nome_verificado (como a Meta mostra, só para o menu). Não há verify_token guardado: a verificação da Meta é respondida pelo próprio `token_webhook` da URL.
+- WhatsApp oficial: waba_id (conta de WhatsApp Business, descoberta pelo token no `descobrir`), phone_number_id, app_id, access_token (permanente), app_secret, numero e nome_verificado (como a Meta mostra, só para o menu). Não há verify_token guardado: a verificação da Meta é respondida pelo próprio `token_webhook` da URL.
 - WAHA: sessao (nome da sessão na WAHA), hmac_key (gerada). Endereço e chave da WAHA são da Instalação (`WAHA_API_KEY` no `.env`).
 - Nativo: nenhuma.
 - Chatwoot: url, account_id, inbox_ids, api_access_token (token do Agent Bot), bot_id, bot_secret. O token do administrador não fica nas credenciais do agente: fica em Acesso ao canal.
