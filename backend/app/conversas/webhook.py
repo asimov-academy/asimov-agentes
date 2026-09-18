@@ -110,7 +110,27 @@ async def receber(
         await registra_falha("webhook_json_invalido", {}, agente.cliente_id, agente.id)
         return _recusa(pune, 400)
 
-    evento = canal_obj.interpretar(payload, credenciais, agente.handoff_destino)
+    # Um webhook pode trazer mais de uma mensagem (a Cloud API junta o que chegou junto). Antes só
+    # a primeira era lida e a segunda sumia, com o envelope confirmado (auditoria de 2026-09-18,
+    # A08). Erro num evento devolve logo: o canal repete o lote e a deduplicação cuida do resto.
+    resposta = Response(status_code=200)
+    for evento in canal_obj.interpretar_todos(payload, credenciais, agente.handoff_destino):
+        resposta = await _processa_evento(request, s, canal, canal_obj, agente, credenciais, evento)
+        if resposta.status_code >= 400:
+            return resposta
+    return resposta
+
+
+async def _processa_evento(
+    request: Request,
+    s: AsyncSession,
+    canal: str,
+    canal_obj: Any,
+    agente: Any,
+    credenciais: dict[str, Any],
+    evento: Evento,
+) -> Response:
+    """Um evento do webhook, do jeito que sempre foi. O lote é quem chama isto mais de uma vez."""
     if evento.acao is Acao.ALERTA:
         from app.canais.waha import vigia
 
@@ -122,6 +142,18 @@ async def receber(
         await registra_falha(
             "canal_fora_do_ar",
             {"canal": canal, "situacao": evento.texto, "motivo": evento.motivo},
+            agente.cliente_id,
+            agente.id,
+        )
+        return Response(status_code=200)
+
+    if evento.acao is Acao.ENTREGA_RECUSADA:
+        # A Cloud API aceita o envio e só depois avisa que não entregou. Sem isto, a recusa sumia
+        # junto com o recibo comum e a conversa ficava sem resposta em silêncio (A07).
+        log.error("entrega_recusada", motivo=evento.motivo, codigo=evento.texto)
+        await registra_falha(
+            "entrega_recusada",
+            {"erro": evento.motivo, "codigo": evento.texto, "mensagem": evento.mensagem_externa},
             agente.cliente_id,
             agente.id,
         )
@@ -197,6 +229,11 @@ async def receber(
         return Response(status_code=500)
 
     if not nova:
+        # Reentrega: o conteúdo já está gravado, mas o agendamento pode ter se perdido (Redis fora
+        # do ar na primeira vez, que respondeu 500 justamente para o canal repetir). Só deduplicar
+        # apagaria o trabalho pendente junto com a mensagem repetida (auditoria de 2026-09-18, A01).
+        if evento.acao is Acao.PROCESSAR:
+            await _reagenda_pendente(request, s, agente, conversa)
         log.info("webhook_reentrega_ignorada")
         return Response(status_code=200)
 
@@ -269,6 +306,29 @@ async def _retoma_por_codigo(s: AsyncSession, agente: Any, codigo: str | None) -
         return Response(status_code=500)
     log.info("webhook_aceito", acao="retomar_por_codigo", motivo="comando do destino", achou=avisado)
     return Response(status_code=200)
+
+
+async def _reagenda_pendente(request: Request, s: AsyncSession, agente: Any, conversa: Any) -> None:
+    """Agenda de novo o turno de uma conversa que ficou com fala do contato sem resposta.
+
+    Só quando não há nada agendado nem rodando. Reentrega comum, com o turno já na fila, não vira
+    segundo job: o canal repete bastante, e o que se quer aqui é o caso em que o agendamento não
+    chegou a existir (Redis fora do ar, que fez o webhook responder 500 de propósito).
+    """
+    fila = getattr(request.app.state, "fila", None)
+    if fila is None:
+        return
+    try:
+        if await buffer.turno_em_andamento(fila, conversa.id):
+            return
+        if await buffer.ja_agendado(fila, conversa.id):
+            return
+        if not await repo.tem_entrada_pendente(s, agente.cliente_id, conversa.id):
+            return
+        await buffer.agenda_turno(fila, agente.cliente_id, conversa.id, agente.buffer_segundos)
+        log.info("webhook_reagendou_pendente", de=conversa.id_externo)
+    except Exception as erro:
+        log.error("webhook_reagendamento_falhou", erro=repr(erro))
 
 
 async def _retoma(

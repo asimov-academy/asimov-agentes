@@ -90,10 +90,48 @@ def _valida_retomada(canal: Any, horas: int | None) -> None:
         )
 
 
+ARQUIVO_DONO = ".cliente"
+
+
+def _pasta_do_cliente(cliente: Cliente) -> Path:
+    """Pasta de prompts do cliente, nunca a de outro que teve o mesmo nome.
+
+    O slug volta a ficar livre quando uma empresa é removida, e os arquivos de prompt ficam no
+    disco de propósito (prompt editado não se apaga sozinho). Sem dono marcado, a empresa nova com
+    o mesmo nome herdava as instruções da antiga (auditoria de 2026-09-18, A05).
+
+    O dono fica em `.cliente`, dentro da pasta. Quando o dono é outro, quem sai é a pasta antiga,
+    que vai para `<slug>-<8 do dono antigo>`: a empresa viva fica sempre em `<slug>/<agente>`,
+    porque esse caminho também é a URL pública da política de privacidade. Pasta anterior a esta
+    regra não tem o arquivo e é adotada por quem a estiver usando: instalação no ar não muda.
+    """
+    pasta = config().diretorio_prompts / cliente.slug
+    marca = pasta / ARQUIVO_DONO
+    if not pasta.exists():
+        pasta.mkdir(parents=True, exist_ok=True)
+        marca.write_text(str(cliente.id), encoding="utf-8")
+        return pasta
+    dono = marca.read_text(encoding="utf-8").strip() if marca.exists() else ""
+    if dono in ("", str(cliente.id)):
+        marca.write_text(str(cliente.id), encoding="utf-8")
+        return pasta
+
+    guardada = config().diretorio_prompts / f"{cliente.slug}-{dono[:8]}"
+    sufixo = 2
+    while guardada.exists():
+        guardada = config().diretorio_prompts / f"{cliente.slug}-{dono[:8]}-{sufixo}"
+        sufixo += 1
+    pasta.rename(guardada)
+    log.info("prompts_da_empresa_anterior_guardados", pasta=guardada.name)
+    pasta.mkdir(parents=True, exist_ok=True)
+    marca.write_text(str(cliente.id), encoding="utf-8")
+    return pasta
+
+
 def _cria_prompts(cliente: Cliente, nome_agente: str, slug_agente: str) -> tuple[str, str]:
     """Copia os prompts padrão para a pasta do agente. Nunca sobrescreve um prompt editado."""
     cfg = config()
-    relativa = Path(cliente.slug) / slug_agente
+    relativa = Path(_pasta_do_cliente(cliente).name) / slug_agente
     pasta = cfg.diretorio_prompts / relativa
     pasta.mkdir(parents=True, exist_ok=True)
     for arquivo in (ARQUIVO_PERSONA, ARQUIVO_RESUMO):

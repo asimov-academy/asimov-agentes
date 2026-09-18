@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
@@ -146,6 +146,32 @@ async def muda_status(
     )
 
 
+async def tem_entrada_pendente(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID
+) -> bool:
+    """Fala do contato que nenhum turno respondeu ainda.
+
+    Serve para a reentrega do canal recuperar um agendamento perdido: a mensagem está gravada, a
+    deduplicação diz que não é nova, e sem isto ela ficaria sem turno para sempre (auditoria de
+    2026-09-18, A01).
+    """
+    respondido = (
+        select(Conversa.respondido_ate).where(Conversa.id == conversa_id).scalar_subquery()
+    )
+    achou = await sessao.scalar(
+        select(Mensagem.id)
+        .where(
+            Mensagem.cliente_id == cliente_id,
+            Mensagem.conversa_id == conversa_id,
+            Mensagem.direcao == "entrada",
+            Mensagem.autor == "contato",
+            or_(respondido.is_(None), Mensagem.criado_em > respondido),
+        )
+        .limit(1)
+    )
+    return achou is not None
+
+
 async def ultimas_mensagens(
     sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID, limite: int = 40
 ) -> list[Mensagem]:
@@ -156,6 +182,63 @@ async def ultimas_mensagens(
         .limit(limite)
     )
     return list(reversed(list(resultado)))
+
+
+async def mensagens_do_turno(
+    sessao: AsyncSession,
+    cliente_id: uuid.UUID,
+    conversa_id: uuid.UUID,
+    respondido_ate: datetime | None,
+    historico: int = 40,
+    teto_pendentes: int = 200,
+) -> tuple[list[Mensagem], bool]:
+    """Histórico recente mais tudo o que chegou depois da última resposta.
+
+    O limite do histórico é de contexto, e cortava junto as falas ainda não respondidas: numa
+    rajada de mais de 40 mensagens o agente deixava de ver as primeiras e o marcador passava por
+    cima delas (auditoria de 2026-09-18, A09). O segundo valor diz se a rajada passou do teto.
+    """
+    if respondido_ate is None:
+        # Conversa que nenhum turno respondeu ainda: tudo o que está lá é pendente, e o limite de
+        # histórico cortaria as primeiras falas justamente na rajada que criou a conversa.
+        tudo = await ultimas_mensagens(sessao, cliente_id, conversa_id, teto_pendentes + 1)
+        return tudo[-teto_pendentes:], len(tudo) > teto_pendentes
+
+    depois = list(
+        reversed(
+            list(
+                await sessao.scalars(
+                    select(Mensagem)
+                    .where(
+                        Mensagem.cliente_id == cliente_id,
+                        Mensagem.conversa_id == conversa_id,
+                        Mensagem.criado_em > respondido_ate,
+                    )
+                    .order_by(Mensagem.criado_em.desc())
+                    .limit(teto_pendentes + 1)
+                )
+            )
+        )
+    )
+    excedeu = len(depois) > teto_pendentes
+    depois = depois[-teto_pendentes:]
+    antes = list(
+        reversed(
+            list(
+                await sessao.scalars(
+                    select(Mensagem)
+                    .where(
+                        Mensagem.cliente_id == cliente_id,
+                        Mensagem.conversa_id == conversa_id,
+                        Mensagem.criado_em <= respondido_ate,
+                    )
+                    .order_by(Mensagem.criado_em.desc())
+                    .limit(historico)
+                )
+            )
+        )
+    )
+    return antes + depois, excedeu
 
 
 async def registra_leitura_de_midia(
