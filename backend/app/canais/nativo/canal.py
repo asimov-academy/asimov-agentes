@@ -44,6 +44,10 @@ class Nativo:
     async def renomear(self, dados: dict[str, Any], credenciais: dict[str, Any], nome: str) -> None:
         return None
 
+    def responde_verificacao(self, parametros: dict[str, str], token: str) -> str | None:
+        """Este canal não confere o endereço do webhook por GET."""
+        return None
+
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool:
         """Sem webhook: qualquer chamada em /webhook/nativo é recusada."""
         return False
@@ -58,7 +62,13 @@ class Nativo:
     ) -> bool:
         return not await memoria.humano_conduz(conversa_externa)
 
-    async def digitando(self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool) -> None:
+    async def digitando(
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        ligado: bool,
+        ultima_mensagem: str | None = None,
+    ) -> None:
         await memoria.muda_digitando(conversa_externa, ligado)
 
     async def enviar_texto(self, credenciais: dict[str, Any], conversa_externa: str, texto: str) -> str:

@@ -69,6 +69,7 @@ Fale com o operador em português, curto e direto.
 - Terminal no navegador da Hostinger manda Enter como `\r\n`: toda leitura com terminal começa por `descarta_pendentes`, senão o Enter sobra e responde a pergunta seguinte.
 - Ação do menu roda em `com_voltar` (subshell, para o Esc voltar): variável alterada lá dentro some, a não ser que saia por `devolve`.
 - WAHA: o contêiner tem perfil no Compose e só sobe no primeiro agente WhatsApp (`WAHA_ATIVA=1` no `.env`, lido pelo `dc`). A `WAHA_API_KEY` nasce na instalação: gerá-la depois obrigaria a reiniciar a API. A imagem é atualizada por timer do systemd no host (`deploy/atualiza_waha.sh`), nunca pelo worker: contêiner com socket do Docker é a VPS inteira.
+- WhatsApp oficial: cada agente aponta o webhook no próprio número (`webhook_configuration`), e a Meta confere o endereço na hora, antes de o agente existir no banco. Por isso o `GET` de verificação responde pelo token da URL, sem olhar o banco.
 - Extrair atualização como root devolve `prompts/` ao root; a API roda como uid 1000. `ajusta_permissoes` roda sempre.
 - DNS: um resolvedor público pode guardar "não existe" por muito tempo; a checagem pergunta aos servidores oficiais do domínio.
 - Chatwoot: conversa Aberta é humano conduzindo, o agente fica calado; só Pendente gera turno.

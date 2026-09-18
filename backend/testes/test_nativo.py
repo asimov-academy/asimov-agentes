@@ -87,9 +87,9 @@ async def test_conversa_no_terminal_responde_com_digitando_e_registra_consumo(ht
     digitando: list[bool] = []
     original = turno._digitando
 
-    async def espia(canal, credenciais, conversa, ligado):  # type: ignore[no-untyped-def]
+    async def espia(canal, credenciais, conversa, ligado, ultima=None):  # type: ignore[no-untyped-def]
         digitando.append(ligado)
-        await original(canal, credenciais, conversa, ligado)
+        await original(canal, credenciais, conversa, ligado, ultima)
 
     monkeypatch.setattr(turno, "_digitando", espia)
 

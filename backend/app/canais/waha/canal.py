@@ -34,7 +34,7 @@ from app.canais.base import (
 )
 from app.canais.waha import api
 from app.canais.waha.assinatura import assinatura_confere
-from app.plataforma.textos import mesmo_telefone, slug
+from app.plataforma.textos import mesmo_telefone, slug, telefone_legivel
 
 COMANDO_RETOMAR = re.compile(r"^\s*/retomar(?:\s+([A-Za-z0-9]{4,12}))?\s*$", re.IGNORECASE)
 """O código é opcional: na conversa do contato ela já está identificada, e no chat de quem recebeu
@@ -116,10 +116,7 @@ def numero_legivel(chat_id: str) -> str:
     digitos = chat_id.split("@")[0]
     if not digitos.isdigit():
         return chat_id
-    if len(digitos) in (12, 13) and digitos.startswith("55"):
-        ddd, resto = digitos[2:4], digitos[4:]
-        return f"+55 {ddd} {resto[:-4]}-{resto[-4:]}"
-    return f"+{digitos}"
+    return telefone_legivel(digitos)
 
 
 TIPOS_POR_MIME = (("audio/", "audio"), ("image/", "imagem"), ("video/", "video"))
@@ -283,6 +280,10 @@ class Waha:
 
     # ── Webhook ────────────────────────────────────────────────────────────
 
+    def responde_verificacao(self, parametros: dict[str, str], token: str) -> str | None:
+        """Este canal não confere o endereço do webhook por GET."""
+        return None
+
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool:
         return assinatura_confere(
             credenciais.get("hmac_key", ""),
@@ -410,7 +411,11 @@ class Waha:
         return status != "humano"
 
     async def digitando(
-        self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        ligado: bool,
+        ultima_mensagem: str | None = None,
     ) -> None:
         if ligado:
             await api.marca_lida(credenciais["sessao"], conversa_externa)

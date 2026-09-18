@@ -11,6 +11,7 @@ from sqlalchemy import text
 from app.agentes.rotas import router as agentes
 from app.canais.nativo.rotas import router as terminal
 from app.canais.waha.rotas import router as waha
+from app.canais.whatsapp.rotas import router as whatsapp
 from app.clientes.rotas import router as clientes
 from app.consumo.rotas import router as consumo
 from app.conversas.webhook import router as webhook
@@ -47,6 +48,7 @@ app.include_router(consumo)
 app.include_router(handoff)
 app.include_router(terminal)
 app.include_router(waha)
+app.include_router(whatsapp)
 app.include_router(webhook)
 
 

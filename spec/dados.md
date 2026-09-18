@@ -60,15 +60,14 @@ A empresa atendida pelo operador.
 | digitacao_maximo_segundos | inteiro, 1 a 30; teto do digitando por mensagem | sim, padrão 20 |
 | ferramentas | lista de nomes do catálogo (`calculadora`, `busca_web`) | sim; o agente novo nasce só com as marcadas na criação (vazia sem escolha, desde a v0.8.11) |
 | contatos_permitidos | telefones que o agente atende, só dígitos; lista vazia (o normal) atende qualquer pessoa. Serve para testar um número novo sem responder a quem escrever para ele | sim, `[]` |
-| handoff_destino | estruturado por canal: na WAHA `{tipo: numero ou grupo, chat_id, telefone, nome}` (o número é normalizado para `<dígitos>@c.us`); no nativo, vazio; no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
-| handoff_template | nome do template aprovado na Meta para o aviso de handoff | sim no canal WhatsApp; vazio nos outros |
+| handoff_destino | estruturado por canal: no WhatsApp oficial `{tipo: numero, telefone, template: {nome, idioma}}` (o template leva o aviso fora da janela de 24 horas); na WAHA `{tipo: numero ou grupo, chat_id, telefone, nome}` (o número é normalizado para `<dígitos>@c.us`); no nativo, vazio; no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
 | retomada_automatica_horas | inteiro | não; padrão 4 no WhatsApp direto (assumido); vazio no Chatwoot (retomada é devolver a conversa para pendente) |
 | ativo | booleano | sim |
 | criado_em, atualizado_em, removido_em | data e hora | criado e atualizado sim |
 
 Credenciais por canal:
 
-- WhatsApp oficial: phone_number_id, business_account_id, access_token, app_secret, verify_token.
+- WhatsApp oficial: waba_id (conta de WhatsApp Business), phone_number_id, access_token (permanente), app_secret, numero e nome_verificado (como a Meta mostra, só para o menu). Não há verify_token guardado: a verificação da Meta é respondida pelo próprio `token_webhook` da URL.
 - WAHA: sessao (nome da sessão na WAHA), hmac_key (gerada). Endereço e chave da WAHA são da Instalação (`WAHA_API_KEY` no `.env`).
 - Nativo: nenhuma.
 - Chatwoot: url, account_id, inbox_ids, api_access_token (token do Agent Bot), bot_id, bot_secret. O token do administrador não fica nas credenciais do agente: fica em Acesso ao canal.

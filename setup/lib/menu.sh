@@ -15,7 +15,7 @@ mostra_agente() {
   campo "Áudio" "$(jq -r '.modelo_transcricao' <<<"$AGENTE")"
   case "$(jq -r '.canal' <<<"$AGENTE")" in
     nativo) campo "Handoff" "aparece na conversa do terminal" ;;
-    waha)
+    waha | whatsapp)
       campo "Handoff" "$(nome_do_destino "$(jq -c '.handoff_destino' <<<"$AGENTE")")$(jq -r '
         if .retomada_automatica_horas then "; volta com 👍 ou em \(.retomada_automatica_horas) h"
         else "; volta com 👍 ou /retomar" end' <<<"$AGENTE")"
@@ -104,6 +104,10 @@ fluxo_editar_agente() {
         rotulos+=("WhatsApp")
         acoes+=(edita_waha)
         ;;
+      whatsapp)
+        rotulos+=("WhatsApp")
+        acoes+=(edita_whatsapp)
+        ;;
       *)
         rotulos+=("Handoff")
         acoes+=(edita_handoff)
@@ -179,12 +183,13 @@ conecta_canal() {
   echo
   escolha op "Canal" \
     "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
-    "WhatsApp  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}"
-  if [ "$op" = 1 ]; then
-    conecta_chatwoot "$nome"
-  else
-    conecta_waha "$nome"
-  fi
+    "WhatsApp oficial  ${CINZA}Cloud API da Meta: número homologado, cobrado por conversa${NORMAL}" \
+    "WhatsApp pela WAHA  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}"
+  case "$op" in
+    1) conecta_chatwoot "$nome" ;;
+    2) conecta_whatsapp "$nome" ;;
+    *) conecta_waha "$nome" ;;
+  esac
   devolve AGENTE RESULTADO
 }
 
@@ -277,6 +282,12 @@ fluxo_remover_agente() {
       dica "O bot sai do Chatwoot. Conversas e consumo ficam guardados; o prompt fica em prompts/ e"
       aguarde="Removendo e apagando o bot no Chatwoot…"
       ;;
+    whatsapp)
+      aviso "$(destaque "$nome") para de responder na hora e o webhook deixa de valer."
+      dica "O número continua na Meta, com os webhooks de volta para a URL do app. Conversas e"
+      dica "consumo ficam guardados; o prompt fica em prompts/ e"
+      aguarde="Removendo e devolvendo o webhook na Meta…"
+      ;;
     waha)
       aviso "$(destaque "$nome") para de responder na hora e o número é desconectado."
       dica "O aparelho sai da lista de aparelhos conectados do WhatsApp. Conversas e consumo ficam"
@@ -311,6 +322,8 @@ fluxo_remover_agente() {
   if [ "$(jq -r '.canal_desconectado' <<<"$API_RESPOSTA")" != true ]; then
     if [ "$canal" = waha ]; then
       aviso "O número continua conectado: tire o aparelho no WhatsApp, em Aparelhos conectados."
+    elif [ "$canal" = whatsapp ]; then
+      aviso "O webhook do número continua apontado para cá: tire o override no painel da Meta."
     else
       aviso "O bot continua no Chatwoot: tire ele da caixa de entrada nas configurações de bot da caixa."
     fi
