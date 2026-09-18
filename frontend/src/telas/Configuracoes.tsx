@@ -20,6 +20,17 @@ function data(iso: string | null): string {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+function Linha({ rotulo, valor, tecnico }: { rotulo: string; valor: string; tecnico?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="rotulo">{rotulo}</dt>
+      <dd className={`mt-1 truncate text-sm text-texto ${tecnico ? "tecnico" : ""}`} title={valor}>
+        {valor}
+      </dd>
+    </div>
+  );
+}
+
 export function Configuracoes({ eu }: { eu: Eu | null }) {
   const [modelos, setModelos] = useState<Modelos | null>(null);
   const [erro, setErro] = useState("");
@@ -39,56 +50,34 @@ export function Configuracoes({ eu }: { eu: Eu | null }) {
     <>
       <Cabecalho titulo="Configurações" contexto="Da instalação inteira, não de um agente." />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <Cartao titulo="Conta">
-          <dl className="flex flex-col gap-3 text-sm">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-muted">Operador</dt>
-              <dd className="text-texto">único desta instalação</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-muted">Acesso criado em</dt>
-              <dd className="tecnico text-texto">{data(eu?.operador.criado_em ?? null)}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-muted">Último acesso</dt>
-              <dd className="tecnico text-texto">{data(eu?.operador.ultimo_acesso_em ?? null)}</dd>
-            </div>
-          </dl>
-          <p className="text-sm text-dim">
-            Para trocar a senha, rode <span className="tecnico text-muted">asimov painel</span> na VPS
-            e crie um acesso novo.
-          </p>
-          <form method="post" action="/painel/sair">
-            <Botao type="submit" pequeno icone="sys-logout">
-              Sair do painel
-            </Botao>
-          </form>
-        </Cartao>
+      {/* Um cartão, não dois: eram duas metades com quatro linhas cada, e a da direita ficava com
+          metade vazia. Saíram também as duas linhas que não diziam nada, "Operador: único desta
+          instalação" e um "último acesso" que, com uma conta só, ou é "nunca" ou é "agora". */}
 
+      <div className="mt-6">
         <Cartao titulo="Instalação">
-          <dl className="flex flex-col gap-3 text-sm">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="shrink-0 text-muted">Painel</dt>
-              <dd className="tecnico truncate text-texto">{eu?.instalacao.subdominio_app || "não publicado"}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="shrink-0 text-muted">Agentes</dt>
-              <dd className="tecnico truncate text-texto">{eu?.instalacao.subdominio_bot ?? "…"}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-muted">Empresas</dt>
-              <dd className="text-texto">{eu?.empresas ?? 0}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-muted">Agentes criados</dt>
-              <dd className="text-texto">{eu?.agentes ?? 0}</dd>
-            </div>
+          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Linha rotulo="Painel" valor={eu?.instalacao.subdominio_app || "não publicado"} tecnico />
+            <Linha rotulo="Agentes em" valor={eu?.instalacao.subdominio_bot ?? "…"} tecnico />
+            <Linha rotulo="Empresas" valor={String(eu?.empresas ?? 0)} />
+            <Linha rotulo="Agentes criados" valor={String(eu?.agentes ?? 0)} />
           </dl>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-borda pt-4">
+            <p className="text-sm text-dim">
+              Acesso criado em {data(eu?.operador.criado_em ?? null)}. Para trocar a senha, rode{" "}
+              <span className="tecnico text-muted">asimov painel</span> na VPS.
+            </p>
+            <form method="post" action="/painel/sair">
+              <Botao type="submit" pequeno icone="sys-logout">
+                Sair do painel
+              </Botao>
+            </form>
+          </div>
         </Cartao>
       </div>
 
-      <section className="mt-6">
+      <section className="mt-4">
         <Cartao titulo="Chaves de IA">
           <p className="max-w-[70ch] text-sm text-muted">
             Uma chave por provedor, guardada cifrada no servidor e usada por todo agente que escolher

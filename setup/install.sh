@@ -9,7 +9,7 @@
 # Se o projeto já existe, só roda o setup (retomada ou resumo).
 set -euo pipefail
 
-VERSAO="${ASIMOV_VERSAO:-v0.21.2}"
+VERSAO="${ASIMOV_VERSAO:-v0.21.3}"
 PACOTE="${ASIMOV_PACOTE:-https://codeload.github.com/asimov-academy/asimov-agentes/tar.gz/$VERSAO}"
 SHA256="${ASIMOV_SHA256:-}"
 DESTINO="${ASIMOV_DIR:-$HOME/asimov-agentes}"

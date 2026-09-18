@@ -115,8 +115,15 @@ export function Casca({
         </div>
 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          {GRUPOS.map((grupo) => (
-            <div key={grupo.titulo} className="mb-5 last:mb-0">
+          {GRUPOS.map((grupo, i) => (
+            <div
+              key={grupo.titulo}
+              className={
+                recolhido
+                  ? `${i > 0 ? "mt-2 border-t border-borda pt-2" : ""}`
+                  : "mb-5 last:mb-0"
+              }
+            >
               {!recolhido && <p className="rotulo mb-1.5 px-3">{grupo.titulo}</p>}
               <ul className="flex flex-col gap-0.5">
                 {grupo.itens.map((item) => (
@@ -188,14 +195,24 @@ export function Casca({
             title={recolhido ? "Perfil e configurações" : undefined}
             aria-label={recolhido ? "Perfil e configurações" : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md px-2 py-2 transition-colors ${
-                recolhido ? "justify-center" : ""
-              } ${isActive ? "bg-ciano/10 text-ciano" : "text-muted hover:bg-surface hover:text-texto"}`
+              recolhido
+                ? `mx-auto flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                    isActive
+                      ? "border-ciano/40 bg-ciano/10 text-ciano"
+                      : "border-borda text-muted hover:text-texto"
+                  }`
+                : `flex items-center gap-3 rounded-md px-2 py-2 transition-colors ${
+                    isActive ? "bg-ciano/10 text-ciano" : "text-muted hover:bg-surface hover:text-texto"
+                  }`
             }
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-borda">
+            {recolhido ? (
               <Icone nome="nav-user" tamanho={16} />
-            </span>
+            ) : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-borda">
+                <Icone nome="nav-user" tamanho={16} />
+              </span>
+            )}
             {!recolhido && (
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">Operador</span>
