@@ -12,7 +12,7 @@ import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
 import { Carregando } from "../design/Carregando";
-import { Icone } from "../design/Icone";
+import { Dica } from "../design/Dica";
 import { Marca } from "../design/Marca";
 import { Modal } from "../design/Modal";
 import { Vazio } from "../design/Vazio";
@@ -137,20 +137,19 @@ export function Canais({
                   className="flex flex-col gap-2 rounded-lg border border-borda bg-surface p-4"
                 >
                   <span className="flex items-start gap-2.5">
-                    {texto && <Marca nome={texto.marca} tamanho={18} className="mt-0.5 text-muted" />}
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-borda text-muted">
+                      {texto && <Marca nome={texto.marca} tamanho={18} />}
+                    </span>
                     <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-texto">
                       {ROTULO_DO_CANAL(c.nome)}
                     </span>
+                    {/* O aviso é só o ícone, e o texto abre no hover e no foco: aberto, ele ocupava
+                        mais linha que a descrição do canal. */}
+                    {texto?.atencao && <Dica texto={texto.atencao} />}
                   </span>
 
                   <p className="text-sm leading-snug text-muted">{texto?.serve}</p>
-                  <p className="text-xs leading-snug text-dim">Precisa de {texto?.exige ?? "nada"}.</p>
-                  {texto?.atencao && (
-                    <p className="flex items-start gap-1.5 text-xs leading-snug text-atencao">
-                      <Icone nome="stat-warning" tamanho={14} className="mt-px" />
-                      {texto.atencao}
-                    </p>
-                  )}
+                  <p className="text-xs leading-snug text-dim">Precisa: {texto?.exige ?? "nada"}</p>
 
                   <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
                     <span className="text-xs text-dim">
