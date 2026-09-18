@@ -122,3 +122,5 @@ com_voltar edita_whatsapp
 jq -c . "$DIR/patch_whatsapp"
 # Refazer o webhook na Meta, quando alguém mexeu na configuração pelo painel.
 com_voltar edita_whatsapp
+# Diagnóstico: o que está no ar e em que versão (curl é falso aqui, então cai no ramo de falha).
+com_voltar fluxo_diagnostico

@@ -173,6 +173,51 @@ edita_modelo() {
   salva_agente "$CORPO_MODELO"
 }
 
+# fluxo_diagnostico: o que está no ar e em que versão. Sai no `asimov diagnostico`.
+# Nasceu de a página pública responder 404 com o arquivo certo no disco: o Caddy estava com a
+# configuração antiga em memória, e não havia como ver isso sem entrar nos contêineres.
+fluxo_diagnostico() {
+  local sub codigo
+  sub=$(env_get SUBDOMINIO_BOT)
+  secao "Diagnóstico"
+  campo "Versão do código" "$VERSAO"
+  campo "Versão instalada" "$(estado_get versao)"
+  campo "Pasta" "$RAIZ_PROJETO"
+  echo
+  confere_endereco "API, por dentro" "http://127.0.0.1:8000/health"
+  confere_endereco "API, pelo domínio" "https://$sub/health"
+  confere_endereco "Política de privacidade" "https://$sub/privacidade"
+  confere_endereco "Ícone do app" "https://$sub/icone-app.png"
+  if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
+    confere_endereco "WAHA, por dentro" "http://127.0.0.1:8000/admin/canais/waha" --com-chave
+  fi
+  echo
+  if [ "$(estado_get versao)" != "$VERSAO" ]; then
+    aviso "A versão instalada não é a do código. Rode: asimov atualizar"
+  fi
+  dica "Caminho público que responde 404 com o arquivo certo no disco é o servidor web com a"
+  dica "configuração antiga em memória. Recarregue com:"
+  dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc restart caddy"
+  dica "Log da API:"
+  dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc logs -n 50 api"
+}
+
+# confere_endereco "rótulo" URL [--com-chave]: mostra o código HTTP de um endereço.
+confere_endereco() {
+  local rotulo=$1 url=$2 chave=${3:-} codigo
+  if [ -n "$chave" ]; then
+    codigo=$(printf 'X-Admin-Key: %s\n' "$(env_get CHAVE_API_ADMIN)" |
+      curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H @- "$url" || true)
+  else
+    codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" || true)
+  fi
+  if [ "$codigo" = 200 ]; then
+    campo "$rotulo" "$(printf '%s✓ %s%s' "$VERDE" "$codigo" "$NORMAL")"
+  else
+    campo "$rotulo" "$(printf '%s✗ %s%s  %s%s%s' "$VERMELHO" "$codigo" "$NORMAL" "$CINZA" "$url" "$NORMAL")"
+  fi
+}
+
 # conecta_canal: liga o AGENTE nativo num canal externo. Prompt, modelos, ferramentas e conversas ficam.
 conecta_canal() {
   local nome op
@@ -442,8 +487,8 @@ menu_operador() {
       rotulos+=("WhatsApp (WAHA)")
       acoes+=("com_pausa fluxo_waha")
     fi
-    rotulos+=("Token do Chatwoot" "Sair")
-    acoes+=("com_pausa fluxo_token_chatwoot")
+    rotulos+=("Token do Chatwoot" "Diagnóstico" "Sair")
+    acoes+=("com_pausa fluxo_token_chatwoot" "com_pausa fluxo_diagnostico")
     ESC_ESCOLHE=${#rotulos[@]} escolha op "O que fazer?" "${rotulos[@]}"
     [ "$op" -lt "${#rotulos[@]}" ] || return 0
     # shellcheck disable=SC2086  # a ação pode vir com `com_pausa` na frente

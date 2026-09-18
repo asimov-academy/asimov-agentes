@@ -2,7 +2,10 @@
 """Gera o ícone quadrado do app da Meta: um A claro sobre fundo escuro.
 
 Sem dependência: a borda suave sai da distância de cada pixel aos traços do A, e o PNG é escrito
-com o zlib da biblioteca padrão. Rode com `python3 docs/imagens/gerar_icone.py`.
+com o zlib da biblioteca padrão. Rode com `python3 modelos/gerar_icone.py`.
+
+O arquivo gerado fica ao lado, em `modelos/icone-app.png`, que a API serve em `/icone-app.png`:
+assim o operador baixa pelo navegador e sobe no app da Meta, sem `scp`.
 """
 
 import struct

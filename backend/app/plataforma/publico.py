@@ -8,12 +8,15 @@ devolve HTML. O operador edita o arquivo e a página muda.
 Três endereços, porque na Meta existe um app por número: `/privacidade` para a instalação,
 `/privacidade/{empresa}` para o cliente e `/privacidade/{empresa}/{agente}` para um agente dele.
 Não existe listagem: quem não sabe o slug não descobre quem são os clientes da instalação.
+
+`/icone-app.png` serve o ícone quadrado que o app da Meta também exige, para o operador baixar pelo
+navegador em vez de tirar o arquivo da VPS com `scp`.
 """
 
 from datetime import date
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 
@@ -37,6 +40,13 @@ def _por_extenso(dia: date) -> str:
 def pagina(empresa: str, agente: str = "") -> str:
     cfg = config()
     arquivo = cfg.diretorio_modelos / "privacidade.html"
+    if not arquivo.is_file():
+        # Acontece quando a atualização não trouxe `modelos/`: melhor dizer o que falta do que
+        # devolver um erro interno sem explicação.
+        raise HTTPException(
+            status_code=503,
+            detail=f"{arquivo} não encontrado: atualize a instalação (asimov atualizar)",
+        )
     contato = (
         f"Escreva para {cfg.email_ssl}."
         if cfg.email_ssl
@@ -79,3 +89,15 @@ async def privacidade_do_agente(
     if achado is None:
         raise HTTPException(status_code=404, detail="agente não encontrado")
     return HTMLResponse(pagina(cliente.nome, achado.nome))
+
+
+@router.get("/icone-app.png", response_class=FileResponse)
+async def icone_do_app() -> FileResponse:
+    """Ícone quadrado para o app da Meta. Trocar `modelos/icone-app.png` troca o que sai aqui."""
+    arquivo = config().diretorio_modelos / "icone-app.png"
+    if not arquivo.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail=f"{arquivo} não encontrado: atualize a instalação (asimov atualizar)",
+        )
+    return FileResponse(arquivo, media_type="image/png", filename="icone-app.png")

@@ -43,13 +43,37 @@ aviso_oficial() {
 # dados_para_publicar_o_app: o que a Meta pede para o app sair do modo de desenvolvimento.
 # A página de privacidade é servida por esta instalação, no domínio dela.
 dados_para_publicar_o_app() {
+  local sub
+  sub=$(env_get SUBDOMINIO_BOT)
   echo
-  info "Para publicar o app (sair do modo de desenvolvimento), a Meta pede dois dados:"
-  dica "Política de privacidade: esta instalação serve uma por agente, e o endereço aparece no fim"
-  dica "  desta tela e em Editar agente. A da instalação é https://$(env_get SUBDOMINIO_BOT)/privacidade"
+  info "Para publicar o app (sair do modo de desenvolvimento), a Meta pede dois dados. Os dois"
+  info "estão no ar nesta instalação, para você abrir no navegador:"
+  echo
+  printf '    %s%s%s\n' "$NEGRITO" "https://$sub/privacidade" "$NORMAL"
+  dica "  Por agente, que é a que o app do número quer, aparece no fim desta tela e em Editar agente."
   dica "  O texto fica em modelos/privacidade.html, para você ajustar ao seu caso."
-  dica "Ícone quadrado do app: docs/imagens/icone-app.png, aqui no projeto."
+  printf '    %s%s%s\n' "$NEGRITO" "https://$sub/icone-app.png" "$NORMAL"
+  dica "  Abra e salve a imagem. Para trocar: modelos/icone-app.png, ou python3 modelos/gerar_icone.py."
+  # Confere de fora, pelo domínio: é assim que a Meta vai abrir. Caminho público novo já respondeu
+  # 404 por o Caddy estar com a configuração antiga em memória, e ninguém viu até tentar.
+  if ! confere_publico "https://$sub/privacidade" && ! confere_publico "https://$sub/icone-app.png"; then
+    echo
+    aviso "Os dois endereços não responderam. A Meta vai recusar a URL assim."
+    dica "Recarregue o servidor web e tente de novo:"
+    dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc restart caddy"
+    dica "Se continuar: asimov diagnostico"
+  fi
   echo
+}
+
+# confere_publico URL: 0 quando o endereço responde 200 de fora. Avisa quando não.
+confere_publico() {
+  local url=$1 codigo
+  codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" || true)
+  [ "$codigo" = 200 ] && return 0
+  echo
+  aviso "$url não respondeu ($codigo)."
+  return 1
 }
 
 # pede_credenciais_whatsapp: pergunta app, token e chave secreta, descobre as contas de WhatsApp
