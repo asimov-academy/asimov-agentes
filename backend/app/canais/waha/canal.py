@@ -34,7 +34,7 @@ from app.canais.base import (
 )
 from app.canais.waha import api
 from app.canais.waha.assinatura import assinatura_confere
-from app.plataforma.textos import slug
+from app.plataforma.textos import mesmo_telefone, slug
 
 COMANDO_RETOMAR = re.compile(r"^\s*/retomar\s+([A-Za-z0-9]{4,12})\s*$", re.IGNORECASE)
 SUFIXOS_DE_PESSOA = ("@c.us", "@lid", "@s.whatsapp.net")
@@ -88,8 +88,29 @@ def _texto_do_destino(destino: dict[str, Any] | None) -> str | None:
     return chat_id if isinstance(chat_id, str) and chat_id else None
 
 
+def e_o_destino(mensagem: dict[str, Any], chat: str, destino: dict[str, Any] | None) -> bool:
+    """Quem recebeu o handoff pode escrever do id da conversa ou de trás de um `@lid`.
+
+    O id guardado no destino é o que o WhatsApp devolveu quando o operador cadastrou o número, e
+    nem sempre é o mesmo pelo qual a pessoa escreve. O telefone resolvido desempata.
+    """
+    if destino is None:
+        return False
+    if chat == _texto_do_destino(destino):
+        return True
+    telefone = destino.get("telefone")
+    de = telefone_do_contato(mensagem)
+    return bool(telefone and de and mesmo_telefone(str(telefone), de))
+
+
 def numero_legivel(chat_id: str) -> str:
-    """`5511988887777@c.us` vira `+55 11 98888-7777`. O que não for número volta como veio."""
+    """`5511988887777@c.us` vira `+55 11 98888-7777`. O que não for número volta como veio.
+
+    `@lid` nunca vira telefone: são dígitos, mas não são o número de ninguém, e mostrar isso como
+    telefone num aviso de handoff faz a pessoa ligar para um número que não existe.
+    """
+    if chat_id.endswith("@lid"):
+        return "o contato"
     digitos = chat_id.split("@")[0]
     if not digitos.isdigit():
         return chat_id
@@ -295,9 +316,8 @@ class Waha:
             return self._saiu_do_numero(mensagem, chat)
 
         texto = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
-        chat_do_destino = _texto_do_destino(destino)
         comando = COMANDO_RETOMAR.match(texto or "")
-        if chat == chat_do_destino and comando:
+        if comando and e_o_destino(mensagem, chat, destino):
             return Evento(
                 Acao.RETOMAR_POR_CODIGO,
                 "quem recebeu o handoff mandou /retomar",
@@ -395,13 +415,14 @@ class Waha:
         destino: dict[str, Any] | None,
         nota: str,
         codigo: str = "",
+        contato: str = "",
     ) -> list[str]:
         """Avisa o número ou grupo do handoff. A pausa é o status da conversa, gravado por quem chama."""
         chat = _texto_do_destino(destino)
         if chat is None:
             return ["agente sem destino de handoff: ninguém foi avisado"]
         aviso = (
-            f"Assumi a conversa com {numero_legivel(conversa_externa)} e o agente parou de responder.\n\n"
+            f"Assumi a conversa com {contato or numero_legivel(conversa_externa)} e o agente parou de responder.\n\n"
             f"{nota}\n\n"
             f"Quando terminar, devolva ao agente: reaja com {JOINHA} em qualquer mensagem da conversa "
             f"ou mande /retomar {codigo} aqui."

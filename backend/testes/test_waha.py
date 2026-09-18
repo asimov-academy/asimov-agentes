@@ -145,7 +145,10 @@ def payload_waha(
         mensagem["source"] = origem or "app"
     if telefone_oculto:
         # Como o GOWS entrega quando o WhatsApp esconde o número atrás de um @lid.
-        mensagem["_data"] = {"Info": {"SenderAlt": f"{telefone_oculto}@s.whatsapp.net"}}
+        mensagem["_data"] = {
+            "notifyName": "Maria",
+            "Info": {"SenderAlt": f"{telefone_oculto}@s.whatsapp.net"},
+        }
     if midia is not None:
         mensagem["media"] = midia
     return {"event": evento, "payload": mensagem}
@@ -730,3 +733,63 @@ async def test_sessao_parada_durante_o_pareamento_nao_alarma(http, fila, waha, r
     async with sessao() as s:
         assert list(await s.scalars(select(Falha).where(Falha.tipo == "canal_fora_do_ar"))) == []
         assert await vigia.confere_sessoes(s, fila) == 0 or True
+
+
+async def test_retomar_vale_quando_o_destino_escreve_de_tras_de_um_lid(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """O id guardado é o do cadastro; quem escreve pode aparecer pelo id oculto."""
+    agente = await cria_waha(http)
+    codigo = await transfere(http, fila, redis, waha, agente)
+
+    resposta = await manda(
+        http,
+        agente,
+        waha,
+        payload_waha(
+            f"/retomar {codigo}",
+            de="229536625127609@lid",
+            id_mensagem="false_lid_JJJ",
+            telefone_oculto="5511977776666",
+        ),
+    )
+
+    assert resposta.status_code == 200
+    async with sessao() as s:
+        fechado = (await s.scalars(select(Handoff))).one()
+    assert fechado.retomado_em is not None and fechado.retomado_por == "comando"
+
+
+async def test_retomar_de_um_lid_qualquer_continua_sendo_conversa(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    agente = await cria_waha(http)
+    codigo = await transfere(http, fila, redis, waha, agente)
+
+    await manda(
+        http,
+        agente,
+        waha,
+        payload_waha(
+            f"/retomar {codigo}",
+            de="111111111111111@lid",
+            id_mensagem="false_lid_KKK",
+            telefone_oculto="5511900000000",
+        ),
+    )
+
+    async with sessao() as s:
+        assert (await s.scalars(select(Handoff))).one().retomado_em is None
+
+
+async def test_aviso_de_handoff_chama_o_contato_pelo_nome_e_telefone(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """O id da conversa pode ser um @lid: mostrar isso como telefone manda a pessoa ligar para o nada."""
+    agente = await cria_waha(http)
+    await manda(
+        http,
+        agente,
+        waha,
+        payload_waha("quero falar com uma pessoa", de="1151135133847@lid", telefone_oculto="5551999998888"),
+    )
+    assert await roda_turno(fila, redis) == "transferido"
+
+    avisos = [texto for chat, texto in waha.enviadas if chat == CHAT_DO_DESTINO]
+    assert avisos, "o destino precisa ser avisado"
+    assert "Maria (+55 51 99999-8888)" in avisos[0]
+    assert "1151135133847" not in avisos[0], "o id oculto não é telefone de ninguém"

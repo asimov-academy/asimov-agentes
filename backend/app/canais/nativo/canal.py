@@ -77,6 +77,7 @@ class Nativo:
         destino: dict[str, Any] | None,
         nota: str,
         codigo: str = "",
+        contato: str = "",
     ) -> list[str]:
         await memoria.muda_humano(conversa_externa, True)
         return []
