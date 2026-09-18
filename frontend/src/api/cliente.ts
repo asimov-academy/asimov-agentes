@@ -47,6 +47,7 @@ async function chama<T>(caminho: string, opcoes: RequestInit = {}): Promise<T> {
       corpo.referencia,
     );
   }
+  if (resposta.status === 204) return undefined as T;
   return (await resposta.json()) as T;
 }
 
@@ -110,6 +111,11 @@ export const api = {
 
   ferramentas: () => chama<Ferramenta[]>("/ferramentas"),
   modelos: () => chama<Modelos>("/modelos"),
+  modelosDoProvedor: (provedor: string, funcao: string) =>
+    chama<string[]>(`/modelos/${provedor}?funcao=${funcao}`),
+  /** A chave vai e nunca volta: o backend testa no provedor e guarda cifrada. */
+  guardaChave: (provedor: string, chave: string) =>
+    chama<void>(`/chaves/${provedor}`, { method: "PUT", body: JSON.stringify({ chave }) }),
   canais: () => chama<CanalDisponivel[]>("/canais"),
 
   /** A situação de cada canal, uma linha por agente. */
@@ -284,6 +290,8 @@ export type NovoAgente = {
   ferramentas?: string[];
   emojis?: NivelDeEmoji;
   contatos_permitidos?: string[];
+  /** Só a resposta: resumo, imagem e áudio nascem no mesmo provedor e mudam na ficha. */
+  modelo_conversa?: string;
 };
 
 export type EdicaoDoAgente = {
@@ -310,7 +318,9 @@ export type Ferramenta = { nome: string; rotulo: string; descricao: string; padr
 export type Modelos = {
   provedores: string[];
   provedores_transcricao: string[];
-  funcoes: { campo: string; rotulo: string; obrigatorio: boolean }[];
+  /** Provedores que já têm chave guardada na instalação. A chave em si nunca vem. */
+  com_chave: string[];
+  funcoes: { campo: string; funcao: string; rotulo: string; obrigatorio: boolean }[];
   padroes: Record<string, string | null>;
 };
 

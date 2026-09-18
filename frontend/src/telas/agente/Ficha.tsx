@@ -16,6 +16,7 @@ import { Carregando } from "../../design/Carregando";
 import { Interruptor } from "../../design/Interruptor";
 import { Modal } from "../../design/Modal";
 import { Selo } from "../../design/Selo";
+import { FormDaChave } from "./FormDaChave";
 import { ROTULO_DO_CANAL } from "./canais";
 import { Teste } from "./Teste";
 
@@ -132,7 +133,7 @@ export function Ficha({
                 onClick={() => setAba(a)}
                 className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm transition-colors ${
                   aba === a
-                    ? "border-b-lime text-lime"
+                    ? "border-b-ciano text-ciano"
                     : "border-b-transparent text-muted hover:text-texto"
                 }`}
               >
@@ -351,7 +352,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
             key={e.valor}
             onClick={() => setEmojis(e.valor)}
             className={`border px-4 py-2 text-sm transition-colors ${
-              emojis === e.valor ? "border-lime text-lime" : "border-borda text-muted hover:text-texto"
+              emojis === e.valor ? "border-ciano text-ciano" : "border-borda text-muted hover:text-texto"
             }`}
           >
             {e.rotulo}
@@ -493,7 +494,7 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
               key={f.valor}
               onClick={() => setFuncao(f.valor)}
               className={`border px-4 py-2 text-sm transition-colors ${
-                funcao === f.valor ? "border-lime text-lime" : "border-borda text-muted hover:text-texto"
+                funcao === f.valor ? "border-ciano text-ciano" : "border-borda text-muted hover:text-texto"
               }`}
             >
               {f.rotulo}
@@ -523,7 +524,7 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
           rows={5}
           value={sobre}
           onChange={(e) => setSobre(e.target.value)}
-          className="mt-2 w-full border-b border-dim bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-lime focus:outline-none"
+          className="mt-2 w-full border-b border-dim bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none"
         />
       </label>
 
@@ -567,7 +568,7 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
                   rows={10}
                   value={aMao}
                   onChange={(e) => setAMao(e.target.value)}
-                  className="mt-2 w-full border border-borda bg-void p-3 font-mono text-xs leading-relaxed text-texto focus:border-lime focus:outline-none"
+                  className="mt-2 w-full border border-borda bg-void p-3 font-mono text-xs leading-relaxed text-texto focus:border-ciano focus:outline-none"
                 />
                 <div className="mt-3">
                   <Botao pequeno icone="act-save" ocupado={salvando} onClick={salvaAMao}>
@@ -664,6 +665,7 @@ function Configuracoes({ agente, atualiza }: { agente: Agente; atualiza: (a: Age
     modelo_transcricao: agente.modelo_transcricao,
   });
   const [contatos, setContatos] = useState(agente.contatos_permitidos.join(", "));
+  const [provedorDaChave, setProvedorDaChave] = useState("");
   const { salva, salvando, feito, erro } = useSalvar(agente, atualiza);
 
   useEffect(() => {
@@ -690,9 +692,40 @@ function Configuracoes({ agente, atualiza }: { agente: Agente; atualiza: (a: Age
       </div>
 
       {modelos && (
-        <p className="mt-4 font-mono text-xs text-dim">
-          provedores: {modelos.provedores.join(", ")} · áudio sem anthropic
-        </p>
+        <div className="mt-6">
+          <p className="rotulo">Chaves de IA da instalação</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {modelos.provedores.map((p) => {
+              const tem = modelos.com_chave.includes(p);
+              return (
+                <button
+                  key={p}
+                  onClick={() => setProvedorDaChave(provedorDaChave === p ? "" : p)}
+                  aria-pressed={provedorDaChave === p}
+                  className={`border px-3 py-1.5 font-mono text-xs transition-colors ${
+                    provedorDaChave === p ? "border-ciano text-texto" : "border-borda text-muted hover:border-dim"
+                  }`}
+                >
+                  {p} <span className={tem ? "text-ok" : "text-dim"}>{tem ? "chave ok" : "sem chave"}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-sm text-dim">
+            Para usar um provedor sem chave, clique nele e guarde a chave. Áudio não roda na anthropic.
+          </p>
+          {provedorDaChave && (
+            <div className="mt-4 max-w-md">
+              <FormDaChave
+                provedor={provedorDaChave}
+                aoGuardar={() => {
+                  setProvedorDaChave("");
+                  api.modelos().then(setModelos);
+                }}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       <div className="mt-8">
@@ -769,7 +802,7 @@ function Numero({
         max={max}
         value={valor}
         onChange={(e) => aoMudar(Number(e.target.value))}
-        className="mt-3 w-full accent-lime"
+        className="mt-3 w-full accent-ciano"
       />
       {ajuda && <span className="mt-1 block text-sm text-dim">{ajuda}</span>}
     </label>

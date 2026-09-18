@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 /** O "MECHANICAL TOGGLE" do design system: retângulo de 48x24 com botão quadrado de 16px, borda
- *  `dim` apagado e `lime` ligado, com o fundo em `lime/10`. Nada de cápsula arredondada. */
+ *  `dim` apagado e `ciano` ligado, com o fundo em `ciano/10`. Nada de cápsula arredondada. */
 export function Interruptor({
   ligado,
   aoMudar,
@@ -32,12 +32,12 @@ export function Interruptor({
         disabled={desligado}
         onClick={() => aoMudar(!ligado)}
         className={`relative h-6 w-12 shrink-0 border transition-colors disabled:opacity-40 ${
-          ligado ? "border-lime bg-lime/10" : "border-dim bg-surface"
+          ligado ? "border-ciano bg-ciano/10" : "border-dim bg-surface"
         }`}
       >
         <span
           className={`absolute left-0.5 top-0.5 h-4 w-4 transition-all duration-300 ${
-            ligado ? "translate-x-6 bg-lime" : "bg-dim"
+            ligado ? "translate-x-6 bg-ciano" : "bg-dim"
           }`}
         />
       </button>

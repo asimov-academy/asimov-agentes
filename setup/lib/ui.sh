@@ -476,12 +476,12 @@ confirma() {
   [ "$__sim" -eq 1 ]
 }
 
-# pausa: segura a tela até uma tecla, antes de o menu limpar o que foi mostrado.
+# pausa ["texto"]: segura a tela até uma tecla, antes de o menu limpar o que foi mostrado.
 pausa() {
   local __tecla
   tem_terminal || return 0
   descarta_pendentes
-  printf '\n  %sEnter para voltar%s' "$CINZA" "$NORMAL"
+  printf '\n  %s%s%s' "$CINZA" "${1:-Enter para voltar}" "$NORMAL"
   le_tecla __tecla
   echo
 }

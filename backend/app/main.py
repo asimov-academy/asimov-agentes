@@ -17,6 +17,7 @@ from app.clientes.rotas import router as clientes
 from app.consumo.rotas import router as consumo
 from app.conversas.webhook import router as webhook
 from app.handoff.rotas import router as handoff
+from app.ia.rotas import router as ia
 from app.plataforma.banco import fabrica_sessao
 from app.plataforma.config import config
 from app.painel.rotas import router as painel
@@ -75,6 +76,7 @@ app.include_router(clientes)
 app.include_router(agentes)
 app.include_router(consumo)
 app.include_router(handoff)
+app.include_router(ia)
 app.include_router(terminal)
 app.include_router(waha)
 app.include_router(whatsapp)

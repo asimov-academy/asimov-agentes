@@ -560,7 +560,7 @@ fluxo_agente_waha() {
       --argjson permitidos "$CONTATOS_PERMITIDOS" --arg emojis "$EMOJIS" \
       '{nome: $nome, canal: "waha", ferramentas: $f, retomada_automatica_horas: $horas,
         contatos_permitidos: $permitidos, emojis: $emojis}')
-    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando a sessão na WAHA…"
+    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$(com_modelos "$corpo")" "Criando a sessão na WAHA…"
     if [ "$API_STATUS" = 201 ]; then break; fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
     if [ "$API_STATUS" = 409 ]; then

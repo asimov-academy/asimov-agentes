@@ -100,7 +100,7 @@ export function Teste({
             <p
               className={`max-w-[85%] border px-3 py-2 text-sm leading-snug ${
                 f.de === "voce"
-                  ? "border-lime/30 bg-lime/5 text-texto"
+                  ? "border-ciano/30 bg-ciano/5 text-texto"
                   : "border-borda bg-surface text-texto"
               }`}
             >

@@ -7,12 +7,11 @@ RAIZ_PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=setup/lib/base.sh
 source "$RAIZ_PROJETO/setup/lib/base.sh"
 
-# Instalação já concluída: completa o que versões novas pedem (modo, modelos), reconstrói se o
+# Instalação já concluída: completa o que versões novas pedem (modo), reconstrói se o
 # código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
 atualiza() {
   banner_asimov
   tela_modo
-  tela_modelos
   tela_instalacao
   ajusta_permissoes
   instala_comando
@@ -41,13 +40,14 @@ principal() {
   tela_modo
   tela_iniciando
   tela_dados
-  tela_modelos
   tela_dns
   tela_instalacao
   ajusta_permissoes
+  # O essencial está no ar. O painel vem antes do primeiro agente: quem liga o painel cria o agente
+  # por lá, no passo a passo com prévia; quem fica no terminal cria aqui.
+  tela_painel_oferta
   tela_primeiro_agente
   estado_set handoff_perguntado "$(date -Is)"
-  tela_painel_oferta
   tela_final
 }
 

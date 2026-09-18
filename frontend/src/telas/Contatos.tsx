@@ -57,7 +57,7 @@ export function Contatos({
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Contatos<span className="text-lime">.</span>
+            Contatos<span className="text-ciano">.</span>
           </h1>
           <p className="mt-2 text-sm text-muted">Quem já conversou com algum agente.</p>
         </div>
@@ -67,7 +67,7 @@ export function Contatos({
             value={empresa}
             aria-label="Empresa"
             onChange={(e) => aoTrocarEmpresa(e.target.value)}
-            className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-lime"
+            className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
           >
             <option value="">Todas as empresas</option>
             {empresas.map((e) => (

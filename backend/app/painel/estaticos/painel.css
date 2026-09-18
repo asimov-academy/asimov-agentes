@@ -1,7 +1,7 @@
 /* Entrar, primeiro acesso e as telas em Jinja2 do painel.
  *
  * Mesmo design system do painel em React (`designsystem/`, "Enterprise SaaS UI"): preto, cantos
- * retos, borda de 1 px, rótulo em mono maiúsculo e acento lime. Um arquivo só, sem build.
+ * retos, borda de 1 px, rótulo em mono maiúsculo e acento ciano. Um arquivo só, sem build.
  *
  * As cores são as mesmas do `frontend/tailwind.config.ts`. Aqui elas são escritas em hexadecimal
  * porque este arquivo não passa pelo Tailwind: é o único lugar do painel onde isso vale, e por isso
@@ -44,7 +44,7 @@
   --dim: #444444;
   --muted: #525252;
   --texto: #e5e5e5;
-  --lime: #ccff00;
+  --ciano: #29b8db;
   --ok: #00cc66;
   --atencao: #ffaa00;
   --perigo: #ff453a;
@@ -66,7 +66,7 @@ body {
 }
 
 a {
-  color: var(--lime);
+  color: var(--ciano);
   text-decoration: none;
 }
 
@@ -81,16 +81,16 @@ code,
 }
 
 :focus-visible {
-  outline: 1px solid var(--lime);
+  outline: 1px solid var(--ciano);
   outline-offset: 2px;
 }
 
 ::selection {
-  background: var(--lime);
+  background: var(--ciano);
   color: var(--void);
 }
 
-/* A marca: o quadrado lime com a letra em cima, igual ao topo do menu do painel. */
+/* A marca: o quadrado ciano com a letra em cima, igual ao topo do menu do painel. */
 
 .marca {
   display: flex;
@@ -110,7 +110,7 @@ code,
   width: 28px;
   height: 28px;
   flex: none;
-  background: var(--lime);
+  background: var(--ciano);
   color: var(--void);
   font: 700 14px/1 var(--mono);
 }
@@ -145,7 +145,7 @@ code,
   position: absolute;
   width: 10px;
   height: 10px;
-  border-color: var(--lime);
+  border-color: var(--ciano);
   border-style: solid;
 }
 
@@ -167,7 +167,7 @@ code,
   letter-spacing: -0.01em;
 }
 
-/* Campo: só a borda de baixo, `dim` parado e lime no foco. Moldura inteira é de outro sistema. */
+/* Campo: só a borda de baixo, `dim` parado e ciano no foco. Moldura inteira é de outro sistema. */
 
 .campo {
   margin-top: 24px;
@@ -215,7 +215,7 @@ code,
 
 .campo input:focus {
   outline: 0;
-  border-bottom-color: var(--lime);
+  border-bottom-color: var(--ciano);
 }
 
 /* Botões, na hierarquia do design system: o sólido conclui, o fantasma anda pela tela. */
@@ -329,8 +329,8 @@ code,
 }
 
 .nav a.ativo {
-  border-bottom-color: var(--lime);
-  color: var(--lime);
+  border-bottom-color: var(--ciano);
+  color: var(--ciano);
 }
 
 main {

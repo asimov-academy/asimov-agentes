@@ -2,7 +2,7 @@ import { useId, type InputHTMLAttributes } from "react";
 import { Icone } from "./Icone";
 import type { ICONES } from "./icones";
 
-/** O campo do design system: **só borda de baixo**, `dim` em repouso e `lime` no foco, fundo
+/** O campo do design system: **só borda de baixo**, `dim` em repouso e `ciano` no foco, fundo
  *  `surface` e o ícone à esquerda. Campo com moldura inteira é de outro sistema. */
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "className"> & {
   rotulo?: string;
@@ -27,7 +27,7 @@ export function Campo({ rotulo, icone, erro, ...resto }: Props) {
           aria-invalid={erro ? true : undefined}
           className={`w-full border-b bg-surface p-2 text-sm text-texto transition-colors placeholder:text-dim focus:outline-none ${
             icone ? "pl-8" : ""
-          } ${erro ? "border-perigo" : "border-dim focus:border-lime"}`}
+          } ${erro ? "border-perigo" : "border-dim focus:border-ciano"}`}
         />
       </div>
       {erro && <p className="mt-2 font-mono text-xs text-perigo">{erro}</p>}

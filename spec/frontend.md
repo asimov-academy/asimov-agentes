@@ -49,7 +49,7 @@ nasce no front.
 ## 3. Design system
 
 Fonte: `designsystem/`, projeto "Enterprise SaaS UI". Escuro, cantos retos, borda de 1 px, rótulo em
-mono maiúsculo, acento lime. Os valores entram no `tailwind.config.ts` como tokens e nunca são
+mono maiúsculo, acento ciano. Os valores entram no `tailwind.config.ts` como tokens e nunca são
 escritos soltos no componente.
 
 | Token | Valor | Uso |
@@ -61,7 +61,7 @@ escritos soltos no componente.
 | `dim` | `#444444` | borda de controle desligado, ícone apagado |
 | `muted` | `#525252` | texto secundário |
 | `text` | `#e5e5e5` | texto |
-| `lime` | `#ccff00` | acento, item ativo, foco, confirmação |
+| `ciano` | `#29b8db` | acento, item ativo, foco, confirmação |
 | `success` | `#00cc66` | situação boa |
 | `warning` | `#ffaa00` | atenção |
 | `danger` | `#ff453a` | erro e ação destrutiva |
@@ -75,16 +75,16 @@ seção de origem:
 | Componente | O que o design system manda | Onde |
 |---|---|---|
 | `Botao` sólido | Fundo `texto` (quase branco) sobre preto, negrito, maiúsculo, espaçado. É o mais forte da tela | 5, 01 |
-| `Botao` acento | Contorno `lime/50`, texto lime, preenche no hover. **O lime cheio não é botão**: trocar isso apaga a hierarquia | 5, 01 |
+| `Botao` acento | Contorno `ciano/50`, texto ciano, preenche no hover. **O ciano cheio não é botão**: trocar isso apaga a hierarquia | 5, 01 |
 | `Botao` fantasma | Contorno `texto/20`, fundo transparente, com os dois cantos marcados em SVG. É a assinatura do sistema | 5, 01 |
-| `Campo` | **Só borda de baixo**, `dim` em repouso e `lime` no foco, fundo `surface`, ícone à esquerda | 5, 02 |
-| `Interruptor` | Retângulo de 48x24 com botão **quadrado** de 16px, `dim` desligado e `lime` ligado com fundo `lime/10`. Nada de cápsula | 5, 02 |
+| `Campo` | **Só borda de baixo**, `dim` em repouso e `ciano` no foco, fundo `surface`, ícone à esquerda | 5, 02 |
+| `Interruptor` | Retângulo de 48x24 com botão **quadrado** de 16px, `dim` desligado e `ciano` ligado com fundo `ciano/10`. Nada de cápsula | 5, 02 |
 | `Cartao` | `.comp-card`: borda de 1px `borda`, fundo `surface`, 2rem de respiro, 1.5rem entre as partes, borda clareando no hover | 5 |
 | `Aviso` | Borda de 4px à esquerda na cor do tom, ícone do sprite, título curto maiúsculo, corpo em mono | 5, 05 |
-| `Medidor` | Anel de 2px com arco em lime e brilho, número em mono no centro | 5, 05 |
-| `Vazio` | Tracejado `dim` que vira `lime` no hover, ícone em círculo apagado | 5, 02 |
+| `Medidor` | Anel de 2px com arco em ciano e brilho, número em mono no centro | 5, 05 |
+| `Vazio` | Tracejado `dim` que vira `ciano` no hover, ícone em círculo apagado | 5, 02 |
 | `.rotulo` | `.comp-label`: mono, 0.65rem, `dim`, maiúsculo, espaçado em 0.1em | 5 |
-| `.titulo-secao` | `.section-title`: mono, lime, espaçado em 0.2em, com régua embaixo | 5 |
+| `.titulo-secao` | `.section-title`: mono, ciano, espaçado em 0.2em, com régua embaixo | 5 |
 
 **Ícones.** Os 50 do sprite da seção 1 (grade de 24px, traço de 2px) vivem em `design/icones.ts`,
 extraídos sem retoque, e saem pelo `<Icone nome="nav-dashboard" />`. Nenhum ícone de biblioteca de
@@ -99,7 +99,7 @@ Regra dura: **nada de biblioteca de interface de fora**. Sem Radix, sem shadcn, 
 Chart.js, sem Recharts, sem Framer Motion, sem lucide, sem heroicons. O que a tela precisar nasce de
 `designsystem/index.html`, copiado com a seção de origem no comentário do arquivo. Quando o design
 system não traz a peça pronta (Abas, Tabela, Modal), ela é montada com as primitivas dele (borda de
-1 px `borda`, fundo `surface`, rótulo mono maiúsculo, acento lime, cantos retos, os dois cantos
+1 px `borda`, fundo `surface`, rótulo mono maiúsculo, acento ciano, cantos retos, os dois cantos
 marcados em SVG), nunca com uma peça de fora nem com um estilo inventado na hora.
 
 O painel tinha usado até aqui só a seção 5. As seis seções entram, cada uma com dono:

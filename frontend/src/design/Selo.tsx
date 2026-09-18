@@ -6,7 +6,7 @@ const TONS: Record<Tom, string> = {
   atencao: "border-atencao/40 text-atencao",
   perigo: "border-perigo/40 text-perigo",
   neutro: "border-dim text-muted",
-  acento: "border-lime/40 text-lime",
+  acento: "border-ciano/40 text-ciano",
 };
 
 export function Selo({ tom = "neutro", children }: { tom?: Tom; children: string }) {

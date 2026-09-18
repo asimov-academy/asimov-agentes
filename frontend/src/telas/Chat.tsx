@@ -104,7 +104,7 @@ export function Chat({
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Chat<span className="text-lime">.</span>
+            Chat<span className="text-ciano">.</span>
           </h1>
           <p className="mt-2 text-sm text-muted">
             {conversas === null ? "buscando" : `${conversas.length} conversas recentes`}
@@ -117,7 +117,7 @@ export function Chat({
               value={empresa}
               aria-label="Empresa"
               onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-lime"
+              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
             >
               <option value="">Todas as empresas</option>
               {empresas.map((e) => (
@@ -167,7 +167,7 @@ export function Chat({
                   <button
                     onClick={() => abre(c.id)}
                     className={`w-full border-b border-l-2 border-borda py-3 pl-3 text-left transition-colors hover:bg-surface ${
-                      aberta?.id === c.id ? "border-l-lime bg-surface" : "border-l-transparent"
+                      aberta?.id === c.id ? "border-l-ciano bg-surface" : "border-l-transparent"
                     }`}
                   >
                     <span className="flex items-baseline justify-between gap-3">
@@ -241,7 +241,7 @@ export function Chat({
                           className={`max-w-[80%] border px-3 py-2 text-sm leading-snug ${
                             doContato
                               ? "border-borda bg-void text-texto"
-                              : "border-lime/30 bg-lime/5 text-texto"
+                              : "border-ciano/30 bg-ciano/5 text-texto"
                           }`}
                         >
                           {m.texto || m.texto_extraido || `[${m.tipo}]`}

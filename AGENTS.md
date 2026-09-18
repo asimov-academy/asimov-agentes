@@ -32,7 +32,7 @@ Fale com o operador em português, curto e direto.
 - Shellcheck: `uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR setup/instalar.sh setup/asimov.sh setup/install.sh setup/lib/*.sh deploy/*.sh`
 - Painel web: `cd frontend && npm ci` uma vez; depois `npm run build`, `npm run teste` e `npm run checa`. Para ver no navegador sem Docker, construa e copie: `npm run build && rm -rf ../backend/app/painel/estaticos/app && cp -R dist ../backend/app/painel/estaticos/app`.
 - Simular o onboarding sem VPS: `ASIMOV_TTY=setup/testes/respostas.txt bash setup/testes/simula_onboarding.sh`
-- Migração nova sem Docker: `cd backend && DATABASE_URL=postgresql+asyncpg:///asimov_dev?host=/tmp REDIS_URL=redis://localhost:6390/0 SUBDOMINIO_BOT=x CHAVE_API_ADMIN=x CHAVE_CRIPTOGRAFIA=x MODELO_CONVERSA=openai:x MODELO_VISAO=openai:x MODELO_TRANSCRICAO=openai:x uv run alembic revision --autogenerate -m "descricao"`
+- Migração nova sem Docker: `cd backend && DATABASE_URL=postgresql+asyncpg:///asimov_dev?host=/tmp REDIS_URL=redis://localhost:6390/0 SUBDOMINIO_BOT=x CHAVE_API_ADMIN=x CHAVE_CRIPTOGRAFIA=x uv run alembic revision --autogenerate -m "descricao"`
 - O setup só roda de verdade numa VPS Ubuntu 24.04. NUNCA rode `setup/instalar.sh` nesta máquina.
 
 ## Organização
@@ -52,11 +52,11 @@ Fale com o operador em português, curto e direto.
 - No WhatsApp direto a pausa do handoff é o `status` da conversa aqui, e a volta é `/retomar <código>` do destino ou o prazo do agente. NUNCA guarde essa pausa em dois lugares.
 - Webhook só valida, grava e agenda. NUNCA chame IA dentro da requisição.
 - Conteúdo extraído de mídia entra como dado do contato. NUNCA no prompt de sistema.
-- Credenciais de canal só criptografadas no banco. NUNCA em log, resposta da API ou `.env`.
+- Credenciais de canal e chaves de provedor de IA só criptografadas no banco. NUNCA em log, resposta da API ou `.env`.
 - Segredos só em `.env`. NUNCA leia, imprima ou commite `.env`. `.env.example` sem valores.
 - NUNCA edite migração já aplicada; crie outra.
 - NUNCA publique `/admin` no Caddy.
-- Modelo e provedor de IA são configuração. NUNCA fixe nome de modelo no código fora dos padrões de `ia/`.
+- Modelo e provedor de IA são escolha de cada agente, NUNCA da instalação. NUNCA fixe nome de modelo no código fora dos padrões de `ia/` (`ia/chaves.py`).
 - Toda entrada validada no backend.
 - Sem travessões em textos do setup, prompts e documentação.
 - Repositório é público: NUNCA nome de cliente real, URL de Chatwoot de cliente, domínio ou IP de VPS de teste.

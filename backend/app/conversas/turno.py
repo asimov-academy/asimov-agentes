@@ -34,6 +34,7 @@ from app.conversas.divisao import limita_mensagens, tempos_de_digitacao
 from app.conversas.modelos import Conversa, Mensagem
 from app.handoff import repo as handoff_repo
 from app.handoff import servico as handoff
+from app.ia import chaves
 from app.ia.agente import ResultadoTurno, roda_turno
 from app.midia import servico as midia
 from app.plataforma.banco import fabrica_sessao
@@ -120,6 +121,8 @@ async def _turno(
         agente = await agentes_repo.obter(s, cliente_id, conversa.agente_id)
         if agente is None or not agente.ativo:
             return "agente_inativo"
+        # A chave pode ter sido informada agora há pouco, pela API, que é outro processo.
+        await chaves.carregar(s)
 
         canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
         if not await canal.agente_pode_falar(credenciais, conversa.id_externo, conversa.status):

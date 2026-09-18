@@ -26,7 +26,7 @@ export function Passos({
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
                   pronto
-                    ? "border-lime bg-lime/10 text-lime"
+                    ? "border-ciano bg-ciano/10 text-ciano"
                     : agora
                       ? "border-texto bg-void text-texto shadow-ativo"
                       : "border-dim bg-void text-dim"
@@ -43,7 +43,7 @@ export function Passos({
                 )}
               </span>
               {i < passos.length - 1 && (
-                <span className={`hidden w-px flex-1 md:block ${pronto ? "bg-lime" : "bg-dim"}`} />
+                <span className={`hidden w-px flex-1 md:block ${pronto ? "bg-ciano" : "bg-dim"}`} />
               )}
             </div>
 

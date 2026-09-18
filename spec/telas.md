@@ -27,17 +27,14 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Passos: conferir Ubuntu 24.04, conferir memória e disco mínimos, update, upgrade, instalar sudo, apt-utils, dialog, jq, git, python3, Docker e demais utilitários do setup.
 - Ações: nenhuma; só acompanhar.
 
-### 3. Configuração e modelos de IA
+### 3. Configuração
 
-- Objetivo: coletar domínio, e-mail do SSL, agente de código e os modelos de IA padrão da instalação.
+- Objetivo: coletar domínio, e-mail do SSL e o assistente de código. Nada de IA aqui (v0.20.0): modelo e chave são de cada agente, na tela 6.
 - Quem acessa: operador.
 - Ações:
-  - Informar o domínio (aceita colar com `https://`, `bot.` ou barra) e o e-mail do SSL.
-  - Escolher o agente de código: Claude Code ou Codex.
-  - Para cada função, escolher provedor e modelo: resposta ao contato, fallback (opcional, usado se a resposta falhar), visão (imagens e PDF) e transcrição de áudio. Provedores: OpenAI, Anthropic, Gemini e Groq (transcrição: OpenAI, Groq ou Gemini).
-  - A chave de cada provedor é pedida uma vez e testada na hora.
-  - Os modelos aparecem num menu listado pela API do próprio provedor, com sugestões primeiro e opção de digitar outro.
-  - Conferir o resumo dos modelos e confirmar.
+  - Informar o domínio dos agentes. Aceita colado de qualquer jeito (`https://`, `www.`, `bot.`, `app.`, porta, caminho, barra ou ponto no fim, maiúsculas) e mostra o que entendeu.
+  - Informar o e-mail do SSL.
+  - Escolher o assistente para evoluir os agentes: Claude Code ou Codex.
 
 ### 4. Checagem do domínio
 
@@ -53,7 +50,16 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Mostra: passos numerados `N/T - [ OK ] - descrição` (firewall, Node, Python e uv, agente de código escolhido, SDK do provedor de IA escolhido, banco, proxy com SSL, projeto base, serviços no ar, health check da API em `https://bot.<dominio>`).
 - Ações: nenhuma; só acompanhar.
 
+### 5b. Painel no navegador (oferta)
+
+- Objetivo: com o essencial no ar, oferecer o painel antes do primeiro agente, para o operador poder criá-lo por lá.
+- Mostra: o que o painel faz e o registro DNS que ele exige, com o subdomínio (`app.<dominio>`) e o IP da VPS.
+- Ações: Sim liga o painel (subdomínio explicado com o domínio real, aceita o endereço colado, recusa `bot`; espera o DNS; mostra o código de primeiro acesso e espera um Enter antes de limpar a tela). Não deixa o comando `asimov painel` para depois. Perguntada uma vez.
+- Com o painel ligado, a tela 6 começa perguntando onde criar o primeiro agente: no painel ou no terminal. O resumo final mostra um código de primeiro acesso enquanto o painel não tiver conta.
+
 ### 6. Agente no Chatwoot (primeiro agente e `asimov novo-agente`)
+
+- Todo canal, logo depois da escolha do canal (v0.20.0): a IA que responde o contato. Provedor (OpenAI, Anthropic, Gemini ou Groq), chave só se a instalação ainda não tiver a desse provedor (testada e guardada cifrada pela API, vale para todo agente) e modelo, numa lista que vem do provedor com as sugestões primeiro e a opção de digitar. Resumo, imagem e áudio nascem no mesmo provedor; com Anthropic e nenhum outro provedor com chave, pergunta também quem transcreve áudio.
 
 - Objetivo: deixar um agente respondendo numa caixa do Chatwoot.
 - Quem acessa: operador.
@@ -71,14 +77,14 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
 - Objetivo: fechar a instalação e orientar o próximo passo.
 - Quem acessa: operador.
 - Antes de mostrar: gera `AGENTS.md` e `CLAUDE.md` na raiz do projeto instalado (regras em spec/arquitetura.md, seção 11) e faz o primeiro commit do projeto.
-- Mostra: o que foi instalado, provedor de IA e modelos, URL da API, agentes criados com canal e webhook, caminho do projeto, caminho do log e os próximos passos (entrar na pasta do projeto e abrir Claude Code ou Codex, que já leem o `CLAUDE.md` ou `AGENTS.md`).
+- Mostra: o que foi instalado, URL da API, endereço e código de primeiro acesso do painel (se ligado e sem conta), agentes criados com canal e webhook, caminho do projeto, caminho do log e os próximos passos (entrar na pasta do projeto e abrir Claude Code ou Codex, que já leem o `CLAUDE.md` ou `AGENTS.md`).
 - Ações: nenhuma.
 
 ### 8. Comando `asimov` e setup rodado de novo
 
 - Objetivo: operar os agentes sem front.
 - Quem acessa: operador.
-- Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo, modelos), reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
+- Rodar o setup de novo numa instalação concluída pergunta o que faltar de versões novas (modo), reconstrói se o código mudou, mostra o resumo e abre o menu. `asimov atualizar` para no resumo.
 - `asimov` sem argumento abre o mesmo menu. Cada ação também existe como subcomando: `novo-agente`, `conversar` (desde a v0.8.0), `agentes`, `editar`, `remover`, `consumo`, `handoff` (desde a v0.4.0), `atualizar` e `ajuda`.
 - Atualizar para a v0.4.0 pergunta uma vez o destino do handoff dos agentes que não têm.
 - Ações do menu:
@@ -86,7 +92,7 @@ As telas são telas de terminal do setup, exibidas via SSH. Não existe front ne
   - Conversar com agente (v0.8.0; qualquer canal desde a v0.8.2): escolhe um agente e conversa no terminal; com agente de outro canal, avisa que é conversa de teste e nada vai para o canal. Cada linha é uma mensagem do contato. Acima da linha em edição, uma linha animada mostra a etapa (esperando você terminar, com contagem do buffer; na fila; pensando, com segundos; digitando; terminando o turno). A resposta chega sem apagar o que já foi digitado e, no fim de cada turno, uma linha resume tempo total, modelo e quanto pensou, tokens, custo e ferramentas usadas (ou o erro do modelo). Handoff mostra motivo, resumo e código, e o agente fica calado; `/retomar` devolve a conversa ao agente, `/nova` começa outra conversa, `/sair` ou Esc volta. Criar um agente nativo pelo menu oferece conversar na hora.
   - Listar agentes: por empresa, nome, canal, modelo de resposta, destino do handoff, status e URL do webhook.
   - Criação e edição no Chatwoot perguntam também em quantas horas o agente volta sozinho se o atendente esquecer de devolver a conversa (v0.11.0).
-  - Editar agente: escolhe o agente, vê a configuração. Agente nativo tem "Conectar a um canal" no lugar de Handoff (v0.8.2): escolhe o canal (Chatwoot, WhatsApp oficial ou WhatsApp pela WAHA), caixa ou pareamento e destino do handoff; se o ritmo for o de teste, oferece o do WhatsApp. Agente do WhatsApp oficial tem "WhatsApp" no lugar de Handoff (v0.15.0): confere o número na Meta, troca quem recebe o handoff junto com o template do aviso, as horas até o agente voltar sozinho, quem pode falar com ele e refaz o webhook na Meta (para quando alguém mexe na configuração pelo painel). Agente da WAHA tem "WhatsApp" no lugar de Handoff (v0.9.0): mostra o número pareado, pareia de novo (trocar de número), troca quem recebe o handoff, as horas até o agente voltar sozinho e quem pode falar com ele. A tela explica que responder pelo aparelho cala o agente e que 👍 na conversa o traz de volta (v0.10.0). Muda nome (também o nome do bot no Chatwoot; se o Chatwoot estiver fora, oferece salvar só na plataforma), tempo de buffer, mensagens por resposta, digitação (caracteres por segundo e teto por mensagem), ferramentas (lista de marcar: calculadora e busca na web), emoji, modelos (resposta, fallback, resumo do handoff, visão, áudio; só provedores com chave) ou destino do handoff. Vale na próxima mensagem. No Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente; por isso lá não há tempo de retomada.
+  - Editar agente: escolhe o agente, vê a configuração. Agente nativo tem "Conectar a um canal" no lugar de Handoff (v0.8.2): escolhe o canal (Chatwoot, WhatsApp oficial ou WhatsApp pela WAHA), caixa ou pareamento e destino do handoff; se o ritmo for o de teste, oferece o do WhatsApp. Agente do WhatsApp oficial tem "WhatsApp" no lugar de Handoff (v0.15.0): confere o número na Meta, troca quem recebe o handoff junto com o template do aviso, as horas até o agente voltar sozinho, quem pode falar com ele e refaz o webhook na Meta (para quando alguém mexe na configuração pelo painel). Agente da WAHA tem "WhatsApp" no lugar de Handoff (v0.9.0): mostra o número pareado, pareia de novo (trocar de número), troca quem recebe o handoff, as horas até o agente voltar sozinho e quem pode falar com ele. A tela explica que responder pelo aparelho cala o agente e que 👍 na conversa o traz de volta (v0.10.0). Muda nome (também o nome do bot no Chatwoot; se o Chatwoot estiver fora, oferece salvar só na plataforma), tempo de buffer, mensagens por resposta, digitação (caracteres por segundo e teto por mensagem), ferramentas (lista de marcar: calculadora e busca na web), emoji, modelos (resposta, fallback, resumo do handoff, visão, áudio; provedor sem chave pede a chave na hora) ou destino do handoff. Vale na próxima mensagem. No Chatwoot as credenciais são do bot criado pelo setup e a retomada é devolver a conversa para pendente; por isso lá não há tempo de retomada.
   - Remover agente: pede o nome do agente para confirmar e apaga o bot no Chatwoot junto; se o Chatwoot estiver fora, oferece remover deixando o bot lá. No modo revenda, empresa que ficou sem agentes pode ser removida junto.
   - Token do Chatwoot: mostra onde há token guardado e permite esquecê-lo.
   - Subir base de conhecimento (fase 6): escolher o agente e a pasta ou arquivo; listar e remover documentos já carregados.
@@ -115,8 +121,9 @@ Estes não têm tela no terminal, mas fazem parte da primeira versão:
 5. Dados da instalação (tela 3).
 6. Checagem do domínio (tela 4).
 7. Instalação (tela 5).
-8. Primeiro agente (tela 6) e cola o webhook no canal.
-9. Resumo final (tela 7). Manda uma mensagem de teste no canal.
+8. Oferta do painel (tela 5b).
+9. Primeiro agente (tela 6), no painel ou no terminal, com a IA dele.
+10. Resumo final (tela 7). Manda uma mensagem de teste no canal.
 
 ## Fluxo de uso diário
 

@@ -195,7 +195,7 @@ export function VisaoGeral({
               value={empresa}
               aria-label="Empresa"
               onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-lime"
+              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
             >
               <option value="">Todas as empresas</option>
               {empresas.map((e) => (

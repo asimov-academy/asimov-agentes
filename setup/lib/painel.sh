@@ -125,8 +125,25 @@ painel_liga() {
   info "O painel administra empresas, agentes e consumo pelo navegador, também no celular."
   dica "Quem prefere o terminal não perde nada: o comando asimov continua fazendo tudo."
   echo
-  pergunta nome "Subdomínio do painel" "app"
+  dica "O painel abre num subdomínio do seu domínio. Com $(destaque app)${CINZA}, o endereço fica $(destaque "app.$dominio")${CINZA}."
+  dica "Digite só a primeira parte (app, painel, admin) ou Enter para ficar com app."
+  while true; do
+    pergunta nome "Subdomínio do painel" "app"
+    # Aceita colado inteiro (https://app.dominio/): fica só o primeiro rótulo.
+    nome=$(tr '[:upper:]' '[:lower:]' <<<"$nome" | tr -d '[:space:]')
+    nome=${nome#*://}
+    nome=${nome%%/*}
+    nome=${nome%%.*}
+    if [ "$nome" = bot ]; then
+      falha "bot.$dominio já é o endereço dos agentes. Escolha outro nome."
+    elif [[ "$nome" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+      break
+    else
+      falha "Use só letras, números e hífen. Ex: app"
+    fi
+  done
   sub="$nome.$dominio"
+  ok "O painel vai ficar em $(destaque "https://$sub")"
   echo
 
   painel_espera_dns "$sub" "$dominio" || return 0
@@ -136,7 +153,11 @@ painel_liga() {
   env_set PAINEL_ATIVO 1
   painel_escreve_caddy "$sub"
   printf '  %sSubindo…%s' "$CINZA" "$NORMAL"
-  painel_reinicia_api
+  if ! painel_reinicia_api; then
+    printf '\r\033[K'
+    falha "A API não reiniciou com o painel ligado. Veja o log: $LOG"
+    return 1
+  fi
   painel_recarrega_caddy
   printf '\r\033[K'
 
@@ -208,16 +229,22 @@ tela_painel_oferta() {
   estado_tem painel_perguntado && return 0
   painel_ligado && { estado_set painel_perguntado "$(date -Is)"; return 0; }
 
+  local ip
+  ip=$(ip_publico)
   secao "Painel no navegador"
-  info "Dá para administrar tudo pelo navegador, no computador e no celular: agentes, canais,"
-  info "conversas e consumo, sem abrir SSH."
+  info "A plataforma está no ar. Dá para administrar tudo pelo navegador, no computador e no"
+  info "celular: agentes, canais, conversas e consumo, sem abrir SSH."
   dica "Criar e configurar agente vira um passo a passo com prévia de como ele vai responder."
   echo
-  aviso "Precisa de um registro DNS novo, de $(destaque "app.$(env_get DOMINIO_BASE)") para este IP."
+  aviso "Precisa de um registro DNS novo: $(destaque "app.$(env_get DOMINIO_BASE)") apontando para o IP $(destaque "${ip:-desta VPS}")."
   echo
 
   if confirma "Ligar o painel agora?"; then
-    painel_liga
+    # Falha aqui (API ou contêiner) não pode derrubar a instalação: avisa e segue para o fim.
+    painel_liga || aviso "O painel não terminou de ligar. Rode $(destaque "asimov painel") para conferir e gerar o código."
+    # A próxima tela limpa o terminal: sem esta pausa o código de primeiro acesso sumia antes de
+    # ser lido. Ele também volta no resumo final enquanto a conta não existir.
+    pausa "Anote o código e aperte Enter para continuar"
   else
     dica "Quando quiser: asimov painel"
   fi

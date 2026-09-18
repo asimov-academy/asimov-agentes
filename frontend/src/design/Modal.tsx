@@ -82,10 +82,10 @@ export function Modal({
         className={`relative my-auto w-full ${largura} border border-borda bg-surface shadow-ativo focus:outline-none`}
       >
         {/* Os dois cantos marcados, a assinatura do design system. */}
-        <svg viewBox="0 0 12 12" className="pointer-events-none absolute -left-px -top-px h-3 w-3 text-lime">
+        <svg viewBox="0 0 12 12" className="pointer-events-none absolute -left-px -top-px h-3 w-3 text-ciano">
           <path d="M0 12V0H12" stroke="currentColor" fill="none" strokeWidth={2} />
         </svg>
-        <svg viewBox="0 0 12 12" className="pointer-events-none absolute -bottom-px -right-px h-3 w-3 text-lime">
+        <svg viewBox="0 0 12 12" className="pointer-events-none absolute -bottom-px -right-px h-3 w-3 text-ciano">
           <path d="M12 0V12H0" stroke="currentColor" fill="none" strokeWidth={2} />
         </svg>
 

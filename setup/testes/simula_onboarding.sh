@@ -9,14 +9,6 @@ DIR=$(mktemp -d); export HOME=$DIR
 source $RAIZ_PROJETO/setup/lib/base.sh
 ARQ_ENV=$DIR/.env; estado_iniciar
 clear() { :; }
-consulta_provedor() {
-  local provedor=$1 chave=$2; shift 2
-  case "$*" in *http_code*) [ "$chave" = "boa" ] && echo 200 || echo 401; return ;; esac
-  case "$provedor" in
-    openai) echo '{"data":[{"id":"gpt-4o"},{"id":"gpt-5.5"},{"id":"whisper-1"},{"id":"gpt-4o-transcribe"},{"id":"text-embedding-3-small"},{"id":"gpt-5-mini"},{"id":"gpt-realtime"},{"id":"dall-e-3"},{"id":"gpt-5.1"}]}' ;;
-    groq) echo '{"data":[{"id":"llama-3.3-70b-versatile"},{"id":"whisper-large-v3-turbo"},{"id":"meta-llama/llama-guard-4-12b"},{"id":"openai/gpt-oss-120b"}]}' ;;
-  esac
-}
 ip_publico() { echo 203.0.113.10; }
 # WAHA: o contêiner e o desenho do QR code não existem aqui.
 garante_waha() { ok "WAHA no ar (simulado)"; }
@@ -32,6 +24,15 @@ ip_da_cloudflare() { return 1; }
 INTERVALO_DNS=0.3
 api() {
   case "$1 $2" in
+    # Chaves de IA: como a API, testa no provedor ("boa" é a única aceita) e guarda.
+    "GET /admin/ia/chaves") API_STATUS=200; API_RESPOSTA=$(jq -nc --arg c "$(cat "$DIR/chaves" 2>/dev/null || true)" '{com_chave: ($c | split(" ") | map(select(. != "")))}') ;;
+    "PUT /admin/ia/chaves/"*)
+      if grep -q '"boa"' <<<"$3"; then printf '%s ' "${2##*/}" >>"$DIR/chaves"; API_STATUS=204; API_RESPOSTA=''
+      else API_STATUS=422; API_RESPOSTA='{"detail":"chave recusada: confira se copiou inteira e se a conta tem crédito"}'; fi ;;
+    "GET /admin/ia/modelos/openai?funcao=conversa") API_STATUS=200; API_RESPOSTA='["openai:gpt-5.5","openai:gpt-5.1","openai:gpt-5-mini","openai:gpt-4o"]' ;;
+    "GET /admin/ia/modelos/openai?funcao=auxiliar") API_STATUS=200; API_RESPOSTA='["openai:gpt-5-mini","openai:gpt-5.5","openai:gpt-5.1","openai:gpt-4o"]' ;;
+    "GET /admin/ia/modelos/"*) API_STATUS=200; API_RESPOSTA='[]' ;;
+    "GET /admin/painel") API_STATUS=200; API_RESPOSTA='{"ativo":false,"endereco":"","tem_operador":false}' ;;
     "POST /admin/canais/chatwoot/descobrir")
       # Como a API: sem token guardado pede o token (428); o que vier fica guardado.
       if [ ! -f "$DIR/token" ] && ! grep -q token_admin <<<"$3"; then API_STATUS=428; API_RESPOSTA='{"detail":"informe o token"}'; return; fi
@@ -84,7 +85,9 @@ api() {
     *) API_STATUS=201; API_RESPOSTA='{"id":"a1","url_webhook":"https://bot.exemplo.com.br/webhook/chatwoot/x"}' ;;
   esac
 }
-banner_asimov; tela_boas_vindas; tela_modo; tela_dados; tela_modelos; tela_dns
+banner_asimov; tela_boas_vindas; tela_modo; tela_dados; tela_dns
+# Como no instalar.sh: o painel é oferecido antes do primeiro agente. Aqui responde "não".
+tela_painel_oferta
 tela_primeiro_agente
 estado_set instalacao_concluida x
 mostra_resumo

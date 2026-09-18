@@ -4,11 +4,11 @@
  *  forma do sistema para proporção em lista: uma linha por item, todas na mesma escala, o olho
  *  compara sozinho. Muito melhor que cinco números soltos um do lado do outro.
  */
-type Tom = "texto" | "lime" | "atencao" | "perigo";
+type Tom = "texto" | "ciano" | "atencao" | "perigo";
 
 const TONS: Record<Tom, string> = {
   texto: "bg-texto",
-  lime: "bg-lime",
+  ciano: "bg-ciano",
   atencao: "bg-atencao",
   perigo: "bg-perigo",
 };

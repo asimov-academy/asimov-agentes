@@ -23,7 +23,7 @@ from app.canais.nativo import servico as nativo_servico
 from app.canais.registro import CANAIS, credenciais_visiveis, obter_canal
 from app.clientes import repo as clientes_repo
 from app.clientes import servico as clientes_servico
-from app.ia import ferramentas
+from app.ia import chaves, ferramentas
 from app.ia.provedores import PROVEDORES, PROVEDORES_TRANSCRICAO, ModeloInvalido
 from app.painel import canais as canais_do_painel
 from app.painel import repo
@@ -188,6 +188,9 @@ class NovoAgenteDoPainel(BaseModel):
     ferramentas: list[str] | None = None
     emojis: Literal["nenhum", "pouco", "medio", "muito"] = "nenhum"
     contatos_permitidos: list[str] | None = None
+    modelo_conversa: str | None = Field(default=None, max_length=200)
+    """Só a resposta é escolhida no onboarding. Resumo, visão e áudio nascem no mesmo provedor e
+    mudam depois, na ficha."""
 
 
 @router.post("/empresas/{cliente_id}/agentes", status_code=201)
@@ -206,7 +209,7 @@ async def cria(
             nome=dados.nome,
             canal=dados.canal,
             conexao=dados.conexao,
-            modelos={},
+            modelos={"modelo_conversa": dados.modelo_conversa},
             handoff_destino=dados.handoff_destino,
             buffer_segundos=dados.buffer_segundos,
             max_mensagens_por_resposta=dados.max_mensagens_por_resposta,
@@ -305,23 +308,27 @@ async def catalogo() -> list[dict[str, Any]]:
     ]
 
 
-@router.get("/modelos")
-async def modelos() -> dict[str, Any]:
-    """Provedores por função e o que a instalação tem configurado hoje.
+class ChaveDoProvedor(BaseModel):
+    chave: str = Field(min_length=1, max_length=500)
 
-    A lista de modelos de cada provedor vem da API do provedor, e isso exige a chave, que o front
-    não tem. O popup mostra o que está em uso e deixa digitar outro; quem valida é o backend.
+
+@router.get("/modelos")
+async def modelos(s: AsyncSession = Depends(sessao)) -> dict[str, Any]:
+    """Provedores por função e quais já têm chave nesta instalação.
+
+    A chave nunca volta para o navegador: o front só sabe se o provedor tem uma.
     """
     cfg = config()
     return {
         "provedores": list(PROVEDORES),
         "provedores_transcricao": list(PROVEDORES_TRANSCRICAO),
+        "com_chave": await chaves.provedores_com_chave(s),
         "funcoes": [
-            {"campo": "modelo_conversa", "rotulo": "Conversa", "obrigatorio": True},
-            {"campo": "modelo_fallback", "rotulo": "Reserva", "obrigatorio": False},
-            {"campo": "modelo_auxiliar", "rotulo": "Resumo do handoff", "obrigatorio": True},
-            {"campo": "modelo_visao", "rotulo": "Imagem e PDF", "obrigatorio": True},
-            {"campo": "modelo_transcricao", "rotulo": "Áudio", "obrigatorio": True},
+            {"campo": "modelo_conversa", "funcao": "conversa", "rotulo": "Conversa", "obrigatorio": True},
+            {"campo": "modelo_fallback", "funcao": "conversa", "rotulo": "Reserva", "obrigatorio": False},
+            {"campo": "modelo_auxiliar", "funcao": "auxiliar", "rotulo": "Resumo do handoff", "obrigatorio": True},
+            {"campo": "modelo_visao", "funcao": "visao", "rotulo": "Imagem e PDF", "obrigatorio": True},
+            {"campo": "modelo_transcricao", "funcao": "transcricao", "rotulo": "Áudio", "obrigatorio": True},
         ],
         "padroes": {
             "modelo_conversa": cfg.modelo_conversa,
@@ -330,6 +337,26 @@ async def modelos() -> dict[str, Any]:
             "modelo_transcricao": cfg.modelo_transcricao,
         },
     }
+
+
+@router.get("/modelos/{provedor}")
+async def modelos_do_provedor(
+    provedor: str, funcao: str = "conversa", s: AsyncSession = Depends(sessao)
+) -> list[str]:
+    """O que o provedor oferece para a função, com as sugestões primeiro."""
+    try:
+        return await chaves.listar_modelos(s, provedor, funcao)
+    except ModeloInvalido as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
+
+
+@router.put("/chaves/{provedor}", status_code=204)
+async def guarda_chave(provedor: str, dados: ChaveDoProvedor, s: AsyncSession = Depends(sessao)) -> None:
+    """Testa a chave no provedor e guarda cifrada. Vale para todo agente da instalação."""
+    try:
+        await chaves.guardar(s, provedor, dados.chave)
+    except (chaves.ChaveRecusada, ModeloInvalido) as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
 
 
 @router.get("/canais")

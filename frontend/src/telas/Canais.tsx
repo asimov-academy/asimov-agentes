@@ -76,7 +76,7 @@ export function Canais({
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-borda pb-6">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-            Canais<span className="text-lime">.</span>
+            Canais<span className="text-ciano">.</span>
           </h1>
           <p className="mt-2 text-sm text-muted">Por onde cada agente atende, e se está de pé agora.</p>
         </div>
@@ -87,7 +87,7 @@ export function Canais({
               value={empresa}
               aria-label="Empresa"
               onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-lime"
+              className="border border-borda bg-surface px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] text-muted transition-colors hover:text-texto focus:border-ciano"
             >
               <option value="">Todas as empresas</option>
               {empresas.map((e) => (

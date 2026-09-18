@@ -22,3 +22,21 @@ class AcessoCanal(ComId, ComCriacao, Base):
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=agora, onupdate=agora
     )
+
+
+class ChaveProvedor(ComId, ComCriacao, Base):
+    """Chave de API de um provedor de IA, guardada cifrada.
+
+    É da instalação: o operador informa uma vez, ao criar um agente pelo terminal ou pelo painel, e
+    todo agente que usar o provedor aproveita. Fica no banco e não no `.env` para valer na hora,
+    sem reconstruir nem reiniciar a API.
+    """
+
+    __tablename__ = "chave_provedor"
+    __table_args__ = (UniqueConstraint("provedor"),)
+
+    provedor: Mapped[str] = mapped_column(String(20))
+    chave_cifrada: Mapped[str] = mapped_column(Text)
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=agora, onupdate=agora
+    )
