@@ -59,15 +59,32 @@ vinculo_conta() {
   grep -o '[[:alnum:]._%+-]\+@[[:alnum:].-]\+\.[[:alpha:]]\{2,\}' <<<"$saida" | head -n1 || true
 }
 
+# O Claude Code guarda o login em ~/.claude/ e o estado do primeiro uso em ~/.claude.json, que fica
+# fora da pasta. Sem o segundo, o CLI no contêiner se acha em primeira execução e sai sem responder.
+# O Codex guarda tudo em ~/.codex.
+ia_arquivo_de_config() { ia_e_codex || printf '%s/.claude.json' "$HOME"; }
+
 vinculo_grava() {
-  local dir
+  local dir config
   dir=$(ia_dir_credencial)
+  config=$(ia_arquivo_de_config)
   env_set IA_VINCULADA 1
   env_set IA_CLI "$(env_get AGENTE_CODIGO)"
   env_set IA_CONTA "$(vinculo_conta)"
   # O contêiner do copiloto monta esta pasta para usar o mesmo login, sem cópia de credencial.
   env_set CREDENCIAL_IA_HOST "$dir"
   env_set CREDENCIAL_IA_CONTAINER "/home/app/$(basename "$dir")"
+  if [ -n "$config" ] && [ -f "$config" ]; then
+    env_set CONFIG_IA_HOST "$config"
+    env_set CONFIG_IA_CONTAINER "/home/app/$(basename "$config")"
+  else
+    env_set CONFIG_IA_HOST ""
+    env_set CONFIG_IA_CONTAINER ""
+  fi
+  # O contêiner roda com o dono da credencial, não com o usuário da imagem: o login do operador é
+  # 600 do dono dele (root, em quase toda VPS) e um uid diferente não conseguiria nem abrir.
+  env_set CREDENCIAL_IA_UID "$(stat -c '%u' "$dir" 2>/dev/null || echo 1000)"
+  env_set CREDENCIAL_IA_GID "$(stat -c '%g' "$dir" 2>/dev/null || echo 1000)"
 }
 
 vinculo_limpa() {
@@ -119,10 +136,11 @@ copiloto_acerta() {
 }
 
 copiloto_sobe() {
-  [ "$(env_get COPILOTO_ATIVO)" = 1 ] && [ -z "${COPILOTO_REFAZ:-}" ] && return 0
   printf '  %sPreparando o copiloto (leva alguns minutos na primeira vez)…%s' "$CINZA" "$NORMAL"
   env_set COPILOTO_ATIVO 1
-  if ! dc build copiloto >>"$LOG" 2>&1 || ! dc up -d copiloto >>"$LOG" 2>&1; then
+  # Sempre recriando: o que muda entre uma vinculação e outra são os volumes da credencial e o
+  # usuário do contêiner, e contêiner que já existe não pega nada disso sozinho.
+  if ! dc build copiloto >>"$LOG" 2>&1 || ! dc up -d --force-recreate copiloto >>"$LOG" 2>&1; then
     printf '\r\033[K'
     env_set COPILOTO_ATIVO ""
     aviso "O copiloto não subiu. O painel funciona sem ele; veja o log: $LOG"

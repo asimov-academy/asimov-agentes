@@ -117,10 +117,15 @@ async def roda_turno(texto: str, conversa_cli: str = "") -> tuple[str, str]:
             "o copiloto demorou demais para responder; tente de novo com um pedido menor"
         ) from erro
 
+    # O stdout entra no log junto do stderr: o Claude Code sai com código 1 e stderr vazio quando
+    # não enxerga a credencial, e sem isto todo erro do CLI virava "não conseguiu responder".
     detalhe = erro_bruto[:2000].decode("utf-8", "replace").strip()
     if processo.returncode != 0:
-        log.warning("copiloto_falhou", cli=cli, codigo=processo.returncode, detalhe=detalhe)
-        raise CopilotoIndisponivel(_motivo(detalhe))
+        contou = saida[:2000].decode("utf-8", "replace").strip()
+        log.warning(
+            "copiloto_falhou", cli=cli, codigo=processo.returncode, detalhe=detalhe, saida=contou
+        )
+        raise CopilotoIndisponivel(_motivo(f"{detalhe}\n{contou}"))
     resposta, conversa = (
         _le_codex(saida) if cli == "codex" else _le_claude(saida[:LIMITE_SAIDA_BYTES])
     )
@@ -133,7 +138,14 @@ async def roda_turno(texto: str, conversa_cli: str = "") -> tuple[str, str]:
 def _motivo(detalhe: str) -> str:
     """O erro do CLI em uma frase que o operador entenda, sem jogar a saída crua na tela."""
     baixo = detalhe.lower()
-    if "login" in baixo or "auth" in baixo or "credential" in baixo or "401" in baixo:
+    if (
+        "login" in baixo
+        or "auth" in baixo
+        or "credential" in baixo
+        or "401" in baixo
+        or "sign in" in baixo
+        or "logged in" in baixo
+    ):
         return "a conta de IA não está mais conectada; rode asimov ia no terminal da VPS"
     if "rate" in baixo or "limit" in baixo or "quota" in baixo or "429" in baixo:
         return "a assinatura bateu no limite de uso da janela; tente de novo mais tarde"

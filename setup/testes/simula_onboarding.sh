@@ -103,8 +103,9 @@ banner_asimov; tela_boas_vindas; tela_modo; tela_dados; tela_dns
 # Como no instalar.sh: a conta de IA vem antes do painel. Aqui responde "sim" e o Codex de mentira
 # aceita o login, que é o caminho que liga o copiloto.
 tela_vinculo_ia
-printf 'IA_VINCULADA=%s IA_CONTA=%s CREDENCIAL_IA_CONTAINER=%s\n' \
-  "$(env_get IA_VINCULADA)" "$(env_get IA_CONTA)" "$(env_get CREDENCIAL_IA_CONTAINER)"
+printf 'IA_VINCULADA=%s IA_CONTA=%s CREDENCIAL_IA_CONTAINER=%s uid=%s\n' \
+  "$(env_get IA_VINCULADA)" "$(env_get IA_CONTA)" "$(env_get CREDENCIAL_IA_CONTAINER)" \
+  "$(env_get CREDENCIAL_IA_UID)"
 # Como no instalar.sh: o painel é oferecido antes do primeiro agente. Aqui responde "não".
 tela_painel_oferta
 tela_primeiro_agente

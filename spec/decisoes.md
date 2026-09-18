@@ -2,6 +2,30 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O copiloto enxerga a credencial do operador (v0.25.2)
+
+Primeiro teste em VPS real. O copiloto apareceu no painel e respondeu "o copiloto não conseguiu
+responder desta vez" a qualquer pedido. Três coisas estavam erradas, e nenhuma delas dava para ver
+de fora.
+
+**O contêiner subia com os volumes padrão.** O `docker inspect` mostrava
+`asimov-agentes/modelos -> /tmp/sem-credencial`, que é o default do Compose para quem nunca
+vinculou conta. Contêiner que já existe não pega volume novo, e `copiloto_sobe` saía cedo quando
+`COPILOTO_ATIVO` já era 1. Agora ele sempre recria: o que muda entre uma vinculação e outra são
+justamente os volumes e o usuário.
+
+**O usuário do contêiner não conseguiria abrir o arquivo.** O login do operador é `600` do dono
+dele, e numa VPS Hostinger esse dono é o root; o contêiner rodava como o `app` da imagem (uid
+1000). O `user:` do serviço passou a ser o dono da pasta de credencial, gravado no `.env` pelo
+vínculo (`CREDENCIAL_IA_UID`).
+
+**Faltava o `~/.claude.json`.** O Claude Code guarda o login em `~/.claude/` e o estado de primeiro
+uso num arquivo fora dessa pasta. Sem ele, o CLI no contêiner se acha em primeira execução e sai
+sem responder. Ele entra como um segundo volume.
+
+**E o erro chegava cego:** o CLI sai com código 1, stderr vazio e o recado no stdout, que o
+`servico.py` descartava. Agora o stdout entra no log e na classificação da mensagem.
+
 ## 2026-09-18: O painel sobrevive a `asimov atualizar` (v0.25.1)
 
 `deploy/caddy/painel.caddy` é versionado, com o conteúdo de painel desligado, e o pacote da
