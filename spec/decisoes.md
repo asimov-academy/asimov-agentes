@@ -2,6 +2,13 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: O aviso de handoff dizia um número que não existe (v0.13.2)
+
+- **Achado do operador**: o aviso chegou com "Assumi a conversa com +1151135133847". Aquilo era o `@lid` do contato formatado como telefone: são dígitos, mas não são o número de ninguém, e quem recebe o aviso tenta ligar para o nada.
+- **Quem monta o nome do contato é o serviço de handoff**, não o canal: nome e telefone do Contato (que a v0.11.1 passou a resolver por trás do `@lid`), na forma `Maria (+55 51 99999-8888)`. Sem nome, só o telefone; sem telefone, o rótulo do canal. Vale para o aviso de handoff e para os dois avisos de retomada.
+- **`numero_legivel` não formata mais `@lid` como telefone**: devolve "o contato".
+- **`/retomar` do destino que escreve por trás de um `@lid`**: a comparação era só pelo id guardado no cadastro do destino, e quem escreve nem sempre aparece por ele. Agora o telefone resolvido desempata (`e_o_destino`), como já era para o contato na lista de quem pode falar.
+
 ## 2026-09-18: Arquivo de mídia dura 24 horas, o texto fica (v0.13.0)
 
 - **Observação do operador**: o modelo não ouve nem enxerga; o que chega nele é sempre o texto da transcrição ou da visão. Então o arquivo é insumo, não acervo.

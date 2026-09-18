@@ -174,10 +174,13 @@ class Canal(Protocol):
         destino: dict[str, Any] | None,
         nota: str,
         codigo: str = "",
+        contato: str = "",
     ) -> list[str]:
         """Passa a conversa para humano: nota interna, atribuição ao destino e pausa do agente.
 
         `codigo` é o do handoff, que os canais diretos mandam no aviso para o `/retomar`.
+        `contato` é como chamar quem está do outro lado (nome e telefone), montado por quem chama:
+        o id da conversa pode ser um `@lid`, que não diz nada a quem vai atender.
         Levanta se a pausa falhar. Devolve o que deu errado sem impedir a pausa (nota, atribuição).
         """
         ...

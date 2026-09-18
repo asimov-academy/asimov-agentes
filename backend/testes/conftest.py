@@ -88,6 +88,7 @@ class ChatwootFalso(Chatwoot):
         self.arquivos: dict[str, ArquivoBaixado] = {}
         self.baixados: list[str] = []
         self.transferencias: list[tuple[str, dict[str, Any] | None, str]] = []
+        self.contatos_avisados: list[str] = []
         self.transferir_quebra = False
         self.desconectar_recusa = False
         self.devolver_recusa = False
@@ -144,7 +145,8 @@ class ChatwootFalso(Chatwoot):
         self.enviadas.append((conversa_externa, texto))
         return str(900000 + len(self.enviadas))
 
-    async def transferir(self, credenciais: dict[str, Any], conversa_externa: str, destino: dict[str, Any] | None, nota: str, codigo: str = "") -> list[str]:
+    async def transferir(self, credenciais: dict[str, Any], conversa_externa: str, destino: dict[str, Any] | None, nota: str, codigo: str = "", contato: str = "") -> list[str]:
+        self.contatos_avisados.append(contato)
         if self.transferir_quebra:
             raise ConnectionError("chatwoot fora do ar")
         self.transferencias.append((conversa_externa, destino, nota))

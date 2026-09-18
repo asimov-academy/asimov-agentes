@@ -101,6 +101,7 @@ async def transferir(
 
     mensagens = await conversas_repo.ultimas_mensagens(sessao, agente.cliente_id, conversa.id)
     resumo = await _resumo(sessao, agente, conversa.id, mensagens, motivo)
+    quem = await como_chamar_o_contato(sessao, canal, conversa)
     # O código sai antes do aviso: nos canais diretos ele vai na mensagem que o destino recebe.
     codigo = novo_codigo()
     try:
@@ -110,6 +111,7 @@ async def transferir(
             agente.handoff_destino,
             nota_para_atendente(motivo, resumo),
             codigo,
+            quem,
         )
     except Exception as erro:
         await registra_falha("handoff_falhou", {"erro": repr(erro)[:500]}, agente.cliente_id, agente.id)
@@ -208,7 +210,7 @@ async def retomar_por_codigo(sessao: AsyncSession, agente: "Agente", codigo: str
         canal,
         credenciais,
         agente.handoff_destino,
-        AVISO_DE_RETOMADA.format(contato=_nome_do_contato(canal, conversa)),
+        AVISO_DE_RETOMADA.format(contato=await como_chamar_o_contato(sessao, canal, conversa)),
     )
     return True
 
@@ -272,7 +274,8 @@ async def retomada_automatica(sessao: AsyncSession) -> int:
             credenciais,
             aberto.destino or agente.handoff_destino,
             AVISO_DE_RETOMADA_POR_TEMPO.format(
-                horas=agente.retomada_automatica_horas, contato=_nome_do_contato(canal, conversa)
+                horas=agente.retomada_automatica_horas,
+                contato=await como_chamar_o_contato(sessao, canal, conversa),
             ),
         )
     if retomadas:
@@ -307,8 +310,22 @@ def _canal_do_agente(agente: "Agente") -> tuple["Canal", dict[str, Any]]:
     return obter_canal(agente.canal), agentes_servico.credenciais(agente)
 
 
-def _nome_do_contato(canal: "Canal", conversa: "Conversa | None") -> str:
-    return "o contato" if conversa is None else canal.rotulo_da_conversa(conversa.id_externo)
+async def como_chamar_o_contato(
+    sessao: AsyncSession, canal: "Canal", conversa: "Conversa | None"
+) -> str:
+    """Como o contato aparece para quem vai atender: nome e telefone, nessa ordem de preferência.
+
+    O id da conversa pode ser um `@lid`, que é só um número interno do WhatsApp; mostrar isso como
+    telefone num aviso faz a pessoa tentar ligar para um número que não existe.
+    """
+    if conversa is None:
+        return "o contato"
+    contato = await conversas_repo.obter_contato(sessao, conversa.cliente_id, conversa.contato_id)
+    telefone = canal.rotulo_da_conversa(f"{contato.telefone}@c.us") if contato and contato.telefone else ""
+    nome = (contato.nome or "").strip() if contato else ""
+    if nome and telefone:
+        return f"{nome} ({telefone})"
+    return nome or telefone or canal.rotulo_da_conversa(conversa.id_externo)
 
 
 async def _avisa(

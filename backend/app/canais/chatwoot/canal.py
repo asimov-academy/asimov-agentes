@@ -429,6 +429,7 @@ class Chatwoot:
         destino: dict[str, Any] | None,
         nota: str,
         codigo: str = "",
+        contato: str = "",
     ) -> list[str]:
         """Nota privada, atribuição e status aberto, nessa ordem.
 

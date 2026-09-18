@@ -173,3 +173,11 @@ async def registra_leitura_de_midia(
     )
     for campo, valor in (("anexo", anexo), ("texto_extraido", texto_extraido), ("midia_id", midia_id)):
         set_committed_value(mensagem, campo, valor)
+
+
+async def obter_contato(
+    sessao: AsyncSession, cliente_id: uuid.UUID, contato_id: uuid.UUID
+) -> Contato | None:
+    return await sessao.scalar(
+        select(Contato).where(Contato.cliente_id == cliente_id, Contato.id == contato_id)
+    )
