@@ -7,6 +7,9 @@ credenciais do agente. Não há chave da instalação aqui: cada empresa tem o p
 Endpoints conferidos na documentação da Meta (2026-09-18):
 - `GET /{waba_id}/phone_numbers` lista os números da conta; `GET /{waba_id}/message_templates`
   lista os templates, com o idioma e a situação da aprovação;
+- `POST /{app_id}/subscriptions` liga os webhooks do app (objeto `whatsapp_business_account`,
+  campo `messages`), com o token do app (`{app_id}|{app_secret}`). Sem isso a Meta não entrega
+  nada, nem para um endereço apontado no número;
 - `POST /{waba_id}/subscribed_apps` inscreve o app nos webhooks da conta;
 - `POST /{phone_number_id}` com `webhook_configuration` aponta os webhooks daquele número para uma
   URL própria (webhook override), que é o que deixa cada agente ter o próprio endereço;
@@ -30,6 +33,11 @@ TIMEOUT = httpx.Timeout(20.0, connect=5.0)
 TIMEOUT_DOWNLOAD = httpx.Timeout(60.0, connect=5.0)
 
 LIMITE_TEMPLATES = 200
+
+CAMPOS_DO_WEBHOOK = "messages"
+"""O que o agente lê: mensagens recebidas e reações. Recibo de entrega não serve para nada aqui e
+só gastaria requisição."""
+OBJETO_DO_WEBHOOK = "whatsapp_business_account"
 
 CODIGOS_DE_TOKEN = (190,)
 """OAuthException: token errado, expirado ou sem permissão."""
@@ -186,6 +194,27 @@ def _parametros_do_corpo(componentes: Any) -> int:
 
 
 # ── Webhook ────────────────────────────────────────────────────────────────
+
+
+async def liga_webhook_do_app(app_id: str, app_secret: str, url: str, verify_token: str) -> None:
+    """Liga os webhooks do app no objeto da conta de WhatsApp Business, com o campo `messages`.
+
+    É o alicerce: o endereço apontado no número (override) só recebe se o app estiver assinando o
+    campo. A Meta confere a URL na hora, com `hub.challenge`. O token aqui é o do app, montado com
+    o id e o segredo, e não o token de acesso do número.
+    """
+    await _chama(
+        f"{app_id}|{app_secret}",
+        "POST",
+        f"/{app_id}/subscriptions",
+        "ligar os webhooks do app",
+        params={
+            "object": OBJETO_DO_WEBHOOK,
+            "callback_url": url,
+            "fields": CAMPOS_DO_WEBHOOK,
+            "verify_token": verify_token,
+        },
+    )
 
 
 async def inscreve_app(token: str, waba_id: str) -> None:

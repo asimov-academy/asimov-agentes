@@ -63,6 +63,7 @@ class CredenciaisWhatsApp(BaseModel):
 
     waba_id: str
     phone_number_id: str
+    app_id: str
     access_token: str
     app_secret: str
     numero: str = ""
@@ -228,12 +229,15 @@ class WhatsApp:
         ficha = await api.numero(credenciais.access_token, credenciais.phone_number_id)
         credenciais.numero = ficha["numero"]
         credenciais.nome_verificado = ficha["nome"]
+        token_do_webhook = url_webhook.rstrip("/").rsplit("/", 1)[-1]
+        # Três camadas, nesta ordem: o app assina o campo `messages`, a conta passa a entregar a
+        # este app e o número ganha o endereço deste agente. Sem a primeira, nada chega.
+        await api.liga_webhook_do_app(
+            credenciais.app_id, credenciais.app_secret, url_webhook, token_do_webhook
+        )
         await api.inscreve_app(credenciais.access_token, credenciais.waba_id)
         await api.aponta_webhook(
-            credenciais.access_token,
-            credenciais.phone_number_id,
-            url_webhook,
-            url_webhook.rstrip("/").rsplit("/", 1)[-1],
+            credenciais.access_token, credenciais.phone_number_id, url_webhook, token_do_webhook
         )
         return credenciais.model_dump()
 

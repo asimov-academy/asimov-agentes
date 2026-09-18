@@ -39,9 +39,10 @@ aviso_oficial() {
 # pede_credenciais_whatsapp: pergunta conta, token e segredo e confere na Meta.
 # Define WHATSAPP_CONEXAO (JSON sem o número) e WHATSAPP_ACHADO (números e templates).
 pede_credenciais_whatsapp() {
-  local conta token segredo corpo
+  local conta app token segredo corpo
   echo
-  dica "Conta de WhatsApp Business (WABA ID) e app: painel da Meta, em WhatsApp > Configuração da API."
+  dica "Passo a passo com links: docs/whatsapp-oficial.md, no repositório."
+  dica "Conta de WhatsApp Business (WABA ID): painel da Meta, em WhatsApp > Configuração da API."
   while true; do
     pergunta conta "ID da conta de WhatsApp Business" "$(estado_get whatsapp_waba)"
     conta=$(tr -cd '0-9' <<<"$conta")
@@ -49,15 +50,23 @@ pede_credenciais_whatsapp() {
       falha "O ID da conta é só números."
       continue
     fi
+    dica "ID do app: painel da Meta, em Configurações do app > Básico, no topo."
+    pergunta app "ID do app" "$(estado_get whatsapp_app)"
+    app=$(tr -cd '0-9' <<<"$app")
+    if [ -z "$app" ]; then
+      falha "O ID do app é só números."
+      continue
+    fi
     dica "Token de acesso permanente (usuário do sistema), não o token de teste de 24 horas."
     pergunta_secreta token "Token de acesso"
     dica "Segredo do app: painel da Meta, em Configurações do app > Básico > Chave secreta."
     pergunta_secreta segredo "Segredo do app"
-    corpo=$(jq -n --arg c "$conta" --arg t "$token" --arg s "$segredo" \
-      '{conexao: {waba_id: $c, access_token: $t, app_secret: $s}}')
+    corpo=$(jq -n --arg c "$conta" --arg a "$app" --arg t "$token" --arg s "$segredo" \
+      '{conexao: {waba_id: $c, app_id: $a, access_token: $t, app_secret: $s}}')
     api_com_token POST /admin/canais/whatsapp/descobrir "$corpo" "Conferindo na Meta…"
     if [ "$API_STATUS" = 200 ]; then
       estado_set whatsapp_waba "$conta"
+      estado_set whatsapp_app "$app"
       WHATSAPP_CONEXAO=$(jq -c '.conexao' <<<"$corpo")
       WHATSAPP_ACHADO=$API_RESPOSTA
       unset token segredo
@@ -242,10 +251,11 @@ edita_whatsapp() {
   campo "Retomada" "👍 no aviso$(jq -r 'if .retomada_automatica_horas then ", ou sozinho em \(.retomada_automatica_horas) h" else " ou /retomar" end' <<<"$AGENTE")"
   campo "Atende" "$(atende_do_agente "$AGENTE")"
   echo
-  ESC_ESCOLHE=4 escolha op "O que fazer?" \
+  ESC_ESCOLHE=5 escolha op "O que fazer?" \
     "Quem recebe o handoff  ${CINZA}número e template${NORMAL}" \
     "Horas até voltar sozinho" \
     "Quem o agente atende" \
+    "Refazer o webhook na Meta  ${CINZA}se o agente parou de receber mensagem${NORMAL}" \
     "Voltar"
   case "$op" in
     1)
@@ -260,6 +270,17 @@ edita_whatsapp() {
     3)
       escolhe_contatos_permitidos "$(jq -c '.contatos_permitidos // []' <<<"$AGENTE")"
       salva_agente "$(jq -n --argjson p "$CONTATOS_PERMITIDOS" '{contatos_permitidos: $p}')"
+      ;;
+    4)
+      echo
+      dica "Liga de novo os webhooks do app, inscreve a conta e aponta o número para este servidor."
+      api_com_token POST "$(caminho_do_agente "$AGENTE")/whatsapp/webhook" '{}' "Refazendo na Meta…"
+      if [ "$API_STATUS" = 204 ]; then
+        ok "Webhook refeito. Mande uma mensagem para o número e confira com: asimov consumo"
+      else
+        falha "$(detalhe_erro "$API_RESPOSTA")"
+      fi
+      pausa
       ;;
   esac
 }

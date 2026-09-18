@@ -14,6 +14,7 @@ from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
 from app.agentes.modelos import Agente
 from app.canais.base import CredencialInvalida
+from app.canais.registro import obter_canal
 from app.canais.whatsapp import api
 from app.canais.whatsapp.canal import PARAMETROS_DO_TEMPLATE
 from app.plataforma.admin import exige_admin
@@ -66,6 +67,24 @@ async def numero(
         numero=ficha["numero"],
         nome=ficha["nome"],
     )
+
+
+@router.post("/clientes/{cliente_id}/agentes/{agente_id}/whatsapp/webhook", status_code=204)
+async def refazer_webhook(
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)
+) -> None:
+    """Refaz as três camadas de webhook na Meta, com as credenciais que o agente já tem.
+
+    Serve para quando alguém mexeu na configuração do app pelo painel, ou para agente criado por
+    uma versão anterior que não ligava o campo `messages`. É idempotente.
+    """
+    agente = await _agente(s, cliente_id, agente_id)
+    credenciais = agentes_servico.credenciais(agente)
+    url = agentes_servico.url_webhook(agente)
+    try:
+        await obter_canal("whatsapp").conectar(credenciais, url, agente.nome)
+    except CredencialInvalida as erro:
+        raise _erro_da_meta(erro) from erro
 
 
 @router.get(

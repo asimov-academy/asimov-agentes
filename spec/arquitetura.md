@@ -69,7 +69,7 @@ Modelos de IA:
 
 - **Operador:** entra por SSH. As rotas administrativas (`/admin/*`) exigem o header `X-Admin-Key` com a `chave_api_admin` gerada pelo setup, comparada em tempo constante. O Caddy não publica `/admin/*`; a API escuta em `127.0.0.1:8000` e só o menu, na própria VPS, chega nela.
 - **Canais:** cada webhook entra por `https://bot.<dominio>/webhook/{canal}/{token_webhook}`. O `token_webhook` identifica o agente e, por ele, o cliente. Depois disso, a assinatura do canal é verificada com a credencial daquele agente:
-  - WhatsApp oficial: cada agente tem o próprio endereço, apontado no número pela API (`webhook_configuration`, o webhook override da Meta), e não a URL do app. O `GET` de verificação devolve `hub.challenge` quando `hub.verify_token` é igual ao `token_webhook` da URL: a Meta confere o endereço antes de o agente existir no banco, e quem sabe o token já sabe o segredo do webhook. O `POST` vem com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`), e corpo de outro `phone_number_id` é ignorado.
+  - WhatsApp oficial: a API liga os webhooks do app (campo `messages`, com o token do app), inscreve a conta e aponta o endereço deste agente no número (`webhook_configuration`, o webhook override da Meta), em vez de usar a URL do app. O `GET` de verificação devolve `hub.challenge` quando `hub.verify_token` é igual ao `token_webhook` da URL: a Meta confere o endereço antes de o agente existir no banco, e quem sabe o token já sabe o segredo do webhook. O `POST` vem com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`), e corpo de outro `phone_number_id` é ignorado.
   - WAHA: não passa pelo Caddy. A WAHA chama `http://api:8000/webhook/waha/{token_webhook}` pela rede interna, com `X-Webhook-Hmac` = HMAC SHA-512 do corpo cru com a `hmac_key` do agente.
   - Nativo: sem webhook; o terminal chama as rotas administrativas de conversa.
   - Chatwoot: `X-Chatwoot-Signature` = HMAC SHA-256 de `"{X-Chatwoot-Timestamp}.{corpo cru}"` com o `bot_secret`.
@@ -168,6 +168,7 @@ Webhooks, chamados pelos canais:
 |---|---|---|
 | Verificação do endereço | `GET /webhook/{canal}/{token}` | só o WhatsApp oficial responde: `hub.verify_token` igual ao token da URL devolve `hub.challenge`. Nos outros canais, 404 |
 | Receber WhatsApp | `POST /webhook/whatsapp/{token}` | assinatura; agente ativo; corpo de outro `phone_number_id` ignorado; recibo de entrega ignorado; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando (`/retomar` ou 👍 no aviso) |
+| Refazer o webhook na Meta | `POST /admin/clientes/{c}/agentes/{a}/whatsapp/webhook` | refaz as três camadas com as credenciais guardadas; idempotente |
 | Receber WAHA | `POST /webhook/waha/{token}` (rede interna) | HMAC SHA-512; agente ativo; aceita `message` e `session.status`; ignora `fromMe` e grupos, exceto o grupo de handoff; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando |
 | Receber Chatwoot | `POST /webhook/chatwoot/{token}` | HMAC; aceita só `message_created`, `conversation_status_changed` e `conversation_updated`; vale qualquer caixa em que o bot esteja ligado (o Chatwoot só chama o bot a partir delas e a assinatura prova o bot); deduplica mensagem pelo id; mudança de status para `pending` fecha o handoff aberto (idempotente) |
 

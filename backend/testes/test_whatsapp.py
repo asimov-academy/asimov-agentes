@@ -31,11 +31,13 @@ DESTINO = "5511977776666"
 NUMERO_ID = "1099"
 WABA = "2200"
 TOKEN_META = "EAAtoken-permanente"
+APP_ID = "770011"
 APP_SECRET = "segredo-do-app-da-meta"
 TEMPLATE = {"nome": "aviso_handoff", "idioma": "pt_BR"}
 CONEXAO = {
     "waba_id": WABA,
     "phone_number_id": NUMERO_ID,
+    "app_id": APP_ID,
     "access_token": TOKEN_META,
     "app_secret": APP_SECRET,
 }
@@ -47,6 +49,7 @@ class MetaFalsa:
     def __init__(self) -> None:
         self.url_webhook = ""
         self.verify_token = ""
+        self.assinado: tuple[str, str, str] | None = None
         self.inscritos: list[str] = []
         self.limpos: list[str] = []
         self.textos: list[tuple[str, str]] = []
@@ -59,6 +62,9 @@ class MetaFalsa:
         async def numero(token: str, phone_number_id: str) -> dict[str, Any]:
             assert token == TOKEN_META
             return {"numero": "+55 11 3333-4444", "nome": "Loja Exemplo"}
+
+        async def liga_webhook_do_app(app_id: str, app_secret: str, url: str, verify: str) -> None:
+            self.assinado = (app_id, app_secret, url)
 
         async def inscreve_app(token: str, waba_id: str) -> None:
             self.inscritos.append(waba_id)
@@ -90,6 +96,7 @@ class MetaFalsa:
 
         for nome, funcao in (
             ("numero", numero),
+            ("liga_webhook_do_app", liga_webhook_do_app),
             ("inscreve_app", inscreve_app),
             ("aponta_webhook", aponta_webhook),
             ("limpa_webhook", limpa_webhook),
@@ -214,6 +221,8 @@ async def test_conectar_aponta_o_webhook_do_numero_e_esconde_o_token(http, meta)
     # O token da URL é o mesmo que a Meta devolve na verificação: não há segundo segredo a guardar.
     assert meta.verify_token == agente["token"]
     assert meta.inscritos == [WABA]
+    # O app precisa assinar o campo `messages` antes: sem isso a Meta não entrega nem no override.
+    assert meta.assinado == (APP_ID, APP_SECRET, agente["url_webhook"])
     assert TOKEN_META not in json.dumps(agente) and APP_SECRET not in json.dumps(agente)
     assert agente["credenciais"]["numero"] == "+55 11 3333-4444"
 
@@ -485,3 +494,22 @@ def test_conta_os_parametros_do_corpo_do_template() -> None:
     ]
     assert api._parametros_do_corpo(componentes) == 3
     assert api._parametros_do_corpo([{"type": "BODY", "text": "sem parâmetro"}]) == 0
+
+
+async def test_refazer_webhook_liga_as_tres_camadas_de_novo(http, meta) -> None:  # type: ignore[no-untyped-def]
+    """Alguém mexeu no painel da Meta: o menu refaz sem pedir as credenciais de novo."""
+    agente = await cria_agente(http)
+    meta.assinado = None
+    meta.inscritos.clear()
+    meta.url_webhook = ""
+
+    resp = await http.post(
+        f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}/whatsapp/webhook",
+        json={},
+        headers=ADMIN,
+    )
+
+    assert resp.status_code == 204, resp.text
+    assert meta.assinado == (APP_ID, APP_SECRET, agente["url_webhook"])
+    assert meta.inscritos == [WABA]
+    assert meta.url_webhook == agente["url_webhook"]
