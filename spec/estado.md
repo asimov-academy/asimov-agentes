@@ -45,7 +45,7 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 | 2. Áudio, imagem e documento | Concluída e validada em VPS real (v0.3.2) |
 | 3. Handoff no Chatwoot | Concluída e validada em VPS real (v0.4.1) |
 | 4. Menu do operador | Concluída e validada em VPS real (confirmado pelo operador em 2026-09-17) |
-| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Parte 1 (agente nativo) validada em VPS real (v0.8.11). **Parte 2 (WAHA) validada em VPS real em 2026-09-18 (v0.14.2)**: instalação, pareamento, texto, áudio, imagem, PDF, lista de quem atende, handoff com aviso e código, `/retomar`, joinha, pausa por resposta pelo aparelho, retomada por tempo e remoção tirando o aparelho do celular. **WhatsApp oficial construído na v0.15.0, aguardando validação na VPS.** Ver "Para a fase 5" abaixo |
+| 5. WhatsApp direto (oficial e WAHA) e agente nativo | **Em construção**, uma versão por parte. Parte 1 (agente nativo) validada em VPS real (v0.8.11). **Parte 2 (WAHA) validada em VPS real em 2026-09-18 (v0.14.2)**: instalação, pareamento, texto, áudio, imagem, PDF, lista de quem atende, handoff com aviso e código, `/retomar`, joinha, pausa por resposta pelo aparelho, retomada por tempo e remoção tirando o aparelho do celular. **WhatsApp oficial (v0.15.0 a v0.17.0), em validação na VPS**: número de produção respondendo texto e áudio, com o digitando da Cloud API convincente (confirmado pelo operador em 2026-09-18). Faltam handoff com aviso por template e retomada por tempo. Ver "Para a fase 5" abaixo |
 | 6. Base de conhecimento | Não iniciada |
 | 7. Polimento e distribuição | Parcial: repositório público, README, licença MIT, `install.sh` pelo GitHub; faltam backup, limpeza de mídia de 90 dias e domínio próprio do setup |
 
@@ -98,6 +98,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 ## Para a fase 5
 
 Critério de aceite e o que entra: spec/fases.md, Fase 5. Decisão e comparação de APIs: spec/decisoes.md (2026-09-17). Ordem: **nativo (feito, v0.8.0 a v0.8.11), WAHA (validada, v0.9.0 a v0.14.2), WhatsApp oficial (construído, v0.15.0)**, uma versão por parte, com validação na VPS entre elas.
+
+Validado na VPS no WhatsApp oficial (2026-09-18): áudio entendido e digitando convincente, com o indicador da Cloud API preso à mensagem que chegou. Falta o handoff (aviso por template fora da janela de 24 h) e a retomada por tempo.
 
 Validado na VPS na parte 1 (2026-09-17): conversa no terminal com ritmo rápido e etapas; nativo conectado ao Chatwoot com as conversas de teste separadas; handoff e devolução no Chatwoot; busca na web usada quando precisa (v0.8.5) e sem o erro de JSON (v0.8.9); data do dia respondida sem ferramenta (v0.8.10); agente novo cru, sem ferramentas e com prompt de uma linha, gastando uns 550 tokens por turno contra uns 5.600 com busca ligada (v0.8.11).
 
