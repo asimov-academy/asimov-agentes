@@ -41,6 +41,17 @@ barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de se
 
 spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
 
+## 2026-09-18: Nada de caixa nativa do navegador no painel (v0.21.5)
+
+O X do popup do agente não fechava. Ele chamava `window.confirm` antes de sair, e onde o navegador
+suprime a caixa nativa (embutida num app, modo quiosque, bloqueio de diálogo) ela devolve "não" sem
+aparecer: o popup ficava aberto e o botão parecia morto. O operador achou clicando.
+
+A pergunta saiu inteira, porque não tinha o que proteger: o rascunho é gravado no navegador a cada
+mudança e o popup reabre com ele. Um teste novo (`design/dialogos.teste.ts`) recusa `confirm`,
+`alert` e `prompt` no `src` inteiro. Quem precisa confirmar usa o `Modal`, quem precisa avisar usa o
+`Aviso`: caixa nativa trava a página e ignora o design system.
+
 ## 2026-09-18: O painel se afasta do design system em três pontos (v0.21.0)
 
 O operador pediu canto arredondado, Inter na estrutura e o logo das integrações. Os três contrariam
