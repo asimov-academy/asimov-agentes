@@ -2,6 +2,36 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Humanização vira a fase 10
+
+O operador trouxe três pesquisas sobre humanização de agentes de atendimento (práticas de mercado,
+o que os líderes expõem na interface e o que a PydanticAI oferece) e pediu um plano. A leitura do
+código mostrou que boa parte do que elas chamam de estado da arte já está no ar desde a fase 5:
+buffer com lock, digitando no ritmo de uma pessoa, resposta em bolhas sem markdown, tom, emoji,
+assunto restrito e transferência opcional. O plano ficou com o que falta, em
+`docs/plano-humanizacao.md`: ritmo com nome, persona com o que nunca dizer, memória do contato,
+sentimento com gatilhos e aviso de IA, e regressão de persona quando a IA reescreve o prompt.
+
+**Vira uma fase, a 10, depois da fase 6.** A alternativa era soltar as duas primeiras etapas como
+versão de polimento agora, no molde das v0.21 a v0.24. O operador preferiu a fase inteira: a memória
+do contato encosta na base de conhecimento, e as duas mexem no que o agente sabe além da conversa.
+
+**O aviso de que é uma IA nasce desligado**, e o operador marca. Pela lei europeia ele seria
+obrigatório desde 2 de agosto de 2026, mas quem atende só no Brasil não está nesse caso, e a fase
+entrega a escolha com a frase que explica quando marcar, não a regra ligada por padrão.
+
+**A memória do contato nasce ligada.** Lembrar do que ficou combinado é o que o contato espera de
+quem já falou com ele, e é o item com mais efeito na percepção de atendimento humano. Agente criado
+antes da fase nasce sem memória e só lembra do que vier depois de ligada.
+
+**O validador de preço e prazo fica para a fase 6.** Recusar a resposta que fala de preço sem
+nenhuma ferramenta chamada só funciona quando existe de onde tirar o preço. Hoje quase todo agente
+tem zero ferramenta e o preço mora no "sobre a empresa" escrito pelo operador: o validador recusaria
+a resposta certa. Na fase 10 a regra é só texto no prompt ("não afirme preço ou prazo que não esteja
+no que você recebeu"); o validador entra com a base de conhecimento, ligado em agente com base.
+
+Atualizados: `spec/fases.md` (fase 10), `spec/estado.md` (tabela de fases).
+
 ## 2026-09-18: O jeito do agente vira escolha, e o treinamento ganha lugar (v0.26.0)
 
 Primeiro refino depois do copiloto no ar, com o operador usando o painel e apontando o que faltava.
