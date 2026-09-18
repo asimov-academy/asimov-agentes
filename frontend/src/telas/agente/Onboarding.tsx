@@ -206,11 +206,10 @@ export function Onboarding({
     }
   }
 
+  // Fecha direto: o rascunho é gravado no navegador a cada mudança e o popup reabre onde parou.
+  // Havia um `window.confirm` aqui, e onde o navegador suprime a caixa nativa ela devolve "não" e
+  // o popup não fechava, com o X parecendo morto. Diálogo nativo não tem lugar num painel desenhado.
   function sai() {
-    const escreveu = dados.nome.trim() || dados.canal || dados.sobre.trim();
-    if (escreveu && !window.confirm("Sair? O que você já respondeu fica guardado.")) {
-      return;
-    }
     aoFechar();
   }
 
