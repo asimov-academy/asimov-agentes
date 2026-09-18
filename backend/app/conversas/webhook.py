@@ -108,12 +108,13 @@ async def receber(
     if evento.acao is Acao.IGNORAR:
         # Info de propósito, e com o remetente: evento ignorado sem dizer de onde veio é o que mais
         # atrasa o debug, e foi o que escondeu um `/retomar` que não chegava (v0.13.3).
+        # Sem o texto: `message.any` traz tudo que sai do número do agente, inclusive conversa
+        # pessoal de quem tem o aparelho, e isso não pode virar linha de log (v0.14.2).
         log.info(
             "webhook_ignorado",
             motivo=evento.motivo,
             de=evento.conversa_externa,
             telefone=evento.contato_telefone,
-            texto=(evento.texto or "")[:60] or None,
         )
         return Response(status_code=200)
 
@@ -162,7 +163,6 @@ async def receber(
                     "webhook_ignorado",
                     motivo="conversa que o agente ainda não atende",
                     de=evento.conversa_externa,
-                    texto=(evento.texto or "")[:60] or None,
                 )
                 return Response(status_code=200)
 

@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Conversa pessoal não entra no log, e manutenção não dispara alarme (v0.14.2)
+
+- **Achado no relatório da validação**: linhas como `conversa que o agente ainda não atende, de: 80869972770836@lid, texto: "falta só as guria"`. O número pareado é um celular que a pessoa também usa, `message.any` traz tudo que sai dele, e o texto das conversas particulares estava indo para o log da API. O `texto` saiu do log (entrou na v0.13.3 para diagnóstico e não vale o preço); o remetente fica, que é o que resolve o diagnóstico.
+- **`canal_fora_do_ar` quatro vezes durante os testes**: era o setup recriando o contêiner (atualização e preparação do nome do aparelho), não número caindo. A janela de silêncio só era marcada quando o operador pedia um QR code novo. Agora o setup avisa a plataforma antes de mexer no contêiner (`POST /admin/canais/waha/manutencao`), e a sessão parada nos minutos seguintes não alarma.
+- Regra que fica: o que passa por `message.any` é conversa de quem emprestou o número ao agente. Nada além do necessário para operar sai de lá.
+
 ## 2026-09-18: O áudio leva o idioma (v0.14.1)
 
 - **Achado na validação**: um "Boa noite" voltou transcrito como "Боооооооую ночь." O transcritor adivinha o idioma pelo som, e áudio curto ou com ruído cai em outra língua; o mesmo contato mandou outro áudio que saiu certo.

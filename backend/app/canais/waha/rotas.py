@@ -47,6 +47,19 @@ class NumeroSaida(BaseModel):
     telefone: str | None
 
 
+@router.post("/canais/waha/manutencao", status_code=204)
+async def manutencao(request: Request, s: AsyncSession = Depends(sessao)) -> None:
+    """O setup vai mexer no contêiner: sessão parada nos próximos minutos não é número fora do ar.
+
+    Sem isso, atualizar a plataforma ou preparar o nome do aparelho gerava alarme sobre o que o
+    próprio operador estava fazendo.
+    """
+    fila = getattr(request.app.state, "fila", None)
+    for agente in await agentes_repo.listar_de_todos_os_clientes(s):
+        if agente.canal == "waha" and agente.ativo:
+            await vigia.marca_pareamento(fila, agente.id)
+
+
 @router.get("/canais/waha", response_model=dict)
 async def saude() -> dict[str, Any]:
     """Se a WAHA está no ar e em que versão. O setup espera por aqui depois de recriar o contêiner."""
