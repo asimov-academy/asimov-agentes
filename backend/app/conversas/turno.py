@@ -122,12 +122,13 @@ async def _turno(
         if not pendentes:
             return "nada_pendente"
 
-        await _digitando(canal, credenciais, conversa.id_externo, True)
+        ultima = _ultima_recebida(pendentes)
+        await _digitando(canal, credenciais, conversa.id_externo, True, ultima)
         # Grava a leitura antes do modelo: se a resposta falhar, a mídia não é lida de novo.
         await midia.processa_pendentes(s, agente, canal, credenciais, conversa_id, pendentes)
         await s.commit()
         if not await sem_mensagem_nova():
-            await _digitando(canal, credenciais, conversa.id_externo, False)
+            await _digitando(canal, credenciais, conversa.id_externo, False, ultima)
             return "substituido"
         inicio = time.monotonic()
         try:
@@ -135,7 +136,7 @@ async def _turno(
                 agente, anteriores, pendentes, await handoff_repo.da_conversa(s, cliente_id, conversa_id)
             )
         except Exception as erro:
-            await _digitando(canal, credenciais, conversa.id_externo, False)
+            await _digitando(canal, credenciais, conversa.id_externo, False, ultima)
             await grava_turno(
                 s,
                 Turno(
@@ -148,7 +149,9 @@ async def _turno(
             )
             await s.commit()
             await registra_falha("turno_modelo_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id)
-            await _envia(s, canal, credenciais, agente, conversa, [handoff.MENSAGEM_DE_EXPECTATIVA], comeco)
+            await _envia(
+                s, canal, credenciais, agente, conversa, [handoff.MENSAGEM_DE_EXPECTATIVA], comeco, ultima
+            )
             await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
             await handoff.transferir(s, agente, canal, credenciais, conversa, handoff.MOTIVO_FALHA_NO_TURNO)
             await s.commit()
@@ -170,7 +173,7 @@ async def _turno(
                 ),
             )
             await s.commit()
-            await _digitando(canal, credenciais, conversa.id_externo, False)
+            await _digitando(canal, credenciais, conversa.id_externo, False, ultima)
             log.info("resposta_descartada")
             return "substituido"
         enviadas = await _envia(
@@ -181,6 +184,7 @@ async def _turno(
             conversa,
             limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta),
             comeco,
+            ultima,
         )
         await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
 
@@ -225,6 +229,7 @@ async def _envia(
     conversa: Conversa,
     textos: list[str],
     comeco: float,
+    ultima_recebida: str | None = None,
 ) -> int:
     """Envia na ordem com digitando antes de cada uma; para na primeira que falhar.
 
@@ -239,7 +244,7 @@ async def _envia(
     )
     enviadas = 0
     for texto, segundos in zip(textos, tempos, strict=True):
-        await _digitando(canal, credenciais, conversa.id_externo, True)
+        await _digitando(canal, credenciais, conversa.id_externo, True, ultima_recebida)
         await asyncio.sleep(segundos)
         try:
             id_externo = await canal.enviar_texto(credenciais, conversa.id_externo, texto)
@@ -258,13 +263,30 @@ async def _envia(
             ),
         )
         enviadas += 1
-    await _digitando(canal, credenciais, conversa.id_externo, False)
+    await _digitando(canal, credenciais, conversa.id_externo, False, ultima_recebida)
     return enviadas
 
 
-async def _digitando(canal: Any, credenciais: dict[str, Any], conversa: str, ligado: bool) -> None:
+def _ultima_recebida(pendentes: list[Mensagem]) -> str | None:
+    """Id da última mensagem que chegou, no canal: a Cloud API prende o digitando a ela.
+
+    O sufixo `:1` que a gravação põe nos anexos extras não existe no canal, e sai aqui.
+    """
+    for mensagem in reversed(pendentes):
+        if mensagem.direcao == "entrada" and mensagem.id_externo:
+            return mensagem.id_externo.split(":")[0]
+    return None
+
+
+async def _digitando(
+    canal: Any,
+    credenciais: dict[str, Any],
+    conversa: str,
+    ligado: bool,
+    ultima_recebida: str | None = None,
+) -> None:
     """Digitando é cosmético: falha aqui nunca derruba o turno."""
     try:
-        await canal.digitando(credenciais, conversa, ligado)
+        await canal.digitando(credenciais, conversa, ligado, ultima_recebida)
     except Exception as erro:
         log.debug("digitando_falhou", erro=repr(erro))

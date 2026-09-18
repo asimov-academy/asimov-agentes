@@ -487,6 +487,10 @@ pergunta_retomada() {
     dica "Quando um atendente responde no Chatwoot, a conversa passa a ser dele e o agente cala."
     dica "Ele volta quando a conversa voltar para Pendente, ou sozinho depois do tempo abaixo,"
     dica "que é a rede de segurança para quando alguém esquece de devolver. 0 deixa parado."
+  elif [ "$canal" = whatsapp ]; then
+    dica "Quando o agente passa a conversa, quem recebe o aviso atende pelo próprio WhatsApp."
+    dica "Para devolver ao agente: 👍 no aviso ou /retomar no mesmo chat."
+    dica "Sem nada disso, ele volta sozinho depois do tempo abaixo. 0 deixa parado até alguém devolver."
   else
     dica "Quando alguém da equipe responde pelo aparelho, o agente cala na hora e deixa a pessoa atender."
     dica "Para devolver ao agente: reagir com 👍 em qualquer mensagem da conversa ou mandar /retomar."

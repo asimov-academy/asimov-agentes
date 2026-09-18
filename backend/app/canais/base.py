@@ -133,6 +133,13 @@ class Canal(Protocol):
         """Troca o nome com que o agente aparece no canal. `dados` é o acesso do operador."""
         ...
 
+    def responde_verificacao(self, parametros: dict[str, str], token: str) -> str | None:
+        """`GET` no endereço do webhook: o canal devolve o que precisa responder, ou None.
+
+        Só o WhatsApp oficial usa: a Meta confere o endereço antes de mandar qualquer mensagem.
+        """
+        ...
+
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool: ...
 
     def interpretar(
@@ -157,8 +164,18 @@ class Canal(Protocol):
         ...
 
     async def digitando(
-        self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool
-    ) -> None: ...
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        ligado: bool,
+        ultima_mensagem: str | None = None,
+    ) -> None:
+        """`ultima_mensagem` é o id da última mensagem que chegou, no canal.
+
+        A Cloud API prende o digitando a ela (e some sozinho em 25 s); os outros canais ligam e
+        desligam pela conversa e não precisam do id.
+        """
+        ...
 
     async def enviar_texto(
         self, credenciais: dict[str, Any], conversa_externa: str, texto: str

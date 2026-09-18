@@ -121,7 +121,7 @@ Commit: `feat: menu do operador com agentes e consumo`
 
 ## Fase 5: WhatsApp direto (oficial e WAHA) e agente nativo
 
-Situação: em construção. O Telegram saiu antes de começar (spec/decisoes.md). Agente nativo validado na VPS (v0.8.11) e WAHA validada na VPS em 2026-09-18 (v0.14.2), com o critério de aceite cumprido; falta o WhatsApp oficial.
+Situação: em construção. O Telegram saiu antes de começar (spec/decisoes.md). Agente nativo validado na VPS (v0.8.11) e WAHA validada na VPS em 2026-09-18 (v0.14.2), com o critério de aceite cumprido. WhatsApp oficial construído na v0.15.0, aguardando o critério de aceite numa VPS real.
 
 Objetivo: agentes ligados direto no WhatsApp, pela Cloud API oficial ou pela WAHA instalada na VPS, com handoff por aviso; e agentes nativos, sem canal, para conversar no terminal.
 
@@ -132,7 +132,7 @@ O que entra:
 - Opção "Conversar com agente" no menu e `asimov conversar`.
 - Container `waha` (WAHA com GOWS, versão fixada, sem porta pública, `WAHA_API_KEY` gerada, painel e Swagger desligados, volume de sessões), subido pelo setup no primeiro agente WAHA.
 - `canais/waha/`: sessão por agente com webhook interno assinado; QR code desenhado no terminal (`qrencode`); normalização (ignora `fromMe` e grupos, exceto o de handoff); envio; digitando; marcar como lida; download de mídia; remoção faz logout e apaga a sessão.
-- `canais/whatsapp/`: verificação da Meta, assinatura, normalização, envio, digitando, download de mídia, template de handoff fora da janela de 24 horas.
+- `canais/whatsapp/`: webhook próprio por agente, apontado no número pela API (webhook override da Meta); verificação do endereço, assinatura, normalização, envio, digitando preso à mensagem que chegou, download de mídia, template de handoff fora da janela de 24 horas.
 - Handoff direto (WAHA e oficial): pausa por contato, aviso com resumo e código ao `handoff_destino`, `/retomar <código>` só aceito do destino.
 - Job `retomada_automatica` a cada minuto e aviso de retomada.
 - Canal escolhível nas telas 6 e 8.

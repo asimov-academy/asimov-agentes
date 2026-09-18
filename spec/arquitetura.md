@@ -10,7 +10,7 @@ Encontrados ao cruzar spec/visao.md, spec/usuarios.md, spec/telas.md e spec/dado
 
 1. **Modelo de embeddings estava por agente.** A dimensão do vetor é fixa na coluna do banco, então agentes com modelos diferentes quebrariam a busca. Passou para a Instalação.
 2. **Função 17 (consumo e falhas) não tinha tela.** Adicionada a opção "Ver consumo e falhas" no menu e a operação correspondente na API.
-3. **Aviso de handoff no WhatsApp direto.** Fora da janela de 24 horas a Meta só aceita template aprovado, e o número da empresa normalmente nunca falou com o bot. Adicionado `handoff_template` ao Agente de canal WhatsApp.
+3. **Aviso de handoff no WhatsApp direto.** Fora da janela de 24 horas a Meta só aceita template aprovado, e o número da empresa normalmente nunca falou com o bot. O aviso tenta texto livre e cai no template, que fica no `handoff_destino` do agente (v0.15.0).
 4. **Comando de retomada sem formato.** Definido: o aviso leva um código curto e o atendente responde `/retomar <código>`. Adicionado `codigo` ao Handoff.
 5. **Renovação de SSL listada como job agendado.** O proxy escolhido renova sozinho; removido dos jobs.
 6. **Verificação do webhook do Chatwoot.** Além do token na URL, o Chatwoot assina com HMAC; incluído em spec/usuarios.md.
@@ -69,7 +69,7 @@ Modelos de IA:
 
 - **Operador:** entra por SSH. As rotas administrativas (`/admin/*`) exigem o header `X-Admin-Key` com a `chave_api_admin` gerada pelo setup, comparada em tempo constante. O Caddy não publica `/admin/*`; a API escuta em `127.0.0.1:8000` e só o menu, na própria VPS, chega nela.
 - **Canais:** cada webhook entra por `https://bot.<dominio>/webhook/{canal}/{token_webhook}`. O `token_webhook` identifica o agente e, por ele, o cliente. Depois disso, a assinatura do canal é verificada com a credencial daquele agente:
-  - WhatsApp: `GET` de verificação com `hub.verify_token`; `POST` com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`).
+  - WhatsApp oficial: a API liga os webhooks do app (campo `messages`, com o token do app), inscreve a conta e aponta o endereço deste agente no número (`webhook_configuration`, o webhook override da Meta), em vez de usar a URL do app. O `GET` de verificação devolve `hub.challenge` quando `hub.verify_token` é igual ao `token_webhook` da URL: a Meta confere o endereço antes de o agente existir no banco, e quem sabe o token já sabe o segredo do webhook. O `POST` vem com `X-Hub-Signature-256` (HMAC SHA-256 do corpo cru com o `app_secret`), e corpo de outro `phone_number_id` é ignorado.
   - WAHA: não passa pelo Caddy. A WAHA chama `http://api:8000/webhook/waha/{token_webhook}` pela rede interna, com `X-Webhook-Hmac` = HMAC SHA-512 do corpo cru com a `hmac_key` do agente.
   - Nativo: sem webhook; o terminal chama as rotas administrativas de conversa.
   - Chatwoot: `X-Chatwoot-Signature` = HMAC SHA-256 de `"{X-Chatwoot-Timestamp}.{corpo cru}"` com o `bot_secret`.
@@ -105,7 +105,7 @@ backend/app/
 ├── clientes/       rotas.py, servico.py, repo.py, modelos.py
 ├── agentes/        rotas.py, servico.py, repo.py, modelos.py
 ├── canais/
-│   ├── base.py     interface: conectar e desconectar, verificar, normalizar entrada, enviar, digitando, baixar mídia, transferir, devolver ao agente
+│   ├── base.py     interface: conectar e desconectar, responder verificação de endereço, verificar assinatura, normalizar entrada, enviar, digitando, baixar mídia, transferir, devolver ao agente
 │   ├── chatwoot/
 │   ├── whatsapp/   Cloud API oficial
 │   ├── waha/       WhatsApp não oficial
@@ -166,8 +166,9 @@ Webhooks, chamados pelos canais:
 
 | Operação | Rota | Regras |
 |---|---|---|
-| Verificação da Meta | `GET /webhook/whatsapp/{token}` | `hub.verify_token` confere com o agente; devolve `hub.challenge` |
-| Receber WhatsApp | `POST /webhook/whatsapp/{token}` | assinatura; agente ativo; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando |
+| Verificação do endereço | `GET /webhook/{canal}/{token}` | só o WhatsApp oficial responde: `hub.verify_token` igual ao token da URL devolve `hub.challenge`. Nos outros canais, 404 |
+| Receber WhatsApp | `POST /webhook/whatsapp/{token}` | assinatura; agente ativo; corpo de outro `phone_number_id` ignorado; recibo de entrega ignorado; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando (`/retomar` ou 👍 no aviso) |
+| Refazer o webhook na Meta | `POST /admin/clientes/{c}/agentes/{a}/whatsapp/webhook` | refaz as três camadas com as credenciais guardadas; idempotente |
 | Receber WAHA | `POST /webhook/waha/{token}` (rede interna) | HMAC SHA-512; agente ativo; aceita `message` e `session.status`; ignora `fromMe` e grupos, exceto o grupo de handoff; deduplica pelo id da mensagem; mensagem do `handoff_destino` vira comando |
 | Receber Chatwoot | `POST /webhook/chatwoot/{token}` | HMAC; aceita só `message_created`, `conversation_status_changed` e `conversation_updated`; vale qualquer caixa em que o bot esteja ligado (o Chatwoot só chama o bot a partir delas e a assinatura prova o bot); deduplica mensagem pelo id; mudança de status para `pending` fecha o handoff aberto (idempotente) |
 
@@ -203,7 +204,7 @@ Worker arq, mesmo código do backend, container `worker`:
 
 Fora do worker, no host: `asimov-waha.timer` (systemd, domingo de madrugada) roda `deploy/atualiza_waha.sh`, que atualiza a imagem da WAHA e volta para a anterior se algum número não reconectar. Fica no host porque atualizar contêiner pede o Docker, e dar o socket do Docker a um contêiner é dar a VPS inteira.
 
-Digitando por canal: WhatsApp pelo indicador de digitação da Cloud API junto da confirmação de leitura; WAHA `startTyping`/`stopTyping` e `sendSeen`; nativo guarda o digitando no Redis para o terminal mostrar; Chatwoot `toggle_typing_status`.
+Digitando por canal: WhatsApp oficial pelo indicador da Cloud API junto da confirmação de leitura, preso ao id da última mensagem recebida (some ao responder ou em 25 s); WAHA `startTyping`/`stopTyping` e `sendSeen`; nativo guarda o digitando no Redis para o terminal mostrar; Chatwoot `toggle_typing_status`.
 
 Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persistindo, mensagem curta de expectativa ao contato, registro em Falha e handoff. Nunca resposta inventada.
 

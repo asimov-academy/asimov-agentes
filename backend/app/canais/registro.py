@@ -4,8 +4,14 @@ from app.canais.base import Canal
 from app.canais.chatwoot.canal import Chatwoot
 from app.canais.nativo.canal import Nativo
 from app.canais.waha.canal import Waha
+from app.canais.whatsapp.canal import WhatsApp
 
-CANAIS: dict[str, Canal] = {"chatwoot": Chatwoot(), "nativo": Nativo(), "waha": Waha()}
+CANAIS: dict[str, Canal] = {
+    "chatwoot": Chatwoot(),
+    "nativo": Nativo(),
+    "waha": Waha(),
+    "whatsapp": WhatsApp(),
+}
 
 
 def obter_canal(nome: str) -> Canal:

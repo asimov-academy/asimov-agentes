@@ -169,12 +169,14 @@ fluxo_novo_agente() {
   AGENTE_CAIXA=""
   escolha op "Canal" \
     "Chatwoot  ${CINZA}caixa de entrada de um Chatwoot que já existe${NORMAL}" \
-    "WhatsApp  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}" \
+    "WhatsApp oficial  ${CINZA}Cloud API da Meta: número homologado, cobrado por conversa${NORMAL}" \
+    "WhatsApp pela WAHA  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}" \
     "Nativo  ${CINZA}sem canal: você conversa com ele aqui no terminal${NORMAL}"
   echo
   case "$op" in
     1) fluxo_agente_chatwoot ;;
-    2) fluxo_agente_waha ;;
+    2) fluxo_agente_whatsapp ;;
+    3) fluxo_agente_waha ;;
     *) fluxo_agente_nativo ;;
   esac
 }
@@ -442,8 +444,18 @@ configura_handoff() {
 # asimov handoff: escolhe o agente e troca quem recebe o handoff, no canal dele.
 fluxo_handoff() {
   secao "Handoff"
-  escolhe_agente "chatwoot waha" || return 0
-  if [ "$(jq -r '.canal' <<<"$AGENTE")" = waha ]; then
+  escolhe_agente "chatwoot waha whatsapp" || return 0
+  if [ "$(jq -r '.canal' <<<"$AGENTE")" = whatsapp ]; then
+    templates_do_agente || aviso "Não consegui listar os templates agora."
+    escolhe_destino_whatsapp "$WHATSAPP_TEMPLATES" "$(jq -c '.handoff_destino // {}' <<<"$AGENTE")" || return 0
+    api PATCH "$(caminho_do_agente "$AGENTE")" "$(jq -n --argjson d "$HANDOFF_DESTINO" '{handoff_destino: $d}')"
+    if [ "$API_STATUS" = 200 ]; then
+      AGENTE=$API_RESPOSTA
+      ok "Handoff de $(destaque "$(jq -r .nome <<<"$AGENTE")") para $(destaque "$(nome_do_destino "$HANDOFF_DESTINO")")"
+    else
+      falha "$(detalhe_erro "$API_RESPOSTA")"
+    fi
+  elif [ "$(jq -r '.canal' <<<"$AGENTE")" = waha ]; then
     escolhe_destino_waha "$AGENTE"
     api PATCH "$(caminho_do_agente "$AGENTE")" "$(jq -n --argjson d "$HANDOFF_DESTINO" '{handoff_destino: $d}')"
     if [ "$API_STATUS" = 200 ]; then

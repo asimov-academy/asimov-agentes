@@ -19,7 +19,8 @@ Modelos padrão: {{MODELOS}}.
 - Comportamento do turno (buffer, envio, divisão): `backend/app/conversas/`.
 - Ferramenta nova que o operador liga por agente: um arquivo próprio em `backend/app/ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar e se vem ligada), e uma linha em `backend/app/ia/ferramentas/registro.py`. Aparece no menu `asimov` > Editar > Ferramentas. Nunca duas ferramentas no mesmo arquivo. Tool que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
 - Canal novo: implemente `backend/app/canais/base.py` e registre em `backend/app/canais/registro.py`.
-- WhatsApp direto: `backend/app/canais/waha/` e `setup/lib/waha.sh`. O contêiner `waha` tem perfil no Compose e só sobe no primeiro agente WAHA (`WAHA_ATIVA=1` no `.env`).
+- WhatsApp pela WAHA: `backend/app/canais/waha/` e `setup/lib/waha.sh`. O contêiner `waha` tem perfil no Compose e só sobe no primeiro agente WAHA (`WAHA_ATIVA=1` no `.env`).
+- WhatsApp oficial: `backend/app/canais/whatsapp/` e `setup/lib/whatsapp.sh`. Nada sobe na VPS: a API aponta o webhook no próprio número, na Meta, quando o agente é criado.
 - Em cada assunto: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco.
 
 ## Regras

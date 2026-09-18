@@ -10,6 +10,7 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agentes import repo as agentes_repo
@@ -53,6 +54,27 @@ def _mensagens(evento: Evento, cliente_id: uuid.UUID, conversa_id: uuid.UUID) ->
             )
         )
     return mensagens
+
+
+@router.get("/webhook/{canal}/{token}", response_class=PlainTextResponse)
+async def verificar_endereco(canal: str, token: str, request: Request) -> Response:
+    """A Meta confere o endereço antes de mandar qualquer mensagem, com `hub.challenge`.
+
+    Responde sem olhar o banco: quem prova o endereço é o próprio token da URL, que já é o segredo
+    do webhook. Sem isso a conferência falharia na criação do agente, que acontece antes de ele
+    existir aqui. Canal que não confere endereço por GET responde 404.
+    """
+    canal_obj = CANAIS.get(canal)
+    desafio = (
+        canal_obj.responde_verificacao(dict(request.query_params), token)
+        if canal_obj is not None
+        else None
+    )
+    if desafio is None:
+        log.info("webhook_verificacao_recusada", canal=canal)
+        return Response(status_code=404)
+    log.info("webhook_verificado", canal=canal)
+    return PlainTextResponse(desafio)
 
 
 @router.post("/webhook/{canal}/{token}")

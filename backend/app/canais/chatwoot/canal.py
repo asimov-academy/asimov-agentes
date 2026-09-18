@@ -339,6 +339,10 @@ class Chatwoot:
 
     # ── Operação (token do bot) ────────────────────────────────────────────
 
+    def responde_verificacao(self, parametros: dict[str, str], token: str) -> str | None:
+        """Este canal não confere o endereço do webhook por GET."""
+        return None
+
     def verificar(self, entrada: EntradaWebhook, credenciais: dict[str, Any]) -> bool:
         ts = entrada.cabecalhos.get("x-chatwoot-timestamp", "")
         assinatura = entrada.cabecalhos.get("x-chatwoot-signature", "")
@@ -531,7 +535,11 @@ class Chatwoot:
                     log.warning("atribuir_ao_atendente_recusado", status=atribuiu.status_code)
 
     async def digitando(
-        self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        ligado: bool,
+        ultima_mensagem: str | None = None,
     ) -> None:
         async with self._http() as http:
             await http.post(

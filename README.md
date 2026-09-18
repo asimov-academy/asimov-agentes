@@ -21,7 +21,8 @@ Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de c
 - VPS com **Ubuntu 24.04**, pelo menos 2 GB de RAM e 20 GB livres, com acesso root por SSH
 - Um **domínio** onde você consiga criar um registro DNS
 - **Chatwoot** com acesso de administrador, para agentes no Chatwoot (WhatsApp direto e agente nativo não precisam)
-- Para agentes no WhatsApp direto, um **número de WhatsApp** só para o agente (o WhatsApp pode bloquear número que responde demais)
+- Para agentes no **WhatsApp oficial** (Cloud API da Meta), um app e um número preparados na Meta: passo a passo com links em [docs/whatsapp-oficial.md](docs/whatsapp-oficial.md)
+- Para agentes no **WhatsApp pela WAHA** (API não oficial), um **número de WhatsApp** só para o agente (o WhatsApp pode bloquear número que responde demais)
 - Chave de API de pelo menos um provedor: OpenAI, Anthropic, Gemini ou Groq
 
 ## Instalação
@@ -39,7 +40,7 @@ O setup pergunta, nesta ordem:
 3. Claude Code ou Codex
 4. Provedor e modelo para resposta, fallback, visão e transcrição, com as chaves de API
 5. O registro DNS `bot.<seu-domínio>` (ele mostra o IP e espera propagar)
-6. Canal do primeiro agente (Chatwoot, WhatsApp ou nativo). No Chatwoot: URL e token de administrador (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente. No WhatsApp: nome, ferramentas, o QR code para parear o número e quem recebe o handoff
+6. Canal do primeiro agente (Chatwoot, WhatsApp oficial, WhatsApp pela WAHA ou nativo). No Chatwoot: URL e token de administrador (pedido uma vez e guardado), conta, caixa de entrada, quem recebe o handoff e nome do agente. No WhatsApp oficial: os dados do app da Meta, o número da conta e o template do aviso de handoff ([como preparar](docs/whatsapp-oficial.md)). Na WAHA: nome, ferramentas, o QR code para parear o número e quem recebe o handoff
 
 Se algo falhar, ele mostra o motivo. Rode o mesmo comando de novo e ele continua de onde parou.
 

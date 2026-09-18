@@ -36,3 +36,14 @@ def mesmo_telefone(informado: str, do_canal: str) -> bool:
             if longo.endswith(curto):
                 return True
     return False
+
+
+def telefone_legivel(digitos: str) -> str:
+    """`5511988887777` vira `+55 11 98888-7777`. O que não for número volta como veio."""
+    digitos = so_digitos(digitos)
+    if not digitos:
+        return ""
+    if len(digitos) in (12, 13) and digitos.startswith("55"):
+        ddd, resto = digitos[2:4], digitos[4:]
+        return f"+55 {ddd} {resto[:-4]}-{resto[-4:]}"
+    return f"+{digitos}"

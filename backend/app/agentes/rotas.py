@@ -37,7 +37,6 @@ class NovoAgente(BaseModel):
     )
     modelos: Modelos = Modelos()
     handoff_destino: dict[str, Any] | None = None
-    handoff_template: str | None = None
     buffer_segundos: int = Field(default=8, ge=1, le=60)
     max_mensagens_por_resposta: int = Field(default=3, ge=1, le=10)
     retomada_automatica_horas: int | None = Field(default=None, ge=1, le=720)
@@ -173,7 +172,6 @@ async def criar(
             conexao=dados.conexao,
             modelos=dados.modelos.model_dump(exclude_none=True),
             handoff_destino=dados.handoff_destino,
-            handoff_template=dados.handoff_template,
             buffer_segundos=dados.buffer_segundos,
             max_mensagens_por_resposta=dados.max_mensagens_por_resposta,
             retomada_automatica_horas=dados.retomada_automatica_horas,

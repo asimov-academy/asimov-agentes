@@ -138,7 +138,13 @@ class ChatwootFalso(Chatwoot):
     async def agente_pode_falar(self, credenciais: dict[str, Any], conversa_externa: str, status: str) -> bool:
         return self.status == "pending"
 
-    async def digitando(self, credenciais: dict[str, Any], conversa_externa: str, ligado: bool) -> None:
+    async def digitando(
+        self,
+        credenciais: dict[str, Any],
+        conversa_externa: str,
+        ligado: bool,
+        ultima_mensagem: str | None = None,
+    ) -> None:
         self.digitando_chamadas.append(ligado)
 
     async def enviar_texto(self, credenciais: dict[str, Any], conversa_externa: str, texto: str) -> str:

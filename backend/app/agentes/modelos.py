@@ -48,7 +48,6 @@ class Agente(ComId, ComCriacao, Base):
     Serve para testar um número novo sem responder a qualquer pessoa que escreva para ele."""
 
     handoff_destino: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
-    handoff_template: Mapped[str | None] = mapped_column(String(200))
     retomada_automatica_horas: Mapped[int | None]
 
     ativo: Mapped[bool] = mapped_column(default=True)
