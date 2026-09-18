@@ -34,7 +34,7 @@ com `.dockerignore` para não mandar `.git`, `prompts/` e mídia para o daemon. 
 nenhum artefato de build commitado.
 
 **Autenticação.** Entrar, primeiro acesso e sair continuam como estão hoje: páginas Jinja2 em
-`backend/app/painel/paginas/`, sessão no Redis, cookie `HttpOnly`, `Secure`, `SameSite=Lax`, freio
+`backend/app/painel/paginas/`, sessão no Redis, cookie `HttpOnly`, `Secure`, `SameSite=Strict`, freio
 de tentativa e checagem de origem. Os 29 testes de acesso seguem valendo sem mudança. O front só
 começa depois do login, e quem chega sem sessão é redirecionado para `/painel/entrar`.
 
@@ -483,19 +483,19 @@ VPS, os testes passam e o `shellcheck` não acusa erro.
 
 | Etapa | Entrega | Aceite |
 |---|---|---|
-| 1. Fundação **(construída, falta a VPS)** | `frontend/` com Vite, Tailwind com os tokens, componentes de base, build num estágio `node` do Dockerfile, API servindo `/painel/app` com retorno ao `index.html`, `GET /painel/api/eu` | Entro com a senha, caio no painel novo, vejo a casca e saio. Sem sessão, volto para entrar |
-| 2. Casca e Visão geral **(construída, falta a VPS)** | Menu lateral recolhível, gaveta no celular, barra do topo, `Grafico` portado da AXIS (seção 2) e as animações do KINETIC (seção 3), tela de visão geral com cartões, gráficos, falhas e handoffs | Abro no celular e no computador, troco de período e os números batem com `asimov consumo` |
-| 3. Agentes: lista e onboarding **(construída, falta a VPS)** | Lista com filtro, cartão do agente, o onboarding da seção 5.2.1 em popup, com passos e rascunho | Crio um agente pelo onboarding, converso com ele antes de sair da tela e ele aparece no `asimov agentes` |
-| 4. Agente: Perfil e Comunicação **(construída, falta a VPS)** | Duas abas, salvar por seção, remover agente | Mudo o emoji e a divisão de resposta, mando mensagem e a resposta muda |
-| 5. Agente: Trabalho **(construída, falta a VPS)** | Migração do `perfil`, formulário, geração do `persona.md`, editor do prompt | Preencho os campos, salvo, abro o `persona.md` na VPS e o texto está lá; o agente responde no papel escolhido |
-| 6. Agente: Ferramentas e integrações **(construída, falta a VPS)** | Catálogo com interruptor, handoff com destino e prazo, cartão do Google Calendar em breve | Desligo a busca web, pergunto algo que precisa dela e o agente não usa |
-| 7. Agente: Configurações **(construída, falta a VPS)** | Modelos por função, contatos permitidos, ações do canal | Troco a fornecedora do modelo de conversa e a resposta seguinte usa a nova |
-| 8. Canais **(construída, falta a VPS)** | Tela de canais com situação, QR da WAHA, reiniciar | Vejo o número conectado, reinicio e ele volta |
-| 9. Chat **(construída, falta a VPS)** | Rotas de conversa e mensagem, lista, histórico, devolver ao agente, conversa de teste | Abro uma conversa real, vejo o turno e devolvo um handoff pelo painel |
-| 10. Contatos **(construída, falta a VPS)** | Lista com busca e ficha | Acho um contato pelo telefone e vejo as conversas dele |
-| 11. Base de conhecimento e polimento **(construída, falta a VPS)** | Tela em breve, vazios, erros, acessibilidade, responsivo | Navego o painel inteiro no celular sem quebrar, e nenhum erro no console |
+| 1. Fundação **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | `frontend/` com Vite, Tailwind com os tokens, componentes de base, build num estágio `node` do Dockerfile, API servindo `/painel/app` com retorno ao `index.html`, `GET /painel/api/eu` | Entro com a senha, caio no painel novo, vejo a casca e saio. Sem sessão, volto para entrar |
+| 2. Casca e Visão geral **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Menu lateral recolhível, gaveta no celular, barra do topo, `Grafico` portado da AXIS (seção 2) e as animações do KINETIC (seção 3), tela de visão geral com cartões, gráficos, falhas e handoffs | Abro no celular e no computador, troco de período e os números batem com `asimov consumo` |
+| 3. Agentes: lista e onboarding **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Lista com filtro, cartão do agente, o onboarding da seção 5.2.1 em popup, com passos e rascunho | Crio um agente pelo onboarding, converso com ele antes de sair da tela e ele aparece no `asimov agentes` |
+| 4. Agente: Perfil e Comunicação **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Duas abas, salvar por seção, remover agente | Mudo o emoji e a divisão de resposta, mando mensagem e a resposta muda |
+| 5. Agente: Trabalho **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Migração do `perfil`, formulário, geração do `persona.md`, editor do prompt | Preencho os campos, salvo, abro o `persona.md` na VPS e o texto está lá; o agente responde no papel escolhido |
+| 6. Agente: Ferramentas e integrações **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Catálogo com interruptor, handoff com destino e prazo, cartão do Google Calendar em breve | Desligo a busca web, pergunto algo que precisa dela e o agente não usa |
+| 7. Agente: Configurações **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Modelos por função, contatos permitidos, ações do canal | Troco a fornecedora do modelo de conversa e a resposta seguinte usa a nova |
+| 8. Canais **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Tela de canais com situação, QR da WAHA, reiniciar | Vejo o número conectado, reinicio e ele volta |
+| 9. Chat **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Rotas de conversa e mensagem, lista, histórico, devolver ao agente, conversa de teste | Abro uma conversa real, vejo o turno e devolvo um handoff pelo painel |
+| 10. Contatos **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Lista com busca e ficha | Acho um contato pelo telefone e vejo as conversas dele |
+| 11. Base de conhecimento e polimento **(construída; a VPS confirmou entrar, a visão geral e o painel no ar)** | Tela em breve, vazios, erros, acessibilidade, responsivo | Navego o painel inteiro no celular sem quebrar, e nenhum erro no console |
 
-| 12. Copiloto **(construída, falta a VPS)** | Popup do copiloto, cartão de proposta, cartão de "sem conta vinculada", rotas `/painel/api/copiloto`, contêiner e worker do copiloto | Peço "deixe a Bella mais objetiva", confirmo a proposta e o prompt no disco muda; sem vincular conta, o popup ensina `asimov ia` |
+| 12. Copiloto **(validada em VPS, 2026-09-18)** | Popup do copiloto, cartão de proposta, cartão de "sem conta vinculada", rotas `/painel/api/copiloto`, contêiner e worker do copiloto | Peço "deixe a Bella mais objetiva", confirmo a proposta e o prompt no disco muda; sem vincular conta, o popup ensina `asimov ia` |
 
 Testes por etapa: pytest para toda rota nova, com isolamento por `cliente_id` obrigatório; vitest
 para o cliente de API e para os componentes de base; a checagem de que ninguém escreve cor solta.

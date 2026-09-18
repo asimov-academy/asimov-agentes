@@ -207,7 +207,9 @@ Commit: `chore: distribuição pública, backup e polimento da primeira versão`
 
 ## Fase 8: Painel web do operador (opcional)
 
-Situação: **construída inteira, nada validado em VPS**. Estudo e score: `docs/painel-web.md`; telas,
+Situação: **construída inteira e no ar em VPS real** (2026-09-18): entrar, visão geral e o painel
+servido em `app.<dominio>`. Falta o operador percorrer o critério de aceite inteiro por lá, que
+inclui criar e editar um agente pelo navegador. Estudo e score: `docs/painel-web.md`; telas,
 design system, contrato e etapas: `spec/frontend.md`.
 
 Objetivo: quem não quer terminal administra a instalação pelo navegador, em `app.<dominio>`, e o
@@ -218,7 +220,7 @@ O que entra:
   `asimov painel` para ligar, desligar e gerar o código de acesso, entrar, primeiro acesso, sessão e
   freio de tentativa. As telas de início e de agentes em Jinja2 que essa parte trouxe foram
   substituídas pelo front e viraram desvio para `/painel/app`.
-- Parte 8.2 (construída, onze etapas): o front em `frontend/` (React, Vite, Tailwind), servido pela
+- Parte 8.2 (construída, doze etapas com o copiloto da fase 9): o front em `frontend/` (React, Vite, Tailwind), servido pela
   API em `/painel/app`. Menu lateral fixo, visão geral, agentes com **onboarding e ficha num popup
   grande com o fundo embaçado**, canais, chat, contatos e a base de conhecimento com o que ela vai
   fazer. Telas, design system, contrato `/painel/api` e as etapas estão em `spec/frontend.md`, que é
@@ -244,16 +246,18 @@ Commit: `feat: painel web do operador em app.<dominio>`
 
 ## Fase 9: Conta de IA vinculada e copiloto do painel
 
+Situação: **concluída e validada em VPS real** (confirmado pelo operador em 2026-09-18, v0.25.2).
+
 A conta de IA do operador vira parte da instalação, e é ela que liga o copiloto do painel, que opera
 a plataforma conversando em português.
 
-- Parte 9.1 (construída, falta a VPS): a instalação pede o login do CLI escolhido
+- Parte 9.1 (validada na VPS): a instalação pede o login do CLI escolhido
   (`setup/lib/vinculo.sh`, tela 5a de `spec/telas.md`), grava o vínculo no `.env` e deixa
   `asimov ia` para vincular, trocar de assistente e desvincular depois. Pular não impede nada:
   o painel instala do mesmo jeito, só sem copiloto.
-- Parte 9.2 (construída, falta a VPS): contêiner `copiloto` com perfil, worker e fila próprios,
+- Parte 9.2 (validada na VPS): contêiner `copiloto` com perfil, worker e fila próprios,
   servidor MCP com as ferramentas da plataforma e as rotas `/painel/api/copiloto`.
-- Parte 9.3 (construída, falta a VPS): o popup do copiloto no painel, com o cartão de proposta e o
+- Parte 9.3 (validada na VPS): o popup do copiloto no painel, com o cartão de proposta e o
   cartão de "sem conta vinculada" (`spec/frontend.md`, 5.8).
 
 Dependências: Fase 8.
@@ -271,5 +275,18 @@ Critério de aceite:
 O que o operador precisa fazer:
 - Ter uma assinatura Claude Pro ou Max, ou ChatGPT Plus ou Pro, e aprovar o login no navegador do
   próprio computador quando o terminal pedir.
+
+O que a VPS ensinou, e que virou v0.25.1 e v0.25.2:
+
+- `deploy/caddy/painel.caddy` é versionado, e o pacote da atualização passava por cima do bloco do
+  operador: quem tinha o painel ligado perdia o host `app.<dominio>` a cada `asimov atualizar`.
+- O contêiner do copiloto subia com os volumes padrão, porque contêiner que já existe não pega
+  volume novo. Agora ele é recriado a cada vinculação.
+- Ele rodava como o usuário da imagem, e o login do operador é `600` do dono dele (root, na VPS do
+  teste). O `user:` do serviço passou a ser o dono da pasta de credencial.
+- Faltava o `~/.claude.json`, onde o Claude Code guarda o estado de primeiro uso, fora da pasta da
+  credencial. Sem ele o CLI se acha em primeira execução e sai calado.
+- O erro do CLI chegava cego: ele sai com código 1, stderr vazio e o recado no stdout, que era
+  descartado. O stdout entrou no log e na classificação da mensagem.
 
 Commit: `feat: conta de IA vinculada na instalação e copiloto no painel`

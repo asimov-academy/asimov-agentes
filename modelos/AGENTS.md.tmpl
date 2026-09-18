@@ -28,6 +28,7 @@ mensagem. Empresa: o cliente que você atende. Contato: quem escreve para o agen
 - WhatsApp pela WAHA: `backend/app/canais/waha/` e `setup/lib/waha.sh`. O contêiner `waha` tem perfil no Compose e só sobe no primeiro agente WAHA (`WAHA_ATIVA=1` no `.env`).
 - WhatsApp oficial: `backend/app/canais/whatsapp/` e `setup/lib/whatsapp.sh`. Nada sobe na VPS: a API aponta o webhook no próprio número, na Meta, quando o agente é criado.
 - Painel no navegador: `frontend/` (React, Vite, Tailwind), servido pela API em `/painel/app`; a API dele é `backend/app/painel/`. O build roda dentro da imagem, então publique com `./deploy/publicar.sh`. Cor só pelo nome do token do `tailwind.config.ts`, componente só de `frontend/src/design/`, nunca de biblioteca de fora.
+- Copiloto do painel: `backend/app/copiloto/`. Ele é o {{AGENTE_CODIGO}} do operador rodando num contêiner com perfil (`COPILOTO_ATIVO=1`), e só alcança a plataforma pelo MCP de `copiloto/mcp.py`. Ferramenta nova: um arquivo em `copiloto/ferramentas/` e uma linha em `registro.py`. Ferramenta `propor_` NUNCA escreve: quem aplica é `copiloto/aplicar.py`, no clique do operador. `asimov ia` vincula ou troca a conta.
 - Em cada assunto: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco.
 
 ## Regras

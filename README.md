@@ -2,7 +2,7 @@
 
 Setup da Asimov Academy que transforma uma VPS vazia numa plataforma de **agentes de IA de atendimento**, pronta para evoluir com vibecoding no Claude Code ou no Codex.
 
-Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de código. No final você tem um agente respondendo no Chatwoot e um projeto com `AGENTS.md` para continuar construindo.
+Um comando instala tudo: Docker, banco, HTTPS, a API dos agentes e o agente de código, e entra na sua conta dele. No final você tem um agente respondendo no Chatwoot, um projeto com `AGENTS.md` para continuar construindo e, se quiser o painel, um copiloto lá dentro que configura a plataforma conversando com você.
 
 ## O que você ganha
 
@@ -77,10 +77,12 @@ Mande uma mensagem na caixa de entrada do Chatwoot e o agente responde. Com um a
 | Tela | O que faz |
 |---|---|
 | Visão geral | Se está tudo de pé, o que passou do prazo, turnos, custo e quanto o agente resolveu sozinho, comparado com o período anterior |
-| Agentes | Lista e o popup do agente: criar em oito passos, e depois perfil, comunicação, trabalho (o prompt), ferramentas, configurações e uma conversa de teste |
+| Agentes | Lista e o popup do agente: criar em cinco passos (nome, objetivo, empresa, o que ela faz e os ajustes), e depois perfil, comunicação, trabalho (o prompt), ferramentas, configurações e uma conversa de teste |
 | Canais | Se cada canal respondeu agora, com o QR code do WhatsApp e reiniciar a sessão |
 | Chat | As conversas, o histórico, quem falou, o custo de cada turno e devolver ao agente uma conversa que está com uma pessoa |
 | Contatos | Quem já falou com algum agente, por nome ou telefone |
+| Oportunidades | Funil em kanban por empresa, com etapas e etiquetas suas |
+| Copiloto | O botão no canto de qualquer tela: você pede em português e ele lê a plataforma, propõe a mudança e espera você confirmar |
 
 A operação nasce na API, e painel e terminal chamam a mesma rota. Navegar pelas conversas e pelos
 contatos, por enquanto, só no painel. O painel nunca fala com `/admin`, e `app.<domínio>/admin` e `/webhook` respondem 404.

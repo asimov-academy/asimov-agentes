@@ -23,7 +23,7 @@ Fale com o operador em português, curto e direto.
 - Setup e comando `asimov`: Bash para Ubuntu 24.04 (`curl`, `jq`, `dig`).
 - Backend: Python 3.12, `uv`, FastAPI, PydanticAI (OpenAI pela Responses, Anthropic, Gemini, Groq, FallbackModel, `WebSearch` com DuckDuckGo local), arq.
 - Dados: PostgreSQL 16 com pgvector, SQLAlchemy 2.0, Alembic, Redis 7.
-- Execução: Docker Compose com Caddy. WAHA (WhatsApp) em perfil, sobe sob demanda; `qrencode` desenha o QR no terminal.
+- Execução: Docker Compose com Caddy. WAHA (WhatsApp) e copiloto do painel em perfil, sobem sob demanda; `qrencode` desenha o QR no terminal. O copiloto é o CLI do operador (Claude Code ou Codex) falando MCP (SDK `mcp`, extra `copiloto` do `pyproject`).
 - Testes: pytest com Postgres e Redis reais em container; `shellcheck`.
 
 ## Comandos de desenvolvimento
@@ -39,7 +39,7 @@ Fale com o operador em português, curto e direto.
 
 - `setup/` é o único cliente da API. Depois que a API sobe, ele NUNCA acessa o banco.
 - `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
-- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `oportunidades/`, `painel/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
+- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `oportunidades/`, `painel/`, `copiloto/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
 - Copiloto do painel (`copiloto/`): o CLI de código do operador, pela assinatura dele, falando com a plataforma só pelo MCP de `copiloto/mcp.py`. Ferramenta de leitura responde; ferramenta `propor_` NUNCA escreve, só registra proposta, e quem aplica é `copiloto/aplicar.py` no clique do operador. NUNCA ligue ferramenta de código do CLI.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.

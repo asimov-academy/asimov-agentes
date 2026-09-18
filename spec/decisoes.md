@@ -2,6 +2,27 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 9 validada em VPS, e a spec inteira revisada
+
+O operador percorreu a instalação numa VPS real: atualização para a v0.25.x, login do Claude Code na
+tela da instalação, vínculo reconhecido, painel no ar em `app.<dominio>` e o copiloto respondendo
+pela assinatura. **Fase 9 concluída e validada**; a fase 8 passou a constar como no ar em VPS, com o
+critério de aceite dela ainda por percorrer inteiro (criar e editar agente pelo navegador).
+
+Na mesma passada, a spec foi conferida de ponta a ponta e o que estava velho saiu:
+
+- `spec/visao.md` ainda pedia modelo de IA na instalação (saiu na v0.20.0), não citava a conta de IA
+  nem o painel, e listava a atualização da plataforma como fora de escopo, sendo que `asimov
+  atualizar` existe desde a v0.1.1.
+- `spec/usuarios.md` dizia que não havia autenticação de pessoas no app, o que deixou de valer com o
+  painel: hoje há uma conta de operador, com senha em scrypt e primeiro acesso por código.
+- `spec/telas.md` descrevia a tela de instalação com um passo de "SDK do provedor escolhido" que não
+  existe mais, e o menu sem os itens de painel e conta de IA.
+- `spec/frontend.md` dizia `SameSite=Lax`, e o cookie é `Strict` desde a v0.18.0.
+- `spec/dados.md` não tinha as chaves do vínculo na entidade Instalação, nem o login do CLI entre os
+  dados sensíveis.
+- `README.md` prometia um onboarding de agente em oito passos, que virou cinco na v0.24.0.
+
 ## 2026-09-18: O copiloto enxerga a credencial do operador (v0.25.2)
 
 Primeiro teste em VPS real. O copiloto apareceu no painel e respondeu "o copiloto não conseguiu

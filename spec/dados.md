@@ -19,6 +19,9 @@ Configuração única da VPS. Não fica no banco: segredos em `.env` com permiss
 | provedores | os quatro provedores, para a imagem levar os SDKs | sim |
 | chaves de IA no `.env` | segredo; só em instalação feita até a v0.19, de reserva. As novas ficam em Chave de provedor | não |
 | modelo_embeddings | texto; único na instalação, porque define a dimensão do vetor | sim |
+| ia_vinculada, ia_cli, ia_conta | conta de IA do operador vinculada por `asimov ia`; ligam o copiloto do painel. Não são segredo | não |
+| credencial_ia_host, credencial_ia_container, credencial_ia_uid, credencial_ia_gid | onde o CLI guarda o login, onde o contêiner do copiloto monta e com que dono. O segredo em si nunca é copiado para cá | não |
+| copiloto_ativo | o contêiner do copiloto sobe com conta vinculada e painel ligado | não |
 | chave_criptografia | segredo gerado pelo setup, para as credenciais de canal | sim |
 | chave_api_admin | segredo gerado pelo setup, para as rotas administrativas | sim |
 | versao_setup | texto | sim |
@@ -280,6 +283,7 @@ Falha fora de um turno (webhook inválido, canal fora do ar, envio recusado).
 ## Dados sensíveis
 
 - Chaves de IA, chave de criptografia, chave administrativa e credenciais de canal.
+- Login da conta de IA do operador (Claude Code ou Codex). Ele não é copiado para o banco nem para o `.env`: fica onde o CLI oficial guarda, com a permissão dele, e só o contêiner do copiloto monta essa pasta.
 - Conteúdo de conversas, mensagens, mídias e resumos de handoff: dados pessoais de contatos (nome, telefone e, em alguns negócios, CPF e dados financeiros). Sujeito à LGPD.
 - Documentos da base de conhecimento: podem conter informação comercial interna do cliente.
 
