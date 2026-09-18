@@ -2,6 +2,12 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-17: Arquivo de mídia morava num endereço que o worker não alcança (v0.12.3)
+
+- **Áudio, imagem e PDF falhavam todos com `ConnectError`** no download, mesmo depois da correção do cabeçalho (v0.11.2). A WAHA baixa e guarda o arquivo, mas anuncia o `media.url` com o endereço que conhece de si mesma, `http://localhost:3000/...`; dentro do contêiner do worker, `localhost` é o próprio worker.
+- **Duas voltas de proteção**: `WAHA_BASE_URL=http://waha:3000` no Compose, que é o jeito certo de a WAHA anunciar o endereço, e a reescrita da URL no canal (`localhost`, `127.0.0.1` e afins viram o endereço da WAHA na rede do Compose), que funciona mesmo em instalação que já existe ou se a variável mudar de nome.
+- **Alarme falso durante o pareamento**: pedir um QR code novo passa por `STOPPED`, e a v0.12.0 avisava "número fora do ar" sobre o que o próprio operador estava fazendo. A rota de reiniciar marca uma janela de 15 minutos no Redis, e nem o webhook nem a ronda alarmam nela.
+
 ## 2026-09-17: Aparelho conectado com o nome do agente (v0.12.2)
 
 - **Pedido do operador**: no celular, o aparelho conectado aparecia como "Ubuntu Firefox". Quem abre Aparelhos conectados precisa reconhecer qual agente é aquele.

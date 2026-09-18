@@ -7,7 +7,7 @@ API e nunca sai.
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,7 @@ from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
 from app.agentes.modelos import Agente
 from app.canais.base import CredencialInvalida
-from app.canais.waha import api
+from app.canais.waha import api, vigia
 from app.plataforma.admin import exige_admin
 from app.plataforma.banco import sessao
 
@@ -100,11 +100,13 @@ async def situacao(
 
 @router.post("/clientes/{cliente_id}/agentes/{agente_id}/waha/reiniciar", response_model=SituacaoSaida)
 async def reiniciar(
-    cliente_id: uuid.UUID, agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)
+    cliente_id: uuid.UUID, agente_id: uuid.UUID, request: Request, s: AsyncSession = Depends(sessao)
 ) -> SituacaoSaida:
     """Depois de FAILED ou de o QR code expirar: para e inicia a sessão para vir um QR novo."""
     agente = await _agente_waha(s, cliente_id, agente_id)
     nome_sessao = _sessao(agente)
+    # A sessão vai passar por STOPPED até o QR ser lido: isso não é número fora do ar.
+    await vigia.marca_pareamento(getattr(request.app.state, "fila", None), agente.id)
     try:
         await api.para_sessao(nome_sessao)
         await api.inicia_sessao(nome_sessao)

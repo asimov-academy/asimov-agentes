@@ -4,7 +4,8 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Versão publicada
 
-- `v0.12.2` em `asimov-academy/asimov-agentes` (público): o aparelho conectado aparece no celular como `Agente (Empresa)`, em vez de "Ubuntu Firefox".
+- `v0.12.3` em `asimov-academy/asimov-agentes` (público): áudio, imagem e PDF voltam a ser lidos (o arquivo era anunciado em `localhost`, que no contêiner do worker é o próprio worker), e pedir QR code novo deixou de disparar alarme de número fora do ar.
+- `v0.12.2`: o aparelho conectado aparece no celular como `Agente (Empresa)`, em vez de "Ubuntu Firefox".
 - `v0.12.1`: o id do número do handoff passa a ser o que o próprio WhatsApp devolve (nono dígito, `@lid`), conferido na escolha e corrigido no envio.
 - `v0.12.0`: número desconectado do WhatsApp vira falha visível e aviso no menu, pelo evento da WAHA e por uma ronda de dez em dez minutos.
 - `v0.11.2`: áudio e imagem voltam a ser baixados da WAHA (o `Accept: application/json` do QR code tinha ido parar no download do arquivo).

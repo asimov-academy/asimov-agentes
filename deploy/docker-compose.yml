@@ -88,6 +88,9 @@ services:
     environment:
       WHATSAPP_DEFAULT_ENGINE: GOWS
       WAHA_API_KEY: ${WAHA_API_KEY}
+      # Endereço com que a WAHA monta o `media.url` dos webhooks. Sem isso ela anuncia
+      # `localhost`, que dentro do contêiner do worker é o próprio worker.
+      WAHA_BASE_URL: http://waha:3000
       WAHA_DASHBOARD_ENABLED: "false"
       WHATSAPP_SWAGGER_ENABLED: "false"
       # Nome que aparece em Aparelhos conectados no celular. `Desktop` no GOWS mostra só o nome,

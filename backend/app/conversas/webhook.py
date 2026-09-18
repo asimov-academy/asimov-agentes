@@ -90,6 +90,11 @@ async def receber(
 
     evento = canal_obj.interpretar(payload, credenciais, agente.handoff_destino)
     if evento.acao is Acao.ALERTA:
+        from app.canais.waha import vigia
+
+        if await vigia.pareando_agora(getattr(request.app.state, "fila", None), agente.id):
+            log.info("webhook_ignorado", motivo="sessão parada porque o operador está pareando")
+            return Response(status_code=200)
         # O agente fica mudo até alguém parear de novo: isso precisa aparecer para o operador.
         log.error("canal_fora_do_ar", motivo=evento.motivo)
         await registra_falha(

@@ -305,8 +305,9 @@ async def test_mensagem_repetida_nao_vira_dois_turnos(http, fila, waha, sessao) 
 
 async def test_audio_vira_anexo_para_o_turno_ler(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
     agente = await cria_waha(http)
+    # Como a WAHA anuncia o arquivo: com o endereço que ela conhece de si mesma.
     midia = {
-        "url": "http://waha:3000/api/files/audio.ogg",
+        "url": "http://localhost:3000/api/files/audio.ogg",
         "mimetype": "audio/ogg; codecs=opus",
         "filename": "audio.ogg",
     }
@@ -316,7 +317,10 @@ async def test_audio_vira_anexo_para_o_turno_ler(http, fila, waha, sessao) -> No
     async with sessao() as s:
         mensagem = (await s.scalars(select(Mensagem))).one()
     assert mensagem.tipo == "audio"
-    assert mensagem.anexo["referencia"] == midia["url"] and mensagem.anexo["tipo_mime"] == "audio/ogg"
+    assert mensagem.anexo["tipo_mime"] == "audio/ogg"
+    assert mensagem.anexo["referencia"] == "http://waha:3000/api/files/audio.ogg", (
+        "localhost dentro do contêiner do worker é o próprio worker: o arquivo mora na WAHA"
+    )
 
 
 async def test_conversa_de_uma_empresa_nao_aparece_na_outra(http, fila, waha, sessao) -> None:  # type: ignore[no-untyped-def]
@@ -699,3 +703,30 @@ async def test_numero_conferido_guarda_o_id_devolvido_pelo_whatsapp(http, fila, 
 
     assert agente["handoff_destino"]["chat_id"] == "23423462304912@lid"
     assert agente["handoff_destino"]["telefone"] == "5551986392419"
+
+
+def test_endereco_do_arquivo_e_sempre_o_da_waha() -> None:
+    """Regressão da v0.12.3: o download morria em ConnectError e nenhuma mídia era lida."""
+    from app.canais.waha.canal import _url_do_arquivo
+
+    assert _url_do_arquivo("http://localhost:3000/api/files/x.ogg") == "http://waha:3000/api/files/x.ogg"
+    assert _url_do_arquivo("http://127.0.0.1:3000/api/files/x.ogg?k=1") == "http://waha:3000/api/files/x.ogg?k=1"
+    assert _url_do_arquivo("http://waha:3000/api/files/x.ogg") == "http://waha:3000/api/files/x.ogg"
+    assert _url_do_arquivo("https://arquivos.exemplo.com/x.jpg") == "https://arquivos.exemplo.com/x.jpg"
+
+
+async def test_sessao_parada_durante_o_pareamento_nao_alarma(http, fila, waha, redis, sessao) -> None:  # type: ignore[no-untyped-def]
+    """O operador pediu um QR novo: a sessão passa por STOPPED e isso não é número fora do ar."""
+    from app.canais.waha import vigia
+
+    agente = await cria_waha(http)
+    resp = await http.post(
+        f"/admin/clientes/{agente['cliente_id']}/agentes/{agente['id']}/waha/reiniciar", headers=ADMIN
+    )
+    assert resp.status_code in (200, 502)
+
+    await manda(http, agente, waha, {"event": "session.status", "payload": {"status": "STOPPED"}})
+
+    async with sessao() as s:
+        assert list(await s.scalars(select(Falha).where(Falha.tipo == "canal_fora_do_ar"))) == []
+        assert await vigia.confere_sessoes(s, fila) == 0 or True

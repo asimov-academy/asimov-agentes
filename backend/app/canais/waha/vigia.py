@@ -23,6 +23,29 @@ from app.consumo.repo import registra_falha
 log = structlog.get_logger()
 
 ESPERA_ENTRE_AVISOS_SEGUNDOS = 3600
+JANELA_DE_PAREAMENTO_SEGUNDOS = 900
+"""Depois de pedir um QR code novo, a sessão passa por STOPPED antes de voltar: alarme aí seria
+sobre o que o próprio operador acabou de fazer."""
+
+
+def chave_de_pareamento(agente_id: Any) -> str:
+    return f"waha:pareando:{agente_id}"
+
+
+async def marca_pareamento(redis: Any, agente_id: Any) -> None:
+    try:
+        await redis.set(chave_de_pareamento(agente_id), "1", ex=JANELA_DE_PAREAMENTO_SEGUNDOS)
+    except Exception as erro:
+        log.warning("marca_pareamento_falhou", erro=repr(erro))
+
+
+async def pareando_agora(redis: Any, agente_id: Any) -> bool:
+    if redis is None:
+        return False
+    try:
+        return await redis.get(chave_de_pareamento(agente_id)) is not None
+    except Exception:
+        return False
 STATUS_QUE_ATENDEM = ("WORKING",)
 STATUS_PASSAGEIROS = ("STARTING", "SCAN_QR_CODE")
 """Pareamento em andamento não é problema: alguém está com o QR code na tela."""
@@ -42,6 +65,8 @@ async def confere_sessoes(sessao: AsyncSession, redis: Any) -> int:
         except CredencialInvalida as erro:
             status = f"WAHA sem resposta ({erro})"
         if status in STATUS_QUE_ATENDEM or status in STATUS_PASSAGEIROS:
+            continue
+        if await pareando_agora(redis, agente.id):
             continue
         fora += 1
         if await _pode_avisar(redis, agente.id, status):
