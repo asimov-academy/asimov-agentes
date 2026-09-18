@@ -20,10 +20,10 @@
     @apply bg-void text-texto font-sans antialiased;
   }
   :focus-visible {
-    @apply outline-none ring-1 ring-lime ring-offset-0;
+    @apply outline-none ring-1 ring-ciano ring-offset-0;
   }
   ::selection {
-    @apply bg-lime text-void;
+    @apply bg-ciano text-void;
   }
 }
 
@@ -33,9 +33,9 @@
     @apply font-mono text-[0.65rem] uppercase tracking-[0.1em] text-dim;
   }
 
-  /* `.section-title`: o título de seção em lime, com a régua embaixo. */
+  /* `.section-title`: o título de seção em ciano, com a régua embaixo. */
   .titulo-secao {
-    @apply mb-8 block border-b border-borda pb-4 font-mono text-xs uppercase tracking-[0.2em] text-lime;
+    @apply mb-8 block border-b border-borda pb-4 font-mono text-xs uppercase tracking-[0.2em] text-ciano;
   }
 }
 

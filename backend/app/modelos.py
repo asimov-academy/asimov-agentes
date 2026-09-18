@@ -1,6 +1,6 @@
 """Importa todos os modelos para o Alembic e os testes enxergarem o schema inteiro."""
 
-from app.acessos.modelos import AcessoCanal
+from app.acessos.modelos import AcessoCanal, ChaveProvedor
 from app.agentes.modelos import Agente
 from app.clientes.modelos import Cliente
 from app.consumo.modelos import Falha, Turno
@@ -10,4 +10,4 @@ from app.midia.modelos import Midia
 from app.painel.modelos import UsuarioPainel
 from app.plataforma.banco import Base
 
-__all__ = ["AcessoCanal", "Agente", "Base", "Cliente", "Contato", "Conversa", "Falha", "Handoff", "Mensagem", "Midia", "Turno", "UsuarioPainel"]
+__all__ = ["AcessoCanal", "Agente", "Base", "ChaveProvedor", "Cliente", "Contato", "Conversa", "Falha", "Handoff", "Mensagem", "Midia", "Turno", "UsuarioPainel"]

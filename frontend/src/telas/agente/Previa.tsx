@@ -113,7 +113,7 @@ function Bolha({ de, children }: { de: "agente" | "contato"; children: React.Rea
     <div className={`flex ${doAgente ? "justify-start" : "justify-end"}`}>
       <p
         className={`max-w-[85%] border px-3 py-2 text-sm leading-snug ${
-          doAgente ? "border-borda bg-surface text-texto" : "border-lime/30 bg-lime/5 text-texto"
+          doAgente ? "border-borda bg-surface text-texto" : "border-ciano/30 bg-ciano/5 text-texto"
         }`}
       >
         {children}

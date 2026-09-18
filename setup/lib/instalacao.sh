@@ -86,6 +86,8 @@ tela_instalacao() {
   PASSO_TOTAL=11
   local sub
   sub=$(env_get SUBDOMINIO_BOT)
+  # A IA é escolha de cada agente, feita depois: a imagem leva o SDK dos quatro provedores.
+  env_set PROVEDORES "openai anthropic gemini groq"
 
   passo firewall "Firewall (SSH, 80 e 443)" "Confira com: ufw status" firewall
   passo node "Node.js" "Veja o log." instala_node
@@ -93,7 +95,7 @@ tela_instalacao() {
   passo agente_codigo "$( [ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo 'Claude Code')" \
     "Veja o log." instala_agente_codigo
   passo segredos "Senhas e chaves" "Veja o log." --sem-repetir gera_segredos
-  passo build "Plataforma e SDK $(env_get PROVEDORES)" \
+  passo build "Plataforma" \
     "Confira o espaço em disco: df -h" dc build api worker
   passo banco "Banco e Redis" "Veja: source deploy/compose.sh && dc logs postgres" sobe_banco
   passo migracoes "Tabelas do banco" "Veja o log." migra

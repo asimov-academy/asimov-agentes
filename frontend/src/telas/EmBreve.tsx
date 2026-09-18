@@ -9,7 +9,7 @@ export function EmBreve({ titulo, etapa }: { titulo: string; etapa: string }) {
       <header className="border-b border-borda pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
           {titulo}
-          <span className="text-lime">.</span>
+          <span className="text-ciano">.</span>
         </h1>
         <p className="mt-2 text-sm text-muted">Ainda não construída, e entra na {etapa}.</p>
       </header>
@@ -41,7 +41,7 @@ export function NaoEncontrada() {
     <>
       <header className="border-b border-borda pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-texto md:text-5xl">
-          Este endereço não existe<span className="text-lime">.</span>
+          Este endereço não existe<span className="text-ciano">.</span>
         </h1>
       </header>
       <div className="mt-10">

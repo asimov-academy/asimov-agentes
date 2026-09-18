@@ -12,8 +12,8 @@ APT_OPCOES=(-y -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o 
 tela_boas_vindas() {
   estado_tem aceite && return 0
   banner_asimov
-  info "Prepara esta VPS para agentes de IA de atendimento no Chatwoot,"
-  info "prontos para evoluir com Claude Code ou Codex."
+  info "Este script prepara esta máquina para agentes de IA de atendimento"
+  info "no WhatsApp, no Chatwoot e no terminal, prontos para evoluir com IA."
   dica "Instala Docker, banco, HTTPS e a plataforma. Licença MIT, crédito à Asimov Academy."
   echo
   if ! confirma "Continuar?"; then

@@ -1,37 +1,6 @@
 #!/usr/bin/env bash
-# Telas de dados: modo da instalação, configuração e modelos de IA por função.
-# Respostas comuns vão para o estado; chaves e modelos, para o .env.
-
-# consulta_provedor provedor chave [opções do curl]: GET na lista de modelos do provedor.
-# A chave vai por stdin (-H @-) para não aparecer na lista de processos.
-consulta_provedor() {
-  local provedor=$1 chave=$2
-  shift 2
-  case "$provedor" in
-    openai) printf 'Authorization: Bearer %s\n' "$chave" |
-      curl -s --max-time 20 -H @- "$@" https://api.openai.com/v1/models || true ;;
-    groq) printf 'Authorization: Bearer %s\n' "$chave" |
-      curl -s --max-time 20 -H @- "$@" https://api.groq.com/openai/v1/models || true ;;
-    anthropic) printf 'x-api-key: %s\nanthropic-version: 2023-06-01\n' "$chave" |
-      curl -s --max-time 20 -H @- "$@" 'https://api.anthropic.com/v1/models?limit=100' || true ;;
-    gemini) printf 'x-goog-api-key: %s\n' "$chave" |
-      curl -s --max-time 20 -H @- "$@" 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000' || true ;;
-  esac
-}
-
-# testa_chave provedor chave -> 0 quando o provedor aceita a chave.
-testa_chave() {
-  [ "$(consulta_provedor "$1" "$2" -o /dev/null -w '%{http_code}')" = "200" ]
-}
-
-variavel_da_chave() {
-  case "$1" in
-    openai) echo OPENAI_API_KEY ;;
-    anthropic) echo ANTHROPIC_API_KEY ;;
-    gemini) echo GEMINI_API_KEY ;;
-    groq) echo GROQ_API_KEY ;;
-  esac
-}
+# Telas de dados: modo da instalação, configuração e a escolha de IA de cada agente.
+# Respostas comuns vão para o estado. Chave de provedor de IA vai para a API, que a guarda cifrada.
 
 nome_bonito() {
   case "$1" in
@@ -42,74 +11,29 @@ nome_bonito() {
   esac
 }
 
+# provedor_tem_chave provedor: a API diz quais provedores já têm chave guardada (nunca a chave).
+provedor_tem_chave() {
+  api GET /admin/ia/chaves
+  [ "$API_STATUS" = 200 ] && jq -e --arg p "$1" '.com_chave | index($p)' <<<"$API_RESPOSTA" >/dev/null 2>&1
+}
+
+# pede_chave provedor: só pergunta se a instalação ainda não tem a chave. Quem testa no provedor e
+# guarda cifrada é a API; a chave vale para todo agente e não passa pelo .env.
 pede_chave() {
-  local provedor=$1 chave variavel
-  variavel=$(variavel_da_chave "$provedor")
-  if [ -n "$(env_get "$variavel")" ] && testa_chave "$provedor" "$(env_get "$variavel")"; then
-    return 0
-  fi
+  local provedor=$1 chave
+  provedor_tem_chave "$provedor" && return 0
+  dica "A chave é pedida uma vez e vale para todo agente que usar a $(nome_bonito "$provedor")."
   while true; do
     pergunta_secreta chave "Chave de API da $(nome_bonito "$provedor")"
     printf '  %sTestando…%s' "$CINZA" "$NORMAL"
-    if testa_chave "$provedor" "$chave"; then
-      printf '\r\033[K'
+    api PUT "/admin/ia/chaves/$provedor" "$(jq -n --arg c "$chave" '{chave: $c}')"
+    printf '\r\033[K'
+    if [ "$API_STATUS" = 204 ]; then
       ok "Chave da $(nome_bonito "$provedor") válida"
-      env_set "$variavel" "$chave"
       return 0
     fi
-    printf '\r\033[K'
-    falha "Chave recusada. Confira se copiou inteira e se a conta tem crédito."
+    falha "$(detalhe_erro "$API_RESPOSTA")"
   done
-}
-
-# Sugestões aparecem primeiro, mas só se o provedor ainda listar o modelo.
-preferidos() {
-  case "$1:$2" in
-    openai:conversa) echo "gpt-5.5 gpt-5.1 gpt-5 gpt-4.1" ;;
-    openai:visao) echo "gpt-5-mini gpt-5.1 gpt-4.1-mini" ;;
-    openai:transcricao) echo "gpt-4o-transcribe whisper-1 gpt-4o-mini-transcribe" ;;
-    openai:auxiliar) echo "gpt-5-mini gpt-5-nano gpt-4.1-mini" ;;
-    anthropic:auxiliar) echo "claude-haiku-4-5 claude-sonnet-5" ;;
-    groq:auxiliar) echo "llama-3.1-8b-instant llama-3.3-70b-versatile openai/gpt-oss-20b" ;;
-    anthropic:*) echo "claude-sonnet-5 claude-opus-5 claude-haiku-4-5" ;;
-    gemini:conversa) echo "gemini-2.5-pro gemini-2.5-flash" ;;
-    gemini:*) echo "gemini-2.5-flash gemini-2.5-pro" ;;
-    groq:conversa) echo "llama-3.3-70b-versatile openai/gpt-oss-120b moonshotai/kimi-k2-instruct" ;;
-    groq:visao) echo "meta-llama/llama-4-scout-17b-16e-instruct meta-llama/llama-4-maverick-17b-128e-instruct" ;;
-    groq:transcricao) echo "whisper-large-v3-turbo whisper-large-v3" ;;
-  esac
-}
-
-# filtra_modelos provedor função < ids: só o que serve para a função, sugeridos primeiro, até 8.
-filtra_modelos() {
-  local provedor=$1 funcao=$2 ids preferido
-  ids=$(cat)
-  if [ "$funcao" = transcricao ] && [ "$provedor" != gemini ]; then
-    ids=$(grep -E 'whisper|transcribe' <<<"$ids" || true)
-  else
-    ids=$(grep -v -E 'whisper|transcribe|tts|audio|realtime|embed|image|dall-e|moderation|guard|search|babbage|davinci|sora|codex|computer|preview|exp' <<<"$ids" || true)
-    if [ "$provedor" = openai ]; then
-      ids=$(grep -E '^(gpt-|o[0-9])' <<<"$ids" || true)
-    fi
-  fi
-  {
-    for preferido in $(preferidos "$provedor" "$funcao"); do
-      grep -x -F "$preferido" <<<"$ids" || true
-    done
-    sort -r <<<"$ids"
-  } | awk 'NF && !visto[$0]++' | head -8
-}
-
-# lista_modelos provedor função: ids direto da API do provedor, já filtrados.
-lista_modelos() {
-  local provedor=$1 funcao=$2 json
-  json=$(consulta_provedor "$provedor" "$(env_get "$(variavel_da_chave "$provedor")")")
-  if [ "$provedor" = gemini ]; then
-    jq -r '.models[]? | select(.supportedGenerationMethods | index("generateContent")) | .name | sub("^models/"; "")' <<<"$json" 2>/dev/null |
-      { grep '^gemini' || true; } | filtra_modelos "$provedor" "$funcao"
-  else
-    jq -r '.data[]?.id' <<<"$json" 2>/dev/null | filtra_modelos "$provedor" "$funcao"
-  fi
 }
 
 # escolhe_modelo_em VAR "rótulo" função opcional provedor...: define VAR como provedor:modelo.
@@ -137,7 +61,12 @@ escolhe_modelo_em() {
   __provedor=${__provedores[$((__op - 1))]}
   pede_chave "$__provedor"
 
-  while IFS= read -r __linha; do __modelos+=("$__linha"); done < <(lista_modelos "$__provedor" "$__funcao")
+  api GET "/admin/ia/modelos/$__provedor?funcao=$__funcao"
+  if [ "$API_STATUS" = 200 ]; then
+    while IFS= read -r __linha; do
+      [ -n "$__linha" ] && __modelos+=("${__linha#*:}")
+    done < <(jq -r '.[]' <<<"$API_RESPOSTA" 2>/dev/null || true)
+  fi
   if [ "${#__modelos[@]}" -eq 0 ]; then
     dica "Não consegui listar os modelos da $(nome_bonito "$__provedor"); digite o nome."
     pergunta __modelo "Modelo"
@@ -152,15 +81,44 @@ escolhe_modelo_em() {
   printf -v "$__destino" '%s' "$__provedor:$__modelo"
 }
 
-# escolhe_modelo VAR_ENV "rótulo" função [opcional]: padrão da instalação, gravado no .env.
-escolhe_modelo() {
-  local var=$1 rotulo=$2 funcao=$3 opcional=${4:-} valor
-  if [ "$funcao" = transcricao ]; then
-    escolhe_modelo_em valor "$rotulo" "$funcao" "$opcional" openai groq gemini
-  else
-    escolhe_modelo_em valor "$rotulo" "$funcao" "$opcional" openai anthropic gemini groq
+# escolhe_modelo_do_novo_agente: a IA é escolha de cada agente, feita ao criá-lo. Define
+# MODELOS_NOVO_AGENTE (JSON do campo `modelos`). Só a resposta é perguntada: resumo, visão e áudio
+# nascem no mesmo provedor e mudam em Editar agente > Modelos.
+escolhe_modelo_do_novo_agente() {
+  local resposta audio
+  dica "Cada agente tem a própria IA. Resumo, imagem e áudio seguem o mesmo provedor"
+  dica "e mudam depois em Editar agente > Modelos."
+  escolhe_modelo_em resposta "IA que responde o contato" conversa "" openai anthropic gemini groq
+  MODELOS_NOVO_AGENTE=$(jq -n --arg r "$resposta" '{modelo_conversa: $r}')
+  # A Anthropic não transcreve áudio: sem outro provedor com chave, o áudio precisa de um.
+  if [ "${resposta%%:*}" = anthropic ] && ! provedor_tem_chave openai && ! provedor_tem_chave groq &&
+    ! provedor_tem_chave gemini; then
+    dica "A Anthropic não transcreve áudio. Escolha quem transcreve."
+    escolhe_modelo_em audio "Transcrição de áudio" transcricao "" openai groq gemini
+    MODELOS_NOVO_AGENTE=$(jq --arg a "$audio" '. + {modelo_transcricao: $a}' <<<"$MODELOS_NOVO_AGENTE")
   fi
-  env_set "$var" "$valor"
+  echo
+}
+
+# limpa_dominio "o que a pessoa digitou": devolve só o domínio base, em minúsculas. Aceita colado
+# com https://, www., bot., app., porta, caminho, barra no fim, espaço em volta e ponto final.
+limpa_dominio() {
+  local d=$1
+  d=$(tr '[:upper:]' '[:lower:]' <<<"$d" | tr -d '[:space:]')
+  d=${d#*://}
+  d=${d#*@}
+  d=${d%%/*}
+  d=${d%%\?*}
+  d=${d%%#*}
+  d=${d%%:*}
+  while [[ "$d" == .* ]]; do d=${d#.}; done
+  while [[ "$d" == *. ]]; do d=${d%.}; done
+  # Só tira o prefixo se sobrar um domínio: "app.com" é domínio, "app.exemplo.com" é subdomínio.
+  local prefixo
+  for prefixo in www. bot. app.; do
+    [[ "$d" == "$prefixo"*.* ]] && d=${d#"$prefixo"}
+  done
+  printf '%s' "$d"
 }
 
 valida_dominio() {
@@ -177,49 +135,19 @@ tela_modo() {
   env_set MODO_INSTALACAO "$([ "$op" = 1 ] && echo empresa || echo revenda)"
 }
 
-tela_modelos() {
-  [ -n "$(env_get MODELO_CONVERSA)" ] && estado_tem modelos_confirmados && return 0
-  local fallback
-  while true; do
-    secao "Modelos de IA"
-    dica "Cada função pode usar um provedor diferente. A chave de cada provedor é pedida uma vez."
-    escolhe_modelo MODELO_CONVERSA "Resposta ao contato" conversa
-    escolhe_modelo MODELO_FALLBACK "Fallback, se a resposta falhar" conversa opcional
-    escolhe_modelo MODELO_VISAO "Visão (imagens e PDF)" visao
-    escolhe_modelo MODELO_TRANSCRICAO "Transcrição de áudio" transcricao
-
-    fallback=$(env_get MODELO_FALLBACK)
-    echo
-    campo "Resposta" "$(env_get MODELO_CONVERSA)"
-    campo "Fallback" "${fallback:-nenhum}"
-    campo "Visão" "$(env_get MODELO_VISAO)"
-    campo "Áudio" "$(env_get MODELO_TRANSCRICAO)"
-    echo
-    confirma "Modelos certos?" && break
-  done
-
-  local provedores variavel
-  provedores=$(for variavel in MODELO_CONVERSA MODELO_FALLBACK MODELO_VISAO MODELO_TRANSCRICAO; do
-    env_get "$variavel" | cut -d: -f1
-    echo
-  done | awk 'NF && !visto[$0]++' | xargs)
-  env_set PROVEDORES "$provedores"
-  estado_set modelos_confirmados "$(date -Is)"
-}
-
 tela_dados() {
   estado_tem dados_confirmados && return 0
   secao "Configuração"
 
-  local dominio email opcao
-  dica "Os webhooks dos agentes ficam em bot.<domínio>."
+  local dominio email opcao digitado
+  dica "Domínio dos agentes. Eles ficam em bot.<domínio>; pode colar do jeito que estiver."
   while true; do
-    pergunta dominio "Domínio" "$(estado_get dominio)"
-    dominio=${dominio#http://}
-    dominio=${dominio#https://}
-    dominio=${dominio%%/*}
-    dominio=${dominio#bot.}
-    valida_dominio "$dominio" && break
+    pergunta digitado "Domínio" "$(estado_get dominio)"
+    dominio=$(limpa_dominio "$digitado")
+    if valida_dominio "$dominio"; then
+      [ "$dominio" = "$digitado" ] || ok "Entendi $(destaque "$dominio"): os agentes ficam em $(destaque "bot.$dominio")"
+      break
+    fi
     falha "Domínio inválido. Ex: minhaempresa.com.br"
   done
   while true; do
@@ -228,7 +156,8 @@ tela_dados() {
     falha "E-mail inválido."
   done
   echo
-  escolha opcao "Agente de código" "Claude Code" "Codex"
+  dica "É o assistente de código que fica instalado na VPS para você evoluir os agentes conversando."
+  escolha opcao "Assistente para evoluir os agentes" "Claude Code" "Codex"
 
   estado_set dominio "$dominio"
   estado_set email "$email"

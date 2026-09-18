@@ -9,7 +9,7 @@ type Tom = "erro" | "atencao" | "informacao" | "ok";
 const TONS: Record<Tom, { borda: string; cor: string; icone: keyof typeof ICONES }> = {
   erro: { borda: "border-l-perigo", cor: "text-perigo", icone: "stat-error" },
   atencao: { borda: "border-l-atencao", cor: "text-atencao", icone: "stat-warning" },
-  informacao: { borda: "border-l-lime", cor: "text-lime", icone: "stat-info" },
+  informacao: { borda: "border-l-ciano", cor: "text-ciano", icone: "stat-info" },
   ok: { borda: "border-l-ok", cor: "text-ok", icone: "stat-success" },
 };
 

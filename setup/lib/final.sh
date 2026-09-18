@@ -10,12 +10,12 @@ gera_arquivos_de_contexto() {
   fi
   local agente_codigo modelos
   agente_codigo=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo Codex || echo "Claude Code")
-  modelos="resposta $(env_get MODELO_CONVERSA), fallback $(env_get MODELO_FALLBACK || true), visão $(env_get MODELO_VISAO), áudio $(env_get MODELO_TRANSCRICAO)"
+  modelos="escolhidos por agente (asimov editar > Modelos, ou a ficha do agente no painel)"
 
   sed -e "s|{{AGENTE_CODIGO}}|$agente_codigo|g" \
     -e "s|{{MODELOS}}|$modelos|g" \
     -e "s|{{MODO}}|$(env_get MODO_INSTALACAO)|g" \
-    -e "s|{{CANAIS}}|Chatwoot, WhatsApp (WAHA) e nativo (terminal)|g" \
+    -e "s|{{CANAIS}}|Chatwoot, WhatsApp oficial, WhatsApp pela WAHA e nativo (terminal)|g" \
     -e "s|{{CAMINHO_LOG}}|$LOG|g" \
     "$RAIZ_PROJETO/modelos/AGENTS.md.tmpl" >"$RAIZ_PROJETO/AGENTS.md"
   printf '@AGENTS.md\n' >"$RAIZ_PROJETO/CLAUDE.md"
@@ -34,10 +34,24 @@ instala_comando() {
   $SUDO ln -sf "$RAIZ_PROJETO/setup/asimov.sh" /usr/local/bin/asimov
 }
 
+# Painel ligado e ainda sem conta: o código de primeiro acesso aparece aqui, na última tela, que é
+# a que fica no terminal. O mostrado ao ligar o painel some quando a tela seguinte limpa tudo.
+resumo_acesso_ao_painel() {
+  painel_ligado || return 0
+  api GET /admin/painel
+  [ "$API_STATUS" = 200 ] || return 0
+  [ "$(jq -r '.tem_operador' <<<"$API_RESPOSTA" 2>/dev/null || echo true)" = false ] || return 0
+  info "Primeiro acesso ao painel: abra o endereço e informe o código."
+  painel_mostra_codigo || true
+  if estado_tem primeiro_agente_no_painel && ! estado_tem agente_id; then
+    dica "Depois de entrar, abra Agentes e clique em novo agente: o passo a passo começa ali."
+    echo
+  fi
+}
+
 mostra_resumo() {
-  local sub comando fallback
+  local sub comando
   sub=$(env_get SUBDOMINIO_BOT)
-  fallback=$(env_get MODELO_FALLBACK)
   comando=$([ "$(env_get AGENTE_CODIGO)" = codex ] && echo codex || echo claude)
 
   secao "Pronto"
@@ -62,10 +76,8 @@ mostra_resumo() {
   fi
   campo "Projeto" "$RAIZ_PROJETO"
   campo "Uso" "$([ "$(env_get MODO_INSTALACAO)" = revenda ] && echo 'revenda para empresas clientes' || echo 'só a minha empresa')"
-  campo "Resposta" "$(env_get MODELO_CONVERSA)${fallback:+ ${CINZA}→ $fallback${NORMAL}}"
-  campo "Visão" "$(env_get MODELO_VISAO)"
-  campo "Áudio" "$(env_get MODELO_TRANSCRICAO)"
   echo
+  resumo_acesso_ao_painel
   aviso "Guarde uma cópia do .env fora da VPS: sem ele as credenciais dos canais não abrem."
   echo
   printf '  %sComandos%s\n' "$NEGRITO" "$NORMAL"

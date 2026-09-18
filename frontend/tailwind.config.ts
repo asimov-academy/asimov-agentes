@@ -14,7 +14,7 @@ export default {
         dim: "#444444",
         muted: "#525252",
         texto: "#e5e5e5",
-        lime: "#ccff00",
+        ciano: "#29b8db",
         ok: "#00cc66",
         atencao: "#ffaa00",
         perigo: "#ff453a",
@@ -28,7 +28,7 @@ export default {
       borderRadius: { none: "0" },
       // O brilho do arco do medidor e do foco, no valor do design system. Fica aqui para nenhuma
       // tela precisar escrever a cor solta.
-      dropShadow: { lime: "0 0 5px rgba(204, 255, 0, 0.5)" },
+      dropShadow: { ciano: "0 0 5px rgba(41, 184, 219, 0.5)" },
       boxShadow: { ativo: "0 0 10px rgba(229, 229, 229, 0.3)" },
       // As três animações da AXIS e do KINETIC (seções 2 e 3): a linha que se desenha, a barra que
       // cresce de baixo para cima e o ponto que aparece depois dela. Duração e curva são as do

@@ -5,7 +5,7 @@ import { useId, useState } from "react";
  *  O original é um `ChartRenderer` que desenha SVG na mão com `document.createElementNS`. Aqui o
  *  mesmo desenho sai do JSX, com as mesmas três formas que a seção usa: a curva com suavização de
  *  Bézier e os pontos por cima, a barra que cresce de baixo para cima e a rosca com o buraco em
- *  60% do raio. O que muda do original é só a paleta: lá o acento é laranja, aqui é o lime dos
+ *  60% do raio. O que muda do original é só a paleta: lá o acento é laranja, aqui é o ciano dos
  *  tokens. Cor vem de classe do Tailwind, nunca escrita no atributo.
  *
  *  O SVG usa uma caixa fixa de 1000x300 com `preserveAspectRatio="none"` na horizontal: é o que
@@ -109,7 +109,7 @@ export function Grafico({
         {aviso && (
           <>
             <span className="text-muted">{aviso.rotulo}</span>{" "}
-            <span className="text-lime">{rotuloDoValor(aviso)}</span>
+            <span className="text-ciano">{rotuloDoValor(aviso)}</span>
             {aviso.detalhe && <span className="text-muted"> · {aviso.detalhe}</span>}
           </>
         )}
@@ -137,13 +137,13 @@ function Area({
     <>
       <path
         d={`${curva} L ${LARGURA},${ALTURA} L 0,${ALTURA} Z`}
-        className="animate-surge fill-lime opacity-0"
+        className="animate-surge fill-ciano opacity-0"
         fillOpacity={0.1}
       />
       <path
         d={curva}
         fill="none"
-        className="animate-traco stroke-lime [stroke-dasharray:2000] [stroke-dashoffset:2000]"
+        className="animate-traco stroke-ciano [stroke-dasharray:2000] [stroke-dashoffset:2000]"
         strokeWidth={2}
         vectorEffect="non-scaling-stroke"
       />
@@ -153,7 +153,7 @@ function Area({
           cx={c.x}
           cy={c.y}
           r={4}
-          className="animate-surge cursor-pointer fill-surface stroke-lime opacity-0"
+          className="animate-surge cursor-pointer fill-surface stroke-ciano opacity-0"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
           style={{ animationDelay: `${0.5 + i * 0.03}s` }}
@@ -190,7 +190,7 @@ function Barras({
             width={largura}
             height={alto}
             className={`animate-cresce origin-bottom cursor-pointer transition-colors ${
-              ultima ? "fill-lime hover:fill-texto" : "fill-dim hover:fill-texto"
+              ultima ? "fill-ciano hover:fill-texto" : "fill-dim hover:fill-texto"
             }`}
             style={{ animationDelay: `${i * 0.03}s` }}
             onMouseEnter={() => aoFocar(i)}
@@ -202,7 +202,7 @@ function Barras({
   );
 }
 
-/** A rosca da AXIS: buraco em 60% do raio e uma fatia por cor da escala de cinza, com o lime na
+/** A rosca da AXIS: buraco em 60% do raio e uma fatia por cor da escala de cinza, com o ciano na
  *  maior. Ela desenha numa caixa quadrada: esticar a largura como os outros dois viraria elipse. */
 function Rosca({ pontos, aoFocar }: { pontos: Ponto[]; aoFocar: (i: number | null) => void }) {
   const total = pontos.reduce((soma, p) => soma + p.valor, 0);
@@ -210,7 +210,7 @@ function Rosca({ pontos, aoFocar }: { pontos: Ponto[]; aoFocar: (i: number | nul
   const cy = ALTURA / 2;
   const raio = ALTURA / 2 - RESPIRO;
   const buraco = raio * 0.6;
-  const TONS = ["fill-lime", "fill-texto", "fill-muted", "fill-dim", "fill-borda"];
+  const TONS = ["fill-ciano", "fill-texto", "fill-muted", "fill-dim", "fill-borda"];
   let angulo = -Math.PI / 2;
 
   if (total <= 0) return null;
@@ -273,7 +273,7 @@ function Ponteiro({
       <path
         d={arco}
         fill="none"
-        className="animate-traco stroke-lime drop-shadow-lime [stroke-dasharray:1000] [stroke-dashoffset:1000]"
+        className="animate-traco stroke-ciano drop-shadow-ciano [stroke-dasharray:1000] [stroke-dashoffset:1000]"
         strokeWidth={10}
         strokeLinecap="round"
       />

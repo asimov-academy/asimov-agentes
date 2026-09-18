@@ -13,7 +13,8 @@ from app.canais.registro import obter_canal
 from app.clientes import repo as clientes_repo
 from app.clientes.modelos import Cliente
 from app.ia import ferramentas
-from app.ia.provedores import modelos_padrao, valida_modelos
+from app.ia import chaves
+from app.ia.provedores import valida_modelos
 from app.plataforma import cripto
 from app.plataforma.banco import agora
 from app.plataforma.config import config
@@ -180,7 +181,8 @@ async def criar_agente(
     if await repo.slug_existe(sessao, cliente_id, slug_agente):
         raise Conflito(f"o cliente já tem um agente {slug_agente!r}")
 
-    modelos_finais = {**modelos_padrao(), **(modelos or {})}
+    await chaves.carregar(sessao)
+    modelos_finais = chaves.completa(modelos or {})
     valida_modelos(modelos_finais)
 
     canal_obj = obter_canal(canal)
@@ -315,6 +317,7 @@ async def editar_agente(
         campos["handoff_destino"] = canal.valida_destino_handoff(campos["handoff_destino"])
     if "retomada_automatica_horas" in campos:
         _valida_retomada(canal, campos["retomada_automatica_horas"])
+    await chaves.carregar(sessao)
     valida_modelos({c: v for c, v in campos.items() if c in CAMPOS_MODELO})
     if "ferramentas" in campos:
         campos["ferramentas"] = _valida_ferramentas(campos["ferramentas"])

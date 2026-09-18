@@ -28,17 +28,19 @@ class Config(BaseSettings):
     # de quebrar: é o que se vê rodando a API na máquina de desenvolvimento sem `npm run build`.
     diretorio_painel_app: str = "painel/estaticos/app"
 
-    # Modelos padrão da instalação, no formato provedor:modelo, escolhidos no setup.
-    modelo_conversa: str
+    # Instalação antiga (até a v0.19) escolhia os modelos no setup e eles seguem valendo de padrão.
+    # Na nova ficam vazios: o modelo é escolha de cada agente (ver `ia/chaves.py`).
+    modelo_conversa: str = ""
     modelo_fallback: str = ""
-    modelo_visao: str
-    modelo_transcricao: str
+    modelo_visao: str = ""
+    modelo_transcricao: str = ""
 
     # WAHA (WhatsApp na própria VPS): container sem porta pública, subido no primeiro agente WAHA.
     # A chave é gerada na instalação, mesmo sem o container: assim ligar a WAHA depois não reinicia a API.
     waha_url: str = "http://waha:3000"
     waha_api_key: str = ""
 
+    # Chaves do `.env` de instalação antiga. As novas ficam cifradas no banco.
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     gemini_api_key: str = ""

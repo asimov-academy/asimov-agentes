@@ -46,11 +46,10 @@ salva_agente() {
 }
 
 # escolhe_modelo_do_agente: pergunta a função e o modelo; define CORPO_MODELO para o PATCH.
-# Só provedores com chave no .env: a plataforma não enxerga chave nova sem reconstruir.
+# Provedor sem chave pede a chave na hora; a API guarda e ela vale no próximo turno.
 escolhe_modelo_do_agente() {
-  local op campo funcao rotulo opcional="" provedor
-  local -a provedores=()
-  while IFS= read -r provedor; do provedores+=("$provedor"); done < <(provedores_com_chave)
+  local op campo funcao rotulo opcional=""
+  local -a provedores=(openai anthropic gemini groq)
   echo
   escolha op "Qual modelo" \
     "Resposta ao contato  ${CINZA}$(jq -r '.modelo_conversa' <<<"$AGENTE")${NORMAL}" \

@@ -184,6 +184,7 @@ fluxo_novo_agente() {
     "WhatsApp pela WAHA  ${CINZA}seu número, pareado por QR code; API não oficial${NORMAL}" \
     "Nativo  ${CINZA}sem canal: você conversa com ele aqui no terminal${NORMAL}"
   echo
+  escolhe_modelo_do_novo_agente
   case "$op" in
     1) fluxo_agente_chatwoot ;;
     2) fluxo_agente_whatsapp ;;
@@ -207,7 +208,7 @@ fluxo_agente_nativo() {
     corpo=$(jq -n --arg nome "$nome" --argjson ajustes "$AJUSTES_AGENTE" --argjson f "$ferramentas" \
       --arg emojis "$EMOJIS" \
       '{nome: $nome, canal: "nativo", ferramentas: $f, emojis: $emojis} + $ajustes')
-    api POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo"
+    api POST "/admin/clientes/$EMPRESA_ID/agentes" "$(com_modelos "$corpo")"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
       AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
@@ -249,12 +250,9 @@ configura_ritmo_novo() {
     '{buffer_segundos: $b, digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m}')
 }
 
-# provedores_com_chave: um por linha. A plataforma não enxerga chave nova sem reconstruir.
-provedores_com_chave() {
-  local provedor
-  for provedor in openai anthropic gemini groq; do
-    [ -z "$(env_get "$(variavel_da_chave "$provedor")")" ] || echo "$provedor"
-  done
+# com_modelos JSON: junta ao corpo da criação a IA escolhida em escolhe_modelo_do_novo_agente.
+com_modelos() {
+  jq --argjson m "${MODELOS_NOVO_AGENTE:-{\}}" '. + {modelos: $m}' <<<"$1"
 }
 
 # escolhe_ferramentas VAR JSON_DO_AGENTE: lista de marcar com o catálogo da API; devolve o JSON dos nomes.
@@ -348,7 +346,7 @@ fluxo_agente_chatwoot() {
       --argjson f "$ferramentas" --argjson horas "$RETOMADA_HORAS" --arg emojis "$EMOJIS" \
       '{nome: $nome, canal: "chatwoot", handoff_destino: $destino, conexao: $conexao, ferramentas: $f,
         retomada_automatica_horas: $horas, emojis: $emojis}')
-    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Criando o bot no Chatwoot…"
+    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$(com_modelos "$corpo")" "Criando o bot no Chatwoot…"
     if [ "$API_STATUS" = 201 ]; then
       AGENTE_NOME=$nome
       AGENTE_ID=$(jq -r .id <<<"$API_RESPOSTA")
@@ -370,7 +368,19 @@ fluxo_agente_chatwoot() {
 
 tela_primeiro_agente() {
   estado_tem agente_id && return 0
+  estado_tem primeiro_agente_no_painel && return 0
   secao "Primeiro agente"
+  if painel_ligado; then
+    local onde
+    escolha onde "Onde criar o primeiro agente?" \
+      "No painel  ${CINZA}passo a passo no navegador, com prévia de como ele responde${NORMAL}" \
+      "Aqui no terminal"
+    if [ "$onde" = 1 ]; then
+      estado_set primeiro_agente_no_painel "$(date -Is)"
+      return 0
+    fi
+    echo
+  fi
   AGENTE_ID=""
   fluxo_novo_agente
   # Sem id não houve criação (o operador desistiu no meio, e desistir é uma saída normal). Gravar

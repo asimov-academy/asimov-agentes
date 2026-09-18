@@ -54,7 +54,7 @@ const DESENHO: Record<Espera, ReactElement> = {
         cx="50"
         cy="50"
         r="20"
-        className="animate-anel stroke-lime"
+        className="animate-anel stroke-ciano"
         strokeWidth={4}
         strokeLinecap="round"
       />
@@ -63,7 +63,7 @@ const DESENHO: Record<Espera, ReactElement> = {
 
   // 4. BARS
   barras: (
-    <svg viewBox="0 0 40 40" className="h-10 w-10 stroke-lime" strokeWidth={2} strokeLinecap="round">
+    <svg viewBox="0 0 40 40" className="h-10 w-10 stroke-ciano" strokeWidth={2} strokeLinecap="round">
       {[12, 20, 28].map((x, i) => (
         <line key={x} x1={x} x2={x} y1={15} y2={25}>
           <animate attributeName="y1" dur="0.6s" begin={`${i * 0.1}s`} repeatCount="indefinite" values="15;10;15" />
@@ -87,9 +87,9 @@ const DESENHO: Record<Espera, ReactElement> = {
   // 3. PULSE (RADAR)
   pulso: (
     <div className="relative flex h-12 w-12 items-center justify-center">
-      <span className="absolute z-10 h-3 w-3 rounded-full bg-lime drop-shadow-lime" />
-      <span className="absolute h-full w-full animate-radar rounded-full border border-lime opacity-0" />
-      <span className="absolute h-full w-full animate-radar rounded-full border border-lime opacity-0 [animation-delay:0.6s]" />
+      <span className="absolute z-10 h-3 w-3 rounded-full bg-ciano drop-shadow-ciano" />
+      <span className="absolute h-full w-full animate-radar rounded-full border border-ciano opacity-0" />
+      <span className="absolute h-full w-full animate-radar rounded-full border border-ciano opacity-0 [animation-delay:0.6s]" />
     </div>
   ),
 

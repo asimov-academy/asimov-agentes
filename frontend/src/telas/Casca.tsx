@@ -66,7 +66,7 @@ export function Casca({
       >
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex items-center gap-3 border-b border-borda px-5 py-5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center bg-lime font-mono text-sm font-bold text-void">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center bg-ciano font-mono text-sm font-bold text-void">
               A
             </span>
             {!recolhido && (
@@ -107,7 +107,7 @@ export function Casca({
                   className={({ isActive }) =>
                     `flex items-center gap-3 border-l-2 px-3 py-2 text-sm transition-colors ${
                       isActive
-                        ? "border-l-lime bg-surface text-lime"
+                        ? "border-l-ciano bg-surface text-ciano"
                         : "border-l-transparent text-muted hover:text-texto"
                     }`
                   }

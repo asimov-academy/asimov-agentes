@@ -5,16 +5,16 @@ import type { ICONES } from "./icones";
 /** Os três botões do design system (seção 5, "01 // INTERACTIVE BUTTONS"), na hierarquia dele:
  *
  *  - `solido`: branco sobre preto. É o botão que conclui a ação, e é o mais forte da tela.
- *  - `acento`: contorno lime que se preenche no hover. Ação afirmativa secundária.
+ *  - `acento`: contorno ciano que se preenche no hover. Ação afirmativa secundária.
  *  - `fantasma`: contorno branco fraco, com os cantos marcados. É o botão de andar pela tela.
  *
- *  O lime cheio não é botão no original: ele é contorno. Trocar isso apaga a hierarquia inteira.
+ *  O ciano cheio não é botão no original: ele é contorno. Trocar isso apaga a hierarquia inteira.
  */
 type Tom = "solido" | "acento" | "fantasma" | "perigo";
 
 const TONS: Record<Tom, string> = {
   solido: "bg-texto text-void border border-texto hover:bg-white",
-  acento: "border border-lime/50 text-lime hover:bg-lime hover:text-void",
+  acento: "border border-ciano/50 text-ciano hover:bg-ciano hover:text-void",
   fantasma: "border border-texto/20 bg-transparent text-texto hover:bg-texto/5",
   perigo: "border border-perigo/50 text-perigo hover:bg-perigo hover:text-void",
 };

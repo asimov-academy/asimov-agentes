@@ -1,9 +1,8 @@
 """Modelos por função e construção do modelo com a chave da configuração.
 
 Nome de modelo sempre no formato `provedor:modelo`. Cada função (resposta, fallback, visão,
-transcrição) pode usar um provedor diferente; os padrões vêm do setup e cada agente pode
-trocar. A chave é passada explicitamente ao provider: o pydantic-settings não exporta o .env
-para o ambiente do processo.
+transcrição) pode usar um provedor diferente, e a escolha é de cada agente. A chave vem de
+`ia/chaves.py` (banco, ou `.env` de instalação antiga) e é passada explicitamente ao provider.
 """
 
 from typing import TYPE_CHECKING
@@ -19,17 +18,6 @@ PROVEDORES_TRANSCRICAO = ("openai", "gemini", "groq")
 
 class ModeloInvalido(ValueError):
     pass
-
-
-def modelos_padrao(cfg: Config | None = None) -> dict[str, str | None]:
-    cfg = cfg or config()
-    return {
-        "modelo_conversa": cfg.modelo_conversa,
-        "modelo_fallback": cfg.modelo_fallback or None,
-        "modelo_auxiliar": cfg.modelo_conversa,
-        "modelo_visao": cfg.modelo_visao,
-        "modelo_transcricao": cfg.modelo_transcricao,
-    }
 
 
 def provedor_de(nome_modelo: str) -> str:
@@ -49,6 +37,8 @@ def valida_modelos(modelos: dict[str, str | None], cfg: Config | None = None) ->
     Vazio passava direto e era gravado: o agente ficava com `modelo_conversa: ""`, que não resolve
     modelo nenhum, e só dava erro no turno seguinte (auditoria de 2026-09-18, A12).
     """
+    from app.ia import chaves
+
     cfg = cfg or config()
     for campo, nome in modelos.items():
         if nome is None or not str(nome).strip():
@@ -58,14 +48,16 @@ def valida_modelos(modelos: dict[str, str | None], cfg: Config | None = None) ->
         provedor = provedor_de(nome)
         if campo == "modelo_transcricao" and provedor not in PROVEDORES_TRANSCRICAO:
             raise ModeloInvalido(f"{provedor} não transcreve áudio; use openai, gemini ou groq")
-        if not cfg.chave_do_provedor(provedor):
+        if not chaves.chave_do_provedor(provedor, cfg):
             raise ModeloInvalido(f"{campo} usa {provedor}, mas a instalação não tem essa chave")
 
 
 def construir_modelo(nome_modelo: str) -> "Model":
     provedor = provedor_de(nome_modelo)
     modelo = nome_modelo.split(":", 1)[1]
-    chave = config().chave_do_provedor(provedor)
+    from app.ia import chaves
+
+    chave = chaves.chave_do_provedor(provedor)
 
     if provedor == "openai":
         # Responses, não Chat Completions: só nela a OpenAI tem busca na web nativa.

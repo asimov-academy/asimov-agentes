@@ -15,9 +15,9 @@ Configuração única da VPS. Não fica no banco: segredos em `.env` com permiss
 | email_ssl | e-mail | sim |
 | agente_codigo | `claude_code` ou `codex` | sim |
 | modo_instalacao | `empresa` ou `revenda` | sim |
-| modelo_conversa, modelo_fallback, modelo_visao, modelo_transcricao | `provedor:modelo`; padrões para agentes novos; fallback opcional | sim, exceto fallback |
-| provedores | provedores usados pelos modelos, para instalar os SDKs | sim |
-| chaves de IA (OpenAI, Anthropic, Gemini, Groq) | segredo | as dos provedores escolhidos |
+| modelo_conversa, modelo_fallback, modelo_visao, modelo_transcricao | `provedor:modelo`; só em instalação feita até a v0.19, onde seguem de padrão. Desde a v0.20.0 o modelo é de cada agente | não |
+| provedores | os quatro provedores, para a imagem levar os SDKs | sim |
+| chaves de IA no `.env` | segredo; só em instalação feita até a v0.19, de reserva. As novas ficam em Chave de provedor | não |
 | modelo_embeddings | texto; único na instalação, porque define a dimensão do vetor | sim |
 | chave_criptografia | segredo gerado pelo setup, para as credenciais de canal | sim |
 | chave_api_admin | segredo gerado pelo setup, para as rotas administrativas | sim |
@@ -83,6 +83,17 @@ Acesso do operador a um canal, pedido uma vez e reaproveitado (no Chatwoot, o to
 | canal | `chatwoot` | sim |
 | endereco | URL do Chatwoot | sim, único por canal |
 | acesso | segredo estruturado (token_admin), criptografado | sim |
+| criado_em, atualizado_em | data e hora | sim |
+
+### Chave de provedor
+
+Chave de API de um provedor de IA (v0.20.0), pedida ao criar um agente, no terminal ou no painel, e reaproveitada por todo agente que usar o provedor. É da instalação, não de um cliente. A API testa no provedor antes de guardar e nunca devolve a chave: as telas só sabem quais provedores têm uma.
+
+| Atributo | Tipo | Obrigatório |
+|---|---|---|
+| id | identificador | sim |
+| provedor | `openai`, `anthropic`, `gemini` ou `groq` | sim, único |
+| chave | segredo, criptografado | sim |
 | criado_em, atualizado_em | data e hora | sim |
 
 ### Contato

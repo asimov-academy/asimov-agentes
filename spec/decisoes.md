@@ -2,6 +2,53 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: A IA vira escolha de cada agente, e a instalação fica só com o essencial (v0.20.0)
+
+O operador instalou numa VPS e apontou o que não fazia sentido. Tudo abaixo veio dessa rodada.
+
+**Modelos saem da instalação.** A tela "Modelos de IA" pedia provedor, chave e modelo de quatro
+funções antes de existir agente, e agentes diferentes usam IAs diferentes. Agora a instalação não
+pergunta nada de IA. Criar agente, no terminal ou no painel, pergunta a IA que responde o contato;
+resumo, imagem e áudio nascem no mesmo provedor (primeira sugestão de `ia/chaves.py`) e mudam em
+Editar agente ou na ficha. Anthropic não transcreve: o áudio cai em outro provedor com chave, e sem
+nenhum o terminal pergunta quem transcreve.
+
+**Chave de provedor vai para o banco, cifrada** (tabela `chave_provedor`, migração `0017`, em
+`acessos/`). O `.env` só é lido no boot, e a chave informada ao criar um agente precisa valer na
+hora, sem reiniciar a API. A API testa a chave no provedor antes de guardar e nunca a devolve. API e
+worker são processos separados: cada um relê as chaves antes de validar modelo e no começo do turno.
+`MODELO_*` e `*_API_KEY` do `.env` de instalação antiga seguem valendo de padrão e de reserva. Isto
+muda a regra "segredos só em `.env`": chave de provedor entra na mesma exceção das credenciais de
+canal. A imagem passa a levar o SDK dos quatro provedores (`PROVEDORES` fixo). O catálogo de modelos
+(filtro por função e sugestões) saiu do Bash e foi para `ia/chaves.py`; o terminal lista pela API
+(`/admin/ia/modelos/<provedor>`), porque depois de guardada a chave o setup não a tem mais.
+
+**Ordem da instalação.** O painel era oferecido depois do primeiro agente, quando já não ajudava a
+criá-lo. Agora: essencial instalado, oferta do painel e só então o primeiro agente, com a escolha
+"no painel" ou "aqui no terminal" quando o painel está ligado.
+
+**Código de primeiro acesso sumia.** `painel_liga` mostrava o código e a tela seguinte limpava o
+terminal. Entrou uma pausa depois do código, e o resumo final gera e mostra um código enquanto o
+painel não tiver conta.
+
+**Textos.** Boas-vindas sem "Chatwoot" (a plataforma tem vários canais). "Webhooks ficam em
+bot.<domínio>" virou "Domínio dos agentes". "Agente de código" virou "Assistente para evoluir os
+agentes". A oferta do painel diz o IP do registro DNS. O subdomínio do painel explica com o domínio
+real (`app.<dominio>`), aceita o endereço colado inteiro e recusa `bot`.
+
+**Domínio tolerante.** `limpa_dominio` aceita `https://`, `www.`, `bot.`, `app.`, porta, caminho,
+barra e ponto no fim, maiúsculas e espaço, e mostra o que entendeu antes de seguir.
+
+spec/telas.md, spec/dados.md, spec/arquitetura.md, spec/estado.md e AGENTS.md.
+
+## 2026-09-18: Cor principal do painel passa de lime para ciano
+
+O operador quis no painel o mesmo ciano que vê no CLI (o ciano ANSI do terminal web). O token `lime`
+(`#ccff00`) virou `ciano` (`#29b8db`), com o brilho `rgba(41, 184, 219, 0.5)`, no
+`tailwind.config.ts`, em todo o `frontend/src`, no `painel/estaticos/painel.css` (`--ciano`) e no
+`designsystem/`. Texto preto sobre o ciano cheio continua legível. O token `ok` não mudou.
+Atualizado spec/frontend.md, seção 3.
+
 ## 2026-09-18: A instalação passa a oferecer o painel (v0.19.0)
 
 O painel existia e ninguém ligava: a instalação só citava `asimov painel` numa lista de comandos no

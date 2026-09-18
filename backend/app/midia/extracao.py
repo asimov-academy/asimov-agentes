@@ -16,7 +16,7 @@ from pydantic_ai.settings import ModelSettings
 from pypdf import PdfReader, PdfWriter
 from tinytag import TinyTag
 
-from app.ia import provedores
+from app.ia import chaves, provedores
 from app.ia.agente import custo_estimado
 from app.plataforma.config import config
 
@@ -109,7 +109,7 @@ async def transcrever(nome_modelo: str, conteudo: bytes, tipo_mime: str) -> Extr
     async with _http() as http:
         resp = await http.post(
             endpoint,
-            headers={"Authorization": f"Bearer {config().chave_do_provedor(provedor)}"},
+            headers={"Authorization": f"Bearer {chaves.chave_do_provedor(provedor)}"},
             data=campos,
             files={"file": (f"audio.{extensao}", conteudo, tipo_mime)},
         )

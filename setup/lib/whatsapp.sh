@@ -270,7 +270,7 @@ fluxo_agente_whatsapp() {
       --argjson permitidos "$CONTATOS_PERMITIDOS" --arg emojis "$EMOJIS" \
       '{nome: $nome, canal: "whatsapp", conexao: $conexao, ferramentas: $f, handoff_destino: $destino,
         retomada_automatica_horas: $horas, contatos_permitidos: $permitidos, emojis: $emojis}')
-    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$corpo" "Apontando o webhook na Meta…"
+    api_com_token POST "/admin/clientes/$EMPRESA_ID/agentes" "$(com_modelos "$corpo")" "Apontando o webhook na Meta…"
     if [ "$API_STATUS" = 201 ]; then break; fi
     falha "$(detalhe_erro "$API_RESPOSTA")"
     if [ "$API_STATUS" = 409 ]; then

@@ -17,12 +17,13 @@ import { Interruptor } from "../../design/Interruptor";
 import { Modal } from "../../design/Modal";
 import { Passos } from "../../design/Passos";
 import { CANAIS } from "./canais";
+import { EscolheIA } from "./EscolheIA";
 import { Previa } from "./Previa";
 import { Teste } from "./Teste";
 
 /** O onboarding do agente, no popup grande com o fundo embaçado.
  *
- *  Sete passos na mesma ordem do terminal, um por vez, com a prévia viva ao lado. Só empresa, canal
+ *  Oito passos na mesma ordem do terminal, um por vez, com a prévia viva ao lado. Só empresa, canal
  *  e nome travam; o resto tem padrão e dá para pular. A criação é uma chamada só no fim: passo
  *  nenhum grava pela metade, então desistir no meio não deixa agente capenga no banco.
  *
@@ -38,6 +39,7 @@ const PASSOS = [
   "Sobre a empresa",
   "Jeito de falar",
   "Ferramentas",
+  "IA",
   "Conferir",
 ];
 
@@ -67,6 +69,7 @@ type Rascunho = {
   partes: number;
   buffer: number;
   ferramentas: string[];
+  modelo: string;
 };
 
 const VAZIO: Rascunho = {
@@ -82,6 +85,7 @@ const VAZIO: Rascunho = {
   partes: 3,
   buffer: 8,
   ferramentas: [],
+  modelo: "",
 };
 
 function leRascunho(): Rascunho {
@@ -147,6 +151,7 @@ export function Onboarding({
     if (passo === 0) return Boolean(dados.empresaId || dados.empresaNova.trim());
     if (passo === 1) return Boolean(dados.canal);
     if (passo === 2) return Boolean(dados.nome.trim());
+    if (passo === 6) return dados.modelo.includes(":") && !dados.modelo.endsWith(":");
     return true;
   }, [passo, dados]);
 
@@ -180,6 +185,7 @@ export function Onboarding({
         max_mensagens_por_resposta: dados.partes,
         buffer_segundos: dados.buffer,
         ferramentas: dados.ferramentas,
+        modelo_conversa: dados.modelo,
       });
       if (dados.funcao || dados.publico || dados.site || dados.sobre) {
         await api.gravaPerfil(agente.id, {
@@ -342,11 +348,11 @@ export function Onboarding({
                         key={c.nome}
                         onClick={() => muda("canal", c.nome)}
                         className={`relative flex flex-col gap-2 border p-4 text-left transition-colors ${
-                          marcado ? "border-lime bg-lime/5" : "border-borda hover:border-dim"
+                          marcado ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
                         }`}
                       >
                         <span className="flex items-center gap-2">
-                          <Icone nome={texto?.icone ?? "cont-link"} className={marcado ? "text-lime" : "text-muted"} />
+                          <Icone nome={texto?.icone ?? "cont-link"} className={marcado ? "text-ciano" : "text-muted"} />
                           <span className="text-sm font-semibold text-texto">
                             {texto?.rotulo ?? c.nome}
                           </span>
@@ -416,7 +422,7 @@ export function Onboarding({
                   value={dados.sobre}
                   onChange={(e) => muda("sobre", e.target.value)}
                   placeholder="O que ela vende, desde quando, o que a diferencia."
-                  className="mt-2 w-full border-b border-dim bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-lime focus:outline-none"
+                  className="mt-2 w-full border-b border-dim bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none"
                 />
               </label>
             </Pergunta>
@@ -435,7 +441,7 @@ export function Onboarding({
                     onClick={() => muda("emojis", e.valor)}
                     className={`border px-4 py-2 text-sm transition-colors ${
                       dados.emojis === e.valor
-                        ? "border-lime text-lime"
+                        ? "border-ciano text-ciano"
                         : "border-borda text-muted hover:text-texto"
                     }`}
                   >
@@ -503,6 +509,19 @@ export function Onboarding({
 
           {passo === 6 && (
             <Pergunta
+              titulo="Qual IA responde por ele?"
+              ajuda="Cada agente tem a própria. Resumo, imagem e áudio nascem no mesmo provedor e mudam depois, na ficha."
+            >
+              <EscolheIA funcao="conversa" valor={dados.modelo} aoMudar={(m) => muda("modelo", m)} />
+              <p className="mt-6 text-sm text-dim">
+                A Anthropic não transcreve áudio: com ela, guarde também a chave da OpenAI, da Groq ou
+                do Gemini para o agente ouvir áudio.
+              </p>
+            </Pergunta>
+          )}
+
+          {passo === 7 && (
+            <Pergunta
               titulo="Confere e cria"
               ajuda="Nada foi gravado ainda. O agente nasce inteiro quando você clicar."
             >
@@ -513,6 +532,7 @@ export function Onboarding({
                 <Linha rotulo="Função">
                   {FUNCOES.find((f) => f.valor === dados.funcao)?.rotulo ?? "sem função"}
                 </Linha>
+                <Linha rotulo="IA">{dados.modelo || "não escolhida"}</Linha>
                 <Linha rotulo="Emoji">{EMOJIS.find((e) => e.valor === dados.emojis)?.rotulo}</Linha>
                 <Linha rotulo="Ferramentas">
                   {dados.ferramentas.length === 0
@@ -584,15 +604,15 @@ function Escolha({
       onClick={aoMarcar}
       aria-pressed={marcada}
       className={`flex items-start gap-3 border p-3 text-left transition-colors ${
-        marcada ? "border-lime bg-lime/5" : "border-borda hover:border-dim"
+        marcada ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
       }`}
     >
       <span
         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border ${
-          marcada ? "border-lime" : "border-dim"
+          marcada ? "border-ciano" : "border-dim"
         }`}
       >
-        {marcada && <span className="h-2 w-2 bg-lime" />}
+        {marcada && <span className="h-2 w-2 bg-ciano" />}
       </span>
       <span>
         <span className="block text-sm text-texto">{children}</span>
@@ -633,7 +653,7 @@ function Deslizante({
         max={max}
         value={valor}
         onChange={(e) => aoMudar(Number(e.target.value))}
-        className="mt-3 w-full accent-lime"
+        className="mt-3 w-full accent-ciano"
       />
       {ajuda && <span className="mt-1 block text-sm text-dim">{ajuda}</span>}
     </label>
