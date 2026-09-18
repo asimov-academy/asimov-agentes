@@ -157,6 +157,14 @@ async def receber(
                 s, agente.cliente_id, agente.id, evento.conversa_externa
             )
             if conversa is None:
+                # Fala de saída numa conversa que o agente nunca atendeu: guardar não serve para
+                # nada, mas sumir em silêncio escondia o que estava acontecendo (v0.13.4).
+                log.info(
+                    "webhook_ignorado",
+                    motivo="conversa que o agente ainda não atende",
+                    de=evento.conversa_externa,
+                    texto=(evento.texto or "")[:60] or None,
+                )
                 return Response(status_code=200)
 
         nova = False

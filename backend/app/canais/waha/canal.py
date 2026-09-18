@@ -313,7 +313,7 @@ class Waha:
             return self._reacao(mensagem, chat)
 
         if mensagem.get("fromMe"):
-            return self._saiu_do_numero(mensagem, chat)
+            return self._saiu_do_numero(mensagem, chat, destino)
 
         texto = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
         comando = COMANDO_RETOMAR.match(texto or "")
@@ -356,14 +356,28 @@ class Waha:
             return Evento(Acao.IGNORAR, "reação em grupo", chat)
         return Evento(Acao.RETOMAR, "joinha devolveu a conversa ao agente", chat, por="joinha")
 
-    def _saiu_do_numero(self, mensagem: dict[str, Any], chat: str) -> Evento:
+    def _saiu_do_numero(
+        self, mensagem: dict[str, Any], chat: str, destino: dict[str, Any] | None
+    ) -> Evento:
         """Mensagem do próprio número: ou foi o agente pela API, ou é gente digitando no aparelho.
 
         `source` da WAHA separa os dois: `api` é o agente falando, `app` é uma pessoa da empresa
         que abriu o WhatsApp e respondeu. Nesse caso o agente cala até o joinha ou o prazo.
+
+        Exceção: `/retomar <código>` escrito no chat de quem recebeu o handoff é comando, não
+        conversa. O operador responde o aviso do aparelho do agente com a mesma naturalidade com
+        que responderia do próprio celular.
         """
         if mensagem.get("source") == "api":
             return Evento(Acao.IGNORAR, "mensagem enviada pelo próprio agente", chat)
+        texto_saindo = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None
+        comando = COMANDO_RETOMAR.match(texto_saindo or "")
+        if comando and chat == _texto_do_destino(destino):
+            return Evento(
+                Acao.RETOMAR_POR_CODIGO,
+                "/retomar escrito no chat do handoff",
+                codigo=comando.group(1).upper(),
+            )
         if chat.endswith(SUFIXO_DE_GRUPO):
             return Evento(Acao.IGNORAR, "mensagem de grupo", chat)
         texto = mensagem.get("body") if isinstance(mensagem.get("body"), str) else None

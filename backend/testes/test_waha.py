@@ -793,3 +793,37 @@ async def test_aviso_de_handoff_chama_o_contato_pelo_nome_e_telefone(http, fila,
     assert avisos, "o destino precisa ser avisado"
     assert "Maria (+55 51 99999-8888)" in avisos[0]
     assert "1151135133847" not in avisos[0], "o id oculto não é telefone de ninguém"
+
+
+async def test_retomar_escrito_do_aparelho_do_agente_no_chat_do_handoff(http, fila, waha, redis, sessao, modelo_transfere) -> None:  # type: ignore[no-untyped-def]
+    """Responder o aviso pelo aparelho do agente é tão natural quanto responder do próprio celular."""
+    agente = await cria_waha(http)
+    codigo = await transfere(http, fila, redis, waha, agente)
+
+    resposta = await manda(
+        http,
+        agente,
+        waha,
+        payload_waha(f"/retomar {codigo}", de=CHAT_DO_DESTINO, minha=True, id_mensagem="true_dest_LLL"),
+    )
+
+    assert resposta.status_code == 200
+    async with sessao() as s:
+        fechado = (await s.scalars(select(Handoff))).one()
+    assert fechado.retomado_em is not None, "o comando vale, mesmo saindo do número do agente"
+
+
+async def test_fala_do_aparelho_em_conversa_desconhecida_nao_some_calada(http, fila, waha, sessao, caplog) -> None:  # type: ignore[no-untyped-def]
+    """Responder de um chat que o agente nunca atendeu não faz nada, mas precisa aparecer no log."""
+    agente = await cria_waha(http)
+
+    resposta = await manda(
+        http,
+        agente,
+        waha,
+        payload_waha("bom dia", de="5511911112222@c.us", minha=True, id_mensagem="true_novo_MMM"),
+    )
+
+    assert resposta.status_code == 200
+    async with sessao() as s:
+        assert list(await s.scalars(select(Conversa))) == []
