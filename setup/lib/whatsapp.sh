@@ -35,9 +35,21 @@ aviso_oficial() {
   dica "O número fica só com o agente: ele não roda no celular, então ninguém responde pelo"
   dica "aparelho como acontece na WAHA."
   dica "Você precisa ter, na Meta: um app, a conta de WhatsApp Business com o número, um token de"
-  dica "acesso permanente, o segredo do app e um template aprovado para o aviso de handoff."
-  echo
+  dica "acesso permanente, a chave secreta do app e um template aprovado para o aviso de handoff."
+  dados_para_publicar_o_app
   confirma "Tenho isso em mãos. Continuar?"
+}
+
+# dados_para_publicar_o_app: o que a Meta pede para o app sair do modo de desenvolvimento.
+# A página de privacidade é servida por esta instalação, no domínio dela.
+dados_para_publicar_o_app() {
+  echo
+  info "Para publicar o app (sair do modo de desenvolvimento), a Meta pede dois dados:"
+  dica "Política de privacidade: https://$(env_get SUBDOMINIO_BOT)/privacidade"
+  dica "  Por empresa: https://$(env_get SUBDOMINIO_BOT)/privacidade/<slug-da-empresa>"
+  dica "  O texto fica em modelos/privacidade.html, para você ajustar ao seu caso."
+  dica "Ícone quadrado do app: docs/imagens/icone-app.png, aqui no projeto."
+  echo
 }
 
 # pede_credenciais_whatsapp: pergunta app, token e chave secreta, descobre as contas de WhatsApp

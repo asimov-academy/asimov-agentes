@@ -13,6 +13,8 @@ class Config(BaseSettings):
     database_url: str
     redis_url: str
     subdominio_bot: str
+    # E-mail que o operador deu ao Let's Encrypt; serve de contato na página de privacidade.
+    email_ssl: str = ""
 
     chave_api_admin: str
     chave_criptografia: str

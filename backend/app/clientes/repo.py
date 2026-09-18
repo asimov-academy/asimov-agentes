@@ -19,6 +19,13 @@ async def obter(sessao: AsyncSession, cliente_id: uuid.UUID) -> Cliente | None:
     )
 
 
+async def por_slug(sessao: AsyncSession, slug: str) -> Cliente | None:
+    """Pelo slug, que é o que aparece na URL da página pública de privacidade."""
+    return await sessao.scalar(
+        select(Cliente).where(Cliente.slug == slug, Cliente.removido_em.is_(None))
+    )
+
+
 async def slug_existe(sessao: AsyncSession, slug: str) -> bool:
     return await sessao.scalar(select(Cliente.id).where(Cliente.slug == slug)) is not None
 
