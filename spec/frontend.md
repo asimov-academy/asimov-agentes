@@ -398,11 +398,15 @@ modelo e nem falha no turno nem arquivo grande transferem, porque prometer uma p
 - Sobre a empresa: texto livre, com o rótulo "Descreva um pouco sobre <nome da empresa>".
 - Abaixo, em "Prompt gerado", o `persona.md` resultante, com opção de editar à mão.
 
-**Treinamento** (desenhada, ainda não funciona): o que o agente sabe além do prompt, em cinco
-formas de ensinar a mesma coisa: **texto** (uma afirmação por vez), **site**, **vídeo**,
-**documento** e **base de conhecimento** compartilhada entre agentes. Todas terminam em trechos que
-o agente busca na hora de responder, o que é a fase 6. A tela existe antes da máquina de propósito:
-sem um lugar combinado, cada tipo de material nasceria num canto diferente do painel.
+**Treinamento**: o que o agente sabe além do prompt, em cinco formas de ensinar a mesma coisa:
+**texto** (uma afirmação por vez), **site**, **vídeo**, **documento** e **base de conhecimento**
+compartilhada entre agentes. Todas terminam em trechos que o agente busca na hora de responder.
+Texto, site e documento funcionam desde a fase 6; vídeo e base compartilhada seguem desenhadas, com
+o selo de "em breve" só na aba delas. Embaixo, o que o agente já sabe, com o estado de cada material
+(processando, pronto com o número de trechos, ou erro com o motivo) e o remover. A tela relê sozinha
+enquanto houver material em andamento, porque quem termina a ingestão é o worker. Sem chave de IA
+que gere vetores, um aviso aparece antes de o operador mandar material, em vez de deixar tudo virar
+erro depois.
 
 **Ferramentas e integrações**: catálogo de `ia/ferramentas/registro.py` com interruptor por
 ferramenta e a instrução de quando usar. O destino do handoff e o prazo de retomada automática

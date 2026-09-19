@@ -288,7 +288,7 @@ async def roda_turno(
             agora_em_brasilia(),
         ],
     )
-    contexto = ContextoTurno()
+    contexto = ContextoTurno(cliente_id=agente.cliente_id, agente_id=agente.id)
     entrada = "\n".join(conteudo(m) for m in pendentes)
     cfg = config()
     resultado = await ia.run(

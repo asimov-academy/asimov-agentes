@@ -28,7 +28,7 @@ Fale com o operador em português, curto e direto.
 
 ## Comandos de desenvolvimento
 
-- Testes locais do backend (Postgres com banco `asimov_teste` e Redis em `localhost:6390`): `redis-server --port 6390 --daemonize yes --save "" && cd backend && uv run pytest -q`. Outros endereços: `TESTE_DATABASE_URL` e `TESTE_REDIS_URL`.
+- Testes locais do backend (Postgres com banco `asimov_teste` e Redis em `localhost:6390`): `redis-server --port 6390 --daemonize yes --save "" && cd backend && uv run pytest -q`. Outros endereços: `TESTE_DATABASE_URL` e `TESTE_REDIS_URL`. O Postgres local precisa da extensão `vector` (`CREATE EXTENSION vector`); a imagem da VPS já traz.
 - Shellcheck: `uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR setup/instalar.sh setup/asimov.sh setup/install.sh setup/lib/*.sh deploy/*.sh`
 - Painel web: `cd frontend && npm ci` uma vez; depois `npm run build`, `npm run teste` e `npm run checa`. Para ver no navegador sem Docker, construa e copie: `npm run build && rm -rf ../backend/app/painel/estaticos/app && cp -R dist ../backend/app/painel/estaticos/app`.
 - Simular o onboarding sem VPS: `ASIMOV_TTY=setup/testes/respostas.txt bash setup/testes/simula_onboarding.sh`
@@ -39,7 +39,7 @@ Fale com o operador em português, curto e direto.
 
 - `setup/` é o único cliente da API. Depois que a API sobe, ele NUNCA acessa o banco.
 - `setup/lib/base.sh` tem `VERSAO`, caminhos, `com_voltar` e carrega as telas; `ui.sh` tem os helpers de tela (`pergunta`, `escolha`, `marca`, `confirma`); `menu.sh` o menu; `instalar.sh` e `asimov.sh` só orquestram.
-- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `oportunidades/`, `painel/`, `copiloto/`; `conhecimento/` na fase 6). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
+- `backend/app/` agrupa por assunto (`acessos/`, `clientes/`, `agentes/`, `canais/`, `conversas/`, `midia/`, `handoff/`, `consumo/`, `ia/`, `oportunidades/`, `painel/`, `copiloto/`, `conhecimento/`). Em cada um: `rotas.py` recebe e valida, `servico.py` tem a regra, `repo.py` acessa o banco. Rota NUNCA orquestra nem escreve direto pelo repo; leitura simples (listar, ver) pode chamar `repo.py`, e é o que algumas rotas fazem hoje.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
 - Copiloto do painel (`copiloto/`): o CLI de código do operador, pela assinatura dele, falando com a plataforma só pelo MCP de `copiloto/mcp.py`. Ferramenta de leitura responde; ferramenta `propor_` NUNCA escreve, só registra proposta, e quem aplica é `copiloto/aplicar.py` no clique do operador. NUNCA ligue ferramenta de código do CLI.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.

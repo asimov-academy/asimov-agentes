@@ -14,6 +14,7 @@ from app.canais.nativo.rotas import router as terminal
 from app.canais.waha.rotas import router as waha
 from app.canais.whatsapp.rotas import router as whatsapp
 from app.clientes.rotas import router as clientes
+from app.conhecimento.rotas import router as conhecimento
 from app.consumo.rotas import router as consumo
 from app.conversas.webhook import router as webhook
 from app.handoff.rotas import router as handoff
@@ -74,6 +75,7 @@ async def erro_interno(request: Request, erro: Exception) -> JSONResponse:
 
 app.include_router(clientes)
 app.include_router(agentes)
+app.include_router(conhecimento)
 app.include_router(consumo)
 app.include_router(handoff)
 app.include_router(ia)

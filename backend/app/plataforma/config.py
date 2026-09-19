@@ -64,6 +64,7 @@ class Config(BaseSettings):
     diretorio_prompts: Path = Path("/app/prompts")
     diretorio_modelos: Path = Path("/app/modelos")
     diretorio_midia: Path = Path("/var/lib/asimov/midia")
+    diretorio_conhecimento: Path = Path("/var/lib/asimov/conhecimento")
 
     log_nivel: str = "INFO"
     # Cobre ler mídia e responder no mesmo turno, e passa do `job_timeout` do worker (300 s) de

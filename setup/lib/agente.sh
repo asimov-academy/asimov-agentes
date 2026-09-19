@@ -27,6 +27,18 @@ api() {
   rm -f "$saida" ${arquivo:+"$arquivo"}
 }
 
+# api_arquivo CAMINHO_DA_API ARQUIVO: envia um arquivo do disco da VPS por multipart.
+# O `api` manda JSON; base de conhecimento manda arquivo, e é a única rota assim.
+api_arquivo() {
+  local caminho=$1 arquivo=$2 saida
+  saida=$(mktemp)
+  API_STATUS=$(printf 'X-Admin-Key: %s\n' "$(env_get CHAVE_API_ADMIN)" |
+    curl -s -o "$saida" -w '%{http_code}' -X POST -H @- \
+      -F "arquivo=@$arquivo" "$API_LOCAL$caminho" || true)
+  API_RESPOSTA=$(cat "$saida")
+  rm -f "$saida"
+}
+
 # exige_api: para o comando quando a última chamada não deu 200.
 exige_api() {
   [ "$API_STATUS" = 200 ] || erro_fatal "A API não respondeu" "Veja: source deploy/compose.sh && dc logs api"
