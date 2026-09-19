@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clientes import repo as clientes_repo
 from app.conversas import repo as conversas_repo
 from app.handoff import servico as handoff_servico
+from app.conversas import memoria_do_contato
 from app.painel import repo
 from app.painel.acesso import exige_csrf, exige_sessao
 from app.plataforma.banco import sessao
@@ -104,6 +105,16 @@ async def contatos(
     if cliente_id is not None and await clientes_repo.obter(s, cliente_id) is None:
         raise HTTPException(status_code=404, detail="empresa não encontrada")
     return await repo.contatos(s, busca.strip(), cliente_id, limite)
+
+
+@router.delete("/contatos/{contato_id}/memoria")
+async def esquece_contato(contato_id: uuid.UUID, s: AsyncSession = Depends(sessao)) -> dict[str, bool]:
+    """Apaga o que o agente lembra deste contato. É o pedido de exclusão chegando pelo operador."""
+    ficha = await repo.contato(s, contato_id)
+    if ficha is None:
+        raise HTTPException(status_code=404, detail="contato não encontrado")
+    await memoria_do_contato.esquece(s, uuid.UUID(str(ficha["cliente_id"])), contato_id)
+    return {"esquecido": True}
 
 
 @router.get("/contatos/{contato_id}")

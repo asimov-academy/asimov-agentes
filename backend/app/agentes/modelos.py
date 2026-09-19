@@ -66,6 +66,11 @@ class Agente(ComId, ComCriacao, Base):
     """Quanto o agente usa emoji: `nenhum`, `pouco`, `medio` ou `muito`. `livre` é o que os agentes
     criados antes desta escolha mantêm, e para eles a plataforma não diz nada sobre emoji."""
 
+    memoria_ativa: Mapped[bool] = mapped_column(default=True, server_default="false")
+    """O agente lembra do contato entre conversas (resumo e ficha). Nasce ligado: lembrar do que
+    ficou combinado é o que o contato espera de quem já falou com ele. `server_default` falso de
+    propósito: agente criado antes disto não começa a lembrar sozinho."""
+
     contatos_permitidos: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
     """Telefones que o agente atende, só dígitos. Lista vazia é o normal: atende quem mandar mensagem.
     Serve para testar um número novo sem responder a qualquer pessoa que escreva para ele."""

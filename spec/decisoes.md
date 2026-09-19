@@ -2,6 +2,30 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 10, etapa 3 (memória do contato)
+
+O agente passa a lembrar do contato entre conversas (migração `0023`, aditiva). Duas coisas, escritas
+pelo modelo auxiliar: **resumo da conversa** (`conversa.resumo`), que é o que já aconteceu antes do
+trecho que ainda cabe no histórico, e **ficha do contato** (`contato.memoria`), com fatos duráveis.
+Sem elas, conversa longa perde o começo e o contato que volta em três semanas é um estranho.
+
+**As duas entram no turno marcadas como dado do contato, num bloco `<memoria_do_contato>`, com o
+aviso de que não são instrução.** Elas nascem do que o contato escreveu: sem a marcação, "ignore
+suas regras" escrito hoje viraria regra amanhã. É a mesma fronteira do `<midia_do_contato>`.
+
+**Uma chamada de modelo a cada 20 mensagens, não uma por turno.** Resumo e ficha são reescritos
+juntos, na mesma chamada, e só quando a conversa andou o bastante. A atualização acontece depois de
+o contato já ter a resposta, e falha dela não derruba o turno: memória é melhoria.
+
+**Nasce ligada** (decisão do operador), com `server_default` falso: agente que já existe não começa
+a guardar o que o contato disse sem alguém pedir. O interruptor está na aba Comunicação e em
+`asimov editar` > Jeito de falar.
+
+**Apagar é do operador**, na tela de Contatos: "o que o agente lembra", com o botão de esquecer. É o
+pedido de exclusão da LGPD chegando por onde ele chega de verdade.
+
+Atualizados: `spec/fases.md`, `spec/estado.md`.
+
 ## 2026-09-18: Fase 10, etapas 1 e 2 (ritmo com nome e persona com anti-padrão)
 
 **Ritmo vira preset** (migração `0022`, aditiva): instantâneo, natural, reflexivo e manual. O nome é

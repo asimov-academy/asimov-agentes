@@ -358,7 +358,9 @@ async def contato(sessao: AsyncSession, contato_id: uuid.UUID) -> dict[str, Any]
             Contato.cliente_id,
             Cliente.nome.label("empresa"),
             Contato.agente_id,
+            Contato.memoria,
             Agente.nome.label("agente"),
+            Agente.memoria_ativa,
         )
         .join(Cliente, Cliente.id == Contato.cliente_id)
         .join(Agente, and_(Agente.id == Contato.agente_id, Agente.cliente_id == Contato.cliente_id))
@@ -375,6 +377,14 @@ async def contato(sessao: AsyncSession, contato_id: uuid.UUID) -> dict[str, Any]
         .limit(50)
     )
     ficha["conversas"] = [_texto(dict(c._mapping)) for c in conversas_do_contato]
+    # O resumo mora na conversa; a tela mostra os dois juntos, que é como o agente os usa.
+    resumos = await sessao.scalars(
+        select(Conversa.resumo)
+        .where(Conversa.contato_id == contato_id, Conversa.resumo != "")
+        .order_by(Conversa.atualizado_em.desc())
+        .limit(1)
+    )
+    ficha["resumo"] = resumos.first() or ""
     return ficha
 
 

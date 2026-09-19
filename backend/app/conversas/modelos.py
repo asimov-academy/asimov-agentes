@@ -19,6 +19,9 @@ class Contato(ComId, ComCriacao, Base):
     nome: Mapped[str | None] = mapped_column(String(200))
     telefone: Mapped[str | None] = mapped_column(String(50))
     ultima_mensagem_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=agora)
+    memoria: Mapped[str] = mapped_column(Text, default="", server_default="")
+    """Fatos duráveis que o agente lembra deste contato. Entra no turno como dado do contato,
+    nunca como instrução, e o operador apaga pela tela de Contatos (fase 10, etapa 3)."""
 
 
 class Conversa(ComId, ComCriacao, Base):
@@ -34,6 +37,10 @@ class Conversa(ComId, ComCriacao, Base):
     status: Mapped[str] = mapped_column(String(20), default="agente")
     respondido_ate: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     """Hora da última mensagem do contato que um turno respondeu. O que chega durante o turno fica depois."""
+    resumo: Mapped[str] = mapped_column(Text, default="", server_default="")
+    """O que já aconteceu antes do trecho que ainda cabe no histórico do turno."""
+    resumido_ate: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """Até onde o resumo já cobre. O histórico do turno continua sendo a janela das últimas."""
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=agora, onupdate=agora
     )

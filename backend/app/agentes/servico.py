@@ -58,6 +58,7 @@ CAMPOS_EDITAVEIS = frozenset(
         "tom",
         "transfere_para_humano",
         "restringe_temas",
+        "memoria_ativa",
         "contatos_permitidos",
         *CAMPOS_MODELO,
     }

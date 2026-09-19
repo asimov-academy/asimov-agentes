@@ -29,7 +29,7 @@ from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
 from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
-from app.conversas import buffer, repo
+from app.conversas import buffer, memoria_do_contato, repo
 from app.conversas.divisao import limita_mensagens, pausa_de_leitura, tempos_de_digitacao
 from app.conversas.modelos import Conversa, Mensagem
 from app.handoff import repo as handoff_repo
@@ -68,12 +68,16 @@ def separa_pendentes(
 
 
 async def _roda_com_tentativas(
-    agente: Any, anteriores: list[Mensagem], pendentes: list[Mensagem], handoffs: list[Any]
+    agente: Any,
+    anteriores: list[Mensagem],
+    pendentes: list[Mensagem],
+    handoffs: list[Any],
+    memoria: str = "",
 ) -> ResultadoTurno:
     tentativas = config().tentativas_extra_modelo + 1
     for tentativa in range(1, tentativas + 1):
         try:
-            return await roda_turno(agente, anteriores, pendentes, handoffs=handoffs)
+            return await roda_turno(agente, anteriores, pendentes, handoffs=handoffs, memoria=memoria)
         except Exception as erro:
             log.warning("modelo_falhou", tentativa=tentativa, erro=repr(erro))
             # Estourar o teto do turno é o modelo em loop: tentar de novo só repete o gasto.
@@ -183,7 +187,11 @@ async def _turno(
         inicio = time.monotonic()
         try:
             resultado = await _roda_com_tentativas(
-                agente, anteriores, pendentes, await handoff_repo.da_conversa(s, cliente_id, conversa_id)
+                agente,
+                anteriores,
+                pendentes,
+                await handoff_repo.da_conversa(s, cliente_id, conversa_id),
+                memoria=await memoria_do_contato.do_turno(s, agente, conversa),
             )
         except Exception as erro:
             await _digitando(canal, credenciais, conversa.id_externo, False, ultima)
@@ -290,6 +298,9 @@ async def _turno(
         if motivo is not None:
             transferencia = await handoff.transferir(s, agente, canal, credenciais, conversa, motivo)
         await s.commit()
+        # Depois de o contato já ter a resposta: memória é melhoria, e não pode atrasar o envio nem
+        # derrubar o turno se o modelo auxiliar falhar.
+        await memoria_do_contato.atualiza(s, agente, conversa, [*anteriores, *pendentes])
         log.info("turno_concluido", mensagens=enviadas, latencia_ms=latencia, handoff=transferencia)
         return "transferido" if transferencia == "transferido" else "respondido"
 
