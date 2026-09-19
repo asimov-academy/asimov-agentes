@@ -401,6 +401,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
   const [humano, setHumano] = useState(agente.transfere_para_humano);
   const [soDaEmpresa, setSoDaEmpresa] = useState(agente.restringe_temas);
   const [memoria, setMemoria] = useState(agente.memoria_ativa);
+  const [avisaIa, setAvisaIa] = useState(agente.avisa_que_e_ia);
   const [partes, setPartes] = useState(agente.max_mensagens_por_resposta);
   const [buffer, setBuffer] = useState(agente.buffer_segundos);
   const [velocidade, setVelocidade] = useState(agente.digitacao_caracteres_por_segundo);
@@ -547,6 +548,12 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
           rotulo="Lembrar de cada contato"
           descricao="Ele guarda o que ficou combinado e não pergunta duas vezes. Em Contatos você vê e apaga."
         />
+        <Interruptor
+          ligado={avisaIa}
+          aoMudar={setAvisaIa}
+          rotulo="Avisar que é um assistente virtual"
+          descricao="Uma linha na primeira mensagem de cada conversa. Quem atende na União Europeia precisa ligar."
+        />
       </div>
 
       <Rodape
@@ -565,6 +572,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
                   transfere_para_humano: humano,
                   restringe_temas: soDaEmpresa,
                   memoria_ativa: memoria,
+                  avisa_que_e_ia: avisaIa,
                   max_mensagens_por_resposta: partes,
                   buffer_segundos: buffer,
                   digitacao_caracteres_por_segundo: velocidade,
@@ -576,6 +584,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
                   transfere_para_humano: humano,
                   restringe_temas: soDaEmpresa,
                   memoria_ativa: memoria,
+                  avisa_que_e_ia: avisaIa,
                   max_mensagens_por_resposta: partes,
                   ritmo,
                 },

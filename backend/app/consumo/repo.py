@@ -117,3 +117,21 @@ async def consumo_de_todos_os_clientes(
 
 async def _linhas(sessao: AsyncSession, consulta: Select[Any]) -> list[dict[str, Any]]:
     return [dict(linha._mapping) for linha in await sessao.execute(consulta)]
+
+
+async def ultimos_sentimentos(
+    sessao: AsyncSession, cliente_id: uuid.UUID, conversa_id: uuid.UUID, quantos: int = 1
+) -> list[str]:
+    """Os sentimentos dos últimos turnos de resposta desta conversa, do mais novo para o mais velho."""
+    linhas = await sessao.scalars(
+        select(Turno.sentimento)
+        .where(
+            Turno.cliente_id == cliente_id,
+            Turno.conversa_id == conversa_id,
+            Turno.funcao == "resposta",
+            Turno.sentimento != "",
+        )
+        .order_by(Turno.criado_em.desc())
+        .limit(quantos)
+    )
+    return list(linhas)

@@ -264,3 +264,10 @@ async def obter_contato(
     return await sessao.scalar(
         select(Contato).where(Contato.cliente_id == cliente_id, Contato.id == contato_id)
     )
+
+
+async def nome_da_empresa(sessao: AsyncSession, cliente_id: uuid.UUID) -> str:
+    """Só para o texto do aviso de IA. Consulta curta, e só quando o aviso está ligado."""
+    from app.clientes.modelos import Cliente
+
+    return await sessao.scalar(select(Cliente.nome).where(Cliente.id == cliente_id)) or ""

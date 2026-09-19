@@ -22,6 +22,9 @@ class Turno(ComId, ComCriacao, Base):
     custo_estimado: Mapped[Decimal | None] = mapped_column(Numeric(12, 6))
     latencia_ms: Mapped[int] = mapped_column(default=0)
     tools_chamadas: Mapped[list[str] | None] = mapped_column(JSONB)
+    sentimento: Mapped[str] = mapped_column(String(10), default="", server_default="")
+    """Como o contato parecia estar neste turno, na leitura do próprio modelo: `positivo`, `neutro`
+    ou `negativo`. Vazio no turno que não chegou a rodar o modelo."""
     erro: Mapped[str | None] = mapped_column(Text)
 
 

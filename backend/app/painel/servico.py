@@ -306,6 +306,7 @@ async def visao_geral(
     serie = await repo.serie_de_turnos(sessao, desde, por, cliente_id)
     modelos = await repo.gasto_por_modelo(sessao, desde, cliente_id)
     resolucao = await repo.resolucao(sessao, desde, cliente_id)
+    humor = await repo.humor(sessao, desde, cliente_id)
     handoffs = [
         dict(h, vencido=h["retomar_em"] is not None and h["retomar_em"] <= ate)
         for h in await repo.handoffs_abertos(sessao, cliente_id)
@@ -329,6 +330,7 @@ async def visao_geral(
         },
         "serie": {"por": por, "pontos": _serie_cheia(serie, desde, ate, por)},
         "modelos": modelos,
+        "humor": humor,
         "resolucao": dict(
             resolucao,
             sozinho=resolucao["conversas"] - resolucao["com_gente"],

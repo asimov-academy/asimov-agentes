@@ -246,7 +246,7 @@ export function VisaoGeral({
               meio e a comparação embaixo. Eram três números soltos sobre o fundo, em mono e no
               tamanho de título, e a explicação do terceiro não cabia na coluna. */}
           <section className="mt-10">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-4">
               <Indicador
                 rotulo="Respostas dadas"
                 valor={numero(dados.totais.turnos)}
@@ -272,6 +272,27 @@ export function VisaoGeral({
                   dados.resolucao.porcento === null
                     ? "nenhuma conversa começou neste período"
                     : `de ${numero(dados.resolucao.conversas)} conversas`
+                }
+              />
+              {/* O humor é a leitura do próprio modelo em cada resposta. Serve para ver de longe
+                  que o dia está ruim antes de o cliente reclamar. */}
+              <Indicador
+                rotulo="Contatos irritados"
+                valor={
+                  dados.humor.positivo + dados.humor.neutro + dados.humor.negativo === 0
+                    ? "0%"
+                    : `${Math.round(
+                        (dados.humor.negativo /
+                          (dados.humor.positivo + dados.humor.neutro + dados.humor.negativo)) *
+                          100,
+                      )}%`
+                }
+                rodape={
+                  dados.humor.positivo + dados.humor.neutro + dados.humor.negativo === 0
+                    ? "ainda sem leitura de humor"
+                    : `${numero(dados.humor.negativo)} de ${numero(
+                        dados.humor.positivo + dados.humor.neutro + dados.humor.negativo,
+                      )} respostas`
                 }
               />
             </div>

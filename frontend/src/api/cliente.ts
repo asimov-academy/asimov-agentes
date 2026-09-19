@@ -412,6 +412,8 @@ export type VisaoGeral = {
   variacao: Variacao;
   serie: { por: "hour" | "day"; pontos: Ponto[] };
   modelos: GastoDoModelo[];
+  /** Como o modelo leu o contato nos turnos do período. */
+  humor: { positivo: number; neutro: number; negativo: number };
   resolucao: Resolucao;
   agentes: TurnosDoAgente[];
   falhas: FalhaDoPainel[];
@@ -448,6 +450,8 @@ export type Agente = {
   /** Preset de ritmo: `instantaneo`, `natural`, `reflexivo` ou `manual`. */
   ritmo: string;
   memoria_ativa: boolean;
+  avisa_que_e_ia: boolean;
+  aviso_de_ia: string;
   contatos_permitidos: string[];
   handoff_destino: Record<string, unknown> | null;
   retomada_automatica_horas: number | null;
@@ -519,6 +523,7 @@ export type NovoAgente = {
   restringe_temas?: boolean;
   ritmo?: string;
   memoria_ativa?: boolean;
+  avisa_que_e_ia?: boolean;
   contatos_permitidos?: string[];
   /** Só a resposta: resumo, imagem e áudio nascem no mesmo provedor e mudam na ficha. */
   modelo_conversa?: string;
@@ -533,6 +538,8 @@ export type EdicaoDoAgente = {
   restringe_temas: boolean;
   ritmo: string;
   memoria_ativa: boolean;
+  avisa_que_e_ia: boolean;
+  aviso_de_ia: string;
   buffer_segundos: number;
   max_mensagens_por_resposta: number;
   digitacao_caracteres_por_segundo: number;

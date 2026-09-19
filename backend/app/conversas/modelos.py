@@ -37,6 +37,8 @@ class Conversa(ComId, ComCriacao, Base):
     status: Mapped[str] = mapped_column(String(20), default="agente")
     respondido_ate: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     """Hora da última mensagem do contato que um turno respondeu. O que chega durante o turno fica depois."""
+    avisou_ia_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """Quando o agente disse, nesta conversa, que é um assistente virtual. É o que prova o aviso."""
     resumo: Mapped[str] = mapped_column(Text, default="", server_default="")
     """O que já aconteceu antes do trecho que ainda cabe no histórico do turno."""
     resumido_ate: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

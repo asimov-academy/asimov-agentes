@@ -113,6 +113,25 @@ async def resolucao(
     }
 
 
+async def humor(
+    sessao: AsyncSession, desde: datetime, cliente_id: uuid.UUID | None = None
+) -> dict[str, int]:
+    """Quantos turnos do período o modelo leu como positivo, neutro e negativo.
+
+    Serve para o operador ver de longe que o dia está ruim antes de o cliente reclamar. Turno sem
+    leitura (anterior à fase 10, ou que nem chegou ao modelo) não conta.
+    """
+    consulta = (
+        select(Turno.sentimento, func.count())
+        .where(Turno.criado_em >= desde, Turno.sentimento != "")
+        .group_by(Turno.sentimento)
+    )
+    if cliente_id is not None:
+        consulta = consulta.where(Turno.cliente_id == cliente_id)
+    contagem = {sentimento: total for sentimento, total in await sessao.execute(consulta)}
+    return {qual: contagem.get(qual, 0) for qual in ("positivo", "neutro", "negativo")}
+
+
 async def serie_de_turnos(
     sessao: AsyncSession, desde: datetime, por: str, cliente_id: uuid.UUID | None = None
 ) -> list[dict[str, Any]]:

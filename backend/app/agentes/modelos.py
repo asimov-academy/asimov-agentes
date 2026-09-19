@@ -66,6 +66,14 @@ class Agente(ComId, ComCriacao, Base):
     """Quanto o agente usa emoji: `nenhum`, `pouco`, `medio` ou `muito`. `livre` é o que os agentes
     criados antes desta escolha mantêm, e para eles a plataforma não diz nada sobre emoji."""
 
+    avisa_que_e_ia: Mapped[bool] = mapped_column(default=False, server_default="false")
+    """O agente abre cada conversa nova dizendo que é um assistente virtual. Nasce desligado, por
+    escolha do operador: quem atende na União Europeia precisa marcar (artigo 50 do EU AI Act, em
+    vigor desde 2 de agosto de 2026), e quem atende só no Brasil decide."""
+
+    aviso_de_ia: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    """O texto do aviso. Vazio usa o padrão da plataforma, com o nome do agente e da empresa."""
+
     memoria_ativa: Mapped[bool] = mapped_column(default=True, server_default="false")
     """O agente lembra do contato entre conversas (resumo e ficha). Nasce ligado: lembrar do que
     ficou combinado é o que o contato espera de quem já falou com ele. `server_default` falso de
