@@ -393,8 +393,13 @@ async def editar_agente(
             lambda a: canal.renomear(a, cred, campos["nome"]),
         )
 
+    cliente = await clientes_repo.obter(sessao, cliente_id)
+    empresa = cliente.nome if cliente else ""
+    gerenciado = le_prompt_do_agente(agente) == monta_persona(agente, empresa)
     for campo, valor in campos.items():
         setattr(agente, campo, valor)
+    if "nome" in campos and gerenciado:
+        escreve_prompt_do_agente(agente, monta_persona(agente, empresa))
     await sessao.commit()
     log.info("agente_editado", agente_id=str(agente.id), campos=sorted(campos))
     return agente
@@ -497,10 +502,10 @@ def monta_persona(agente: Agente, empresa: str) -> str:
     diferença (uns 550 tokens por turno no agente cru contra uns 5.600 com tudo ligado).
     """
     perfil = agente.perfil or {}
-    if not perfil.get("funcao"):
-        return f"Você é {agente.nome}, do atendimento de {empresa}.\n"
-
-    linhas = [f"Você é {agente.nome}, de {empresa}, e {FUNCOES[perfil['funcao']]}."]
+    if perfil.get("funcao"):
+        linhas = [f"Você é {agente.nome}, de {empresa}, e {FUNCOES[perfil['funcao']]}."]
+    else:
+        linhas = [f"Você é {agente.nome}, do atendimento de {empresa}."]
     if perfil.get("publico"):
         linhas.append(f"Quem fala com você: {perfil['publico']}.")
     if perfil.get("sobre_empresa"):
@@ -551,11 +556,15 @@ async def grava_perfil(
         raise CampoInvalido(f"função desconhecida: {funcao}")
 
     cliente = await clientes_repo.obter(sessao, cliente_id)
+    empresa = cliente.nome if cliente else ""
+    anterior = le_prompt_do_agente(agente)
+    gerenciado = not anterior or anterior == monta_persona(agente, empresa)
     agente.perfil = {**(agente.perfil or {}), **perfil}
     if assina_nome is not None:
         agente.assina_nome = assina_nome
-    texto = monta_persona(agente, cliente.nome if cliente else "")
-    escreve_prompt_do_agente(agente, texto)
+    texto = monta_persona(agente, empresa) if gerenciado else anterior
+    if gerenciado:
+        escreve_prompt_do_agente(agente, texto)
     await sessao.commit()
     await sessao.refresh(agente)
     return agente, texto

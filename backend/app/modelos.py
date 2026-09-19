@@ -3,7 +3,7 @@
 from app.acessos.modelos import AcessoCanal, ChaveProvedor
 from app.agentes.modelos import Agente
 from app.clientes.modelos import Cliente
-from app.conhecimento.modelos import Documento, Trecho
+from app.conhecimento.modelos import ConfiguracaoEmbeddings, Documento, Trecho
 from app.consumo.modelos import Falha, Turno
 from app.conversas.modelos import Contato, Conversa, Mensagem
 from app.handoff.modelos import Handoff

@@ -261,7 +261,9 @@ async def test_depois_da_devolucao_o_modelo_ve_que_o_pedido_de_pessoa_ja_foi_ate
     avisos = [i for i, f in enumerate(linha_do_tempo) if f.startswith("<system>")]
     pedido = linha_do_tempo.index("quero falar com uma pessoa")
     assert len(avisos) == 2 and pedido < avisos[0] < avisos[1] < len(linha_do_tempo) - 1
-    assert "contato pediu para falar com uma pessoa" in linha_do_tempo[avisos[0]]
+    # O motivo vem do modelo e não entra como parte de sistema (auditoria 2026-09-19, I06).
+    assert "passada para uma pessoa da equipe" in linha_do_tempo[avisos[0]]
+    assert "contato pediu para falar com uma pessoa" not in linha_do_tempo[avisos[0]]
     assert "devolveu a conversa para você" in linha_do_tempo[avisos[1]]
     assert linha_do_tempo[-1] == "qual a cotação do dólar?"
 

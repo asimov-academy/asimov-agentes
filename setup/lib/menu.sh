@@ -369,14 +369,14 @@ edita_jeito() {
   pergunta_emoji "$(jq -r '.emojis' <<<"$AGENTE")"
 
   dica "Desligado, ele nunca promete que alguém vai assumir: atende até o fim sozinho."
-  confirma "Ele pode passar a conversa para uma pessoa?" && humano=true || humano=false
-  confirma "Ele só fala de assuntos da empresa?" && temas=true || temas=false
+  confirma "Ele pode passar a conversa para uma pessoa?" "$(jq -r '.transfere_para_humano' <<<"$AGENTE")" && humano=true || humano=false
+  confirma "Ele só fala de assuntos da empresa?" "$(jq -r '.restringe_temas' <<<"$AGENTE")" && temas=true || temas=false
 
   dica "Ligado, ele guarda o que ficou combinado com cada contato e não pergunta duas vezes."
-  confirma "Ele lembra de cada contato?" && memoria=true || memoria=false
+  confirma "Ele lembra de cada contato?" "$(jq -r '.memoria_ativa' <<<"$AGENTE")" && memoria=true || memoria=false
 
   dica "Uma linha na primeira mensagem de cada conversa. Quem atende na União Europeia precisa ligar."
-  confirma "Ele avisa que é um assistente virtual?" && aviso=true || aviso=false
+  confirma "Ele avisa que é um assistente virtual?" "$(jq -r '.avisa_que_e_ia' <<<"$AGENTE")" && aviso=true || aviso=false
 
   salva_agente "$(jq -n --arg t "$tom" --arg e "$EMOJIS" --argjson h "$humano" --argjson r "$temas" \
     --argjson m "$memoria" --argjson a "$aviso" \

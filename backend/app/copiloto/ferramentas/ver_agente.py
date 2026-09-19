@@ -44,6 +44,12 @@ async def ver_agente(agente_id: str) -> str:
         "max_mensagens_por_resposta": agente.max_mensagens_por_resposta,
         "ferramentas": agente.ferramentas or [],
         "emojis": agente.emojis,
+        "tom": agente.tom,
+        "restringe_temas": agente.restringe_temas,
+        "transfere_para_humano": agente.transfere_para_humano,
+        "memoria_ativa": agente.memoria_ativa,
+        "avisa_que_e_ia": agente.avisa_que_e_ia,
+        "ritmo": agente.ritmo,
         "assina_nome": agente.assina_nome,
         "perfil": agente.perfil or {},
     }

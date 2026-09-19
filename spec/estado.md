@@ -4,6 +4,21 @@ Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-0
 
 ## Auditoria local
 
+Auditoria de inteligência de 2026-09-19: [achados, evidências e roteiro de homologação](../docs/auditoria-inteligencia-2026-09-19.md).
+Revisa personalidade no CLI/painel, PydanticAI, memória, ferramentas e conhecimento.
+
+**Os 16 achados foram corrigidos** (spec/decisoes.md, 2026-09-19): saída estruturada escolhida por
+modelo e ferramentas (I01), comportamento escrito à mão preservado ao salvar e ao renomear (I02,
+I07, I08), volume de conhecimento compartilhado e chaves carregadas no worker (I03, I04), modelo de
+embeddings fixado na primeira ingestão (I05), memória do contato como dado (I06), aviso de IA sem
+cortar resposta (I09), falha sem prometer pessoa quando a transferência está desligada (I10), prova
+do agente no CLI e no painel (I11, I12), personalidade pelo copiloto (I13), consumo da memória e do
+fallback registrado (I14), download de site só para IP público e com teto (I15) e backup com
+`prompts/` e conhecimento (I16). As sondas viraram 11 regressões em
+`backend/testes/test_auditoria_inteligencia.py`; a suíte está em 523 testes no backend e 87 no
+frontend. **Nada disso rodou em VPS nem com modelo real**: o roteiro de homologação do relatório
+continua valendo antes de virar versão.
+
 Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-2026-09-18.md), com inventário, 22 achados priorizados e oito reproduções executáveis. Foram verificados os 266 testes e as 13 migrações da base publicada. O painel que surgiu em trabalho concorrente recebeu revisão parcial separada; esses resultados não validam suas alterações. Não muda a fase nem a versão publicada.
 
 **Os seis P1 foram corrigidos** (spec/decisoes.md, 2026-09-18): reentrega recupera turno perdido (A01), envio que não saiu não conta como respondido (A02), prazo do token de buffer não descarta resposta (A03), humano que assume cala o agente na hora (A04), prompt não passa de uma empresa para outra (A05) e o lock passa a durar mais que o job (A06). Viraram 16 regressões em `backend/testes/test_auditoria_p1.py`; a suíte está em 311 testes. **Nada disso rodou em VPS**: precisa de validação real antes de virar versão. Seguem abertos os 14 P2 e 2 P3, com três sondas em `backend/testes/auditoria_2026_09_18.py`.

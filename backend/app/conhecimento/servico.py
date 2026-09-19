@@ -119,13 +119,12 @@ async def recebe_site(
     url = url.strip()
     if not url.startswith(("http://", "https://")):
         raise CampoInvalido("endereço inválido; comece com https://")
+    from app.conhecimento.site import baixar, SiteInvalido
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_DO_SITE, follow_redirects=True) as http:
-            resposta = await http.get(url, headers={"User-Agent": "AsimovAgentes/1.0"})
-            resposta.raise_for_status()
-            conteudo = resposta.content[:LIMITE_DE_BYTES]
-    except httpx.HTTPError as erro:
-        raise CampoInvalido("não consegui abrir essa página") from erro
+        conteudo = await baixar(url, LIMITE_DE_BYTES)
+    except (httpx.HTTPError, TimeoutError, ValueError) as erro:
+        mensagem = str(erro) if isinstance(erro, SiteInvalido) else "não consegui abrir essa página"
+        raise CampoInvalido(mensagem) from erro
 
     texto = extracao.limpa(extracao.de_html(conteudo))
     if len(texto) < 50:
@@ -173,7 +172,11 @@ async def ingerir(
         trechos = divisao.em_trechos(conteudo)
         if not trechos:
             raise extracao.NaoDeuParaLer("não achei texto nenhum neste material")
-        vetores = await embeddings.gerar(trechos)
+        from app.ia import chaves
+        await chaves.carregar(sessao)
+        modelo = await repo.modelo_fixado(sessao, embeddings.modelo())
+        await sessao.commit()
+        vetores = await embeddings.gerar(trechos, modelo_fixo=modelo)
         await repo.grava_trechos(sessao, documento, list(zip(trechos, vetores, strict=True)))
     except (extracao.NaoDeuParaLer, embeddings.SemEmbeddings) as erro:
         await repo.marca(sessao, cliente_id, documento_id, "erro", erro=str(erro))
@@ -223,7 +226,11 @@ async def buscar(
     pergunta: str,
     quantos: int = 5,
 ) -> list[dict[str, Any]]:
-    vetor = await embeddings.gerar([pergunta])
+    from app.ia import chaves
+    await chaves.carregar(sessao)
+    modelo = await repo.modelo_fixado(sessao, embeddings.modelo())
+    await sessao.commit()
+    vetor = await embeddings.gerar([pergunta], modelo_fixo=modelo)
     return await repo.busca(sessao, cliente_id, agente_id, vetor[0], quantos)
 
 

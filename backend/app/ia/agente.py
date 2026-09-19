@@ -9,7 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.messages import (
     BaseToolCallPart,
@@ -43,6 +43,14 @@ class Resposta(BaseModel):
         description="Mensagens curtas, na ordem em que serão enviadas ao contato.",
         min_length=1,
     )
+    @field_validator("mensagens")
+    @classmethod
+    def resposta_util(cls, mensagens: list[str]) -> list[str]:
+        from app.conversas.divisao import sem_markdown
+        if not any(sem_markdown(m) for m in mensagens):
+            raise ValueError("Escreva uma resposta útil para o contato, não mensagens vazias.")
+        return mensagens
+
     sentimento: Literal["positivo", "neutro", "negativo"] = Field(
         default="neutro",
         description="Como o contato parece estar nesta altura da conversa.",
@@ -55,6 +63,7 @@ class Resposta(BaseModel):
 @dataclass
 class ResultadoTurno:
     mensagens: list[str]
+    modelo: str = ""
     sentimento: str = "neutro"
     tokens_entrada: int = 0
     tokens_saida: int = 0
@@ -103,7 +112,7 @@ INSTRUCAO_DE_CONVERSA = (
     "ajudar, nunca em toda mensagem. NUNCA escreva frase de atendimento automático como 'sua "
     "solicitação está sendo processada' ou 'agradecemos o seu contato'. NUNCA anuncie que vai "
     "verificar alguma coisa se você não for verificar nada. NUNCA afirme preço, prazo ou condição "
-    "que não esteja no que você recebeu: diga que vai confirmar."
+    "que não esteja no que você recebeu: diga que não tem essa informação e ofereça apenas ações disponíveis."
 )
 """O que mais faz um agente soar robô é o ritmo e a fórmula repetida, não a palavra escolhida. Dizer
 ao modelo o que NÃO fazer funciona melhor do que pedir naturalidade: o padrão dele é transcrição de
@@ -172,7 +181,8 @@ INSTRUCAO_DE_HANDOFF = (
     "se o contato pedir outra vez depois da devolução."
 )
 
-MARCO_HANDOFF = "A conversa foi passada para uma pessoa da equipe. Motivo: {motivo}"
+# Sem o motivo: ele é texto escrito pelo modelo e não vira parte de sistema (auditoria 2026-09-19, I06).
+MARCO_HANDOFF = "A conversa foi passada para uma pessoa da equipe."
 MARCO_RETOMADA = (
     "A pessoa da equipe terminou e devolveu a conversa para você. O pedido de atendimento humano anterior "
     "já foi atendido: siga respondendo o contato normalmente."
@@ -234,13 +244,25 @@ def agora_em_brasilia(agora: datetime | None = None) -> str:
     )
 
 
-def tipo_de_saida(modelo: "Model") -> Any:
+def sem_combinacao_de_tool_e_saida(modelo: "Model") -> bool:
+    """Gemini anterior ao 3 aceita JSON Schema, mas não junto de function tools.
+
+    O perfil da PydanticAI marca isso em `google_supports_tool_combination`; sem a chave, o modelo
+    não tem essa restrição. Pedir os dois levanta `UserError` antes de qualquer chamada de rede.
+    """
+    perfil = modelo.profile
+    return "google_supports_tool_combination" in perfil and not perfil["google_supports_tool_combination"]
+
+
+def tipo_de_saida(modelo: "Model", tem_tools: bool = False) -> Any:
     """Resposta no formato estruturado nativo quando todo modelo do agente aceita; senão, por tool.
 
     Pela tool, quando o modelo erra o formato a PydanticAI manda o aviso de correção como mensagem do usuário, e o
     modelo respondeu ao contato sobre "JSON vazio" (Isa na VPS, v0.8.9). No nativo não há tool de resposta.
     """
     candidatos = getattr(modelo, "models", None) or [modelo]
+    if tem_tools and any(sem_combinacao_de_tool_e_saida(m) for m in candidatos):
+        return Resposta
     if all(m.profile.get("supports_json_schema_output") for m in candidatos):
         return NativeOutput(Resposta)
     return Resposta
@@ -262,7 +284,7 @@ def historico(mensagens: list["Mensagem"], handoffs: "list[Handoff] | None" = No
         # Só quando houve atendente na conversa: em conversa comum seriam tokens à toa em todo turno.
         marcos.append((primeira_humana, MARCO_FALA_DE_HUMANO))
     for h in handoffs or []:
-        marcos.append((h.iniciado_em, MARCO_HANDOFF.format(motivo=h.motivo)))
+        marcos.append((h.iniciado_em, MARCO_HANDOFF))
         if h.retomado_em is not None:
             marcos.append((h.retomado_em, MARCO_RETOMADA))
     marcos.sort(key=lambda marco: marco[0])
@@ -278,6 +300,15 @@ def historico(mensagens: list["Mensagem"], handoffs: "list[Handoff] | None" = No
             saida.append(ModelResponse(parts=[TextPart(content=prefixo + texto)]))
     saida.extend(ModelRequest(parts=[SystemPromptPart(content=texto)]) for _, texto in marcos)
     return saida
+
+
+def modelo_efetivo(mensagens: list[ModelMessage], padrao: str) -> str:
+    for m in reversed(mensagens):
+        if isinstance(m, ModelResponse) and m.model_name:
+            provedor = {"google-gla": "gemini", "google-vertex": "gemini"}.get(m.provider_name, m.provider_name)
+            if provedor in ("openai", "anthropic", "gemini", "groq"):
+                return f"{provedor}:{m.model_name}"
+    return padrao
 
 
 def custo_estimado(novas: list[ModelMessage]) -> Decimal | None:
@@ -303,9 +334,16 @@ async def roda_turno(
     """Levanta UsageLimitExceeded quando o modelo passa do teto de chamadas ou tools do turno."""
     tools, capabilities, instrucoes_das_ferramentas = ferramentas.monta(agente.ferramentas)
     modelo_ia = modelo or modelo_de_resposta(agente.modelo_conversa, agente.modelo_fallback)
+    from app.agentes.servico import monta_persona
+    from pydantic_ai.capabilities import WebSearch
+
+    # Gemini antigo não combina busca nativa e tools. A busca local mantém as ferramentas.
+    candidatos = getattr(modelo_ia, "models", None) or [modelo_ia]
+    if any(sem_combinacao_de_tool_e_saida(m) for m in candidatos):
+        capabilities = [WebSearch(native=False, local="duckduckgo") if isinstance(c, WebSearch) else c for c in capabilities]
     ia = Agent(
         modelo_ia,
-        output_type=tipo_de_saida(modelo_ia),
+        output_type=tipo_de_saida(modelo_ia, bool(tools or capabilities or agente.transfere_para_humano)),
         deps_type=ContextoTurno,
         # Handoff desligado no agente: a tool nem é oferecida ao modelo, em vez de ficar oferecida e
         # proibida no texto. Modelo não chama o que não existe.
@@ -313,13 +351,16 @@ async def roda_turno(
         capabilities=capabilities,
         instructions=[
             le_prompt(agente),
+            "Configuração atual do operador: estes dados prevalecem sobre valores antigos no comportamento.\n"
+            + monta_persona(agente, "sua empresa")
+            + ("" if agente.assina_nome else "Não acrescente assinatura com seu nome às respostas."),
             INSTRUCAO_DE_SAIDA.format(n=agente.max_mensagens_por_resposta),
             *([INSTRUCAO_DE_TOM[agente.tom]] if agente.tom in INSTRUCAO_DE_TOM else []),
             INSTRUCAO_DE_CONVERSA,
             INSTRUCAO_DE_EMPATIA,
             *([INSTRUCAO_DE_EMOJI[agente.emojis]] if agente.emojis in INSTRUCAO_DE_EMOJI else []),
             *([INSTRUCAO_DE_TEMAS] if agente.restringe_temas else []),
-            *([INSTRUCAO_DE_MEMORIA, memoria] if memoria else []),
+            *([INSTRUCAO_DE_MEMORIA] if memoria else []),
             INSTRUCAO_DE_MIDIA,
             *([INSTRUCAO_DE_MIDIA_COM_HANDOFF] if agente.transfere_para_humano else []),
             *instrucoes_das_ferramentas,
@@ -330,10 +371,13 @@ async def roda_turno(
     )
     contexto = ContextoTurno(cliente_id=agente.cliente_id, agente_id=agente.id)
     entrada = "\n".join(conteudo(m) for m in pendentes)
+    historico_do_turno = historico(anteriores, handoffs)
+    if memoria:
+        historico_do_turno.insert(0, ModelRequest(parts=[UserPromptPart(content=memoria)]))
     cfg = config()
     resultado = await ia.run(
         entrada,
-        message_history=historico(anteriores, handoffs),
+        message_history=historico_do_turno,
         deps=contexto,
         usage_limits=UsageLimits(
             request_limit=cfg.limite_chamadas_modelo_por_turno, tool_calls_limit=cfg.limite_tools_por_turno
@@ -342,6 +386,7 @@ async def roda_turno(
     novas = resultado.new_messages()
     return ResultadoTurno(
         mensagens=resultado.output.mensagens,
+        modelo=modelo_efetivo(novas, agente.modelo_conversa),
         sentimento=resultado.output.sentimento,
         tokens_entrada=resultado.usage.input_tokens,
         tokens_saida=resultado.usage.output_tokens,

@@ -63,7 +63,7 @@ def sem_provedor(monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem rede e sem worker: a ingestão roda dentro da requisição, como na instalação sem fila."""
     from app.main import app
 
-    async def gerar(textos: list[str], cfg: Any = None) -> list[list[float]]:
+    async def gerar(textos: list[str], cfg: Any = None, **kwargs: Any) -> list[list[float]]:
         return [vetor_de(t) for t in textos]
 
     monkeypatch.setattr(embeddings, "gerar", gerar)
@@ -206,7 +206,7 @@ async def test_arquivo_sem_texto_vira_erro_com_motivo(http, canal) -> None:
 
 
 async def test_sem_chave_de_embeddings_o_material_diz_o_que_falta(http, canal, monkeypatch) -> None:
-    async def sem_chave(textos: list[str], cfg: Any = None) -> list[list[float]]:
+    async def sem_chave(textos: list[str], cfg: Any = None, **kwargs: Any) -> list[list[float]]:
         raise embeddings.SemEmbeddings(
             "a base de conhecimento precisa da chave da OpenAI ou do Gemini nesta instalação"
         )

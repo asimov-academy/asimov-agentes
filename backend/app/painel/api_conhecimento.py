@@ -61,12 +61,16 @@ class SiteDoPainel(BaseModel):
 @router.get("/{agente_id}/documentos")
 async def lista(agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)) -> dict[str, Any]:
     agente = await _agente(s, agente_id)
+    from app.ia import chaves
+    from app.conhecimento.modelos import ConfiguracaoEmbeddings
+    await chaves.carregar(s)
+    fixado = await s.get(ConfiguracaoEmbeddings, 1)
     documentos = await repo.listar(s, agente.cliente_id, agente.id)
     return {
         "documentos": [saida(d) for d in documentos],
         # Sem isto, a tela deixaria o operador enviar material e só depois descobrir que a
         # instalação não tem como gerar vetor nenhum.
-        "modelo_embeddings": embeddings.modelo(),
+        "modelo_embeddings": fixado.modelo if fixado else embeddings.modelo(),
     }
 
 

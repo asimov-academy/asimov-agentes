@@ -78,8 +78,24 @@ async def _roda_com_tentativas(
     tentativas = config().tentativas_extra_modelo + 1
     for tentativa in range(1, tentativas + 1):
         try:
-            return await roda_turno(agente, anteriores, pendentes, handoffs=handoffs, memoria=memoria)
+            from pydantic_ai import capture_run_messages
+            with capture_run_messages() as mensagens_da_tentativa:
+                return await roda_turno(agente, anteriores, pendentes, handoffs=handoffs, memoria=memoria)
         except Exception as erro:
+            from pydantic_ai.messages import ModelResponse
+            from app.ia.agente import custo_estimado, modelo_efetivo
+            respostas = [m for m in mensagens_da_tentativa if isinstance(m, ModelResponse)]
+            if respostas and pendentes:
+                async with fabrica_sessao()() as registro:
+                    await grava_turno(registro, Turno(
+                        cliente_id=agente.cliente_id, conversa_id=pendentes[0].conversa_id,
+                        funcao="tentativa_resposta", modelo=modelo_efetivo(respostas, agente.modelo_conversa),
+                        tokens_entrada=sum(m.usage.input_tokens for m in respostas),
+                        tokens_saida=sum(m.usage.output_tokens for m in respostas),
+                        custo_estimado=custo_estimado(respostas), latencia_ms=0,
+                        erro=f"tentativa {tentativa} sem resposta válida",
+                    ))
+                    await registro.commit()
             log.warning("modelo_falhou", tentativa=tentativa, erro=repr(erro))
             # Estourar o teto do turno é o modelo em loop: tentar de novo só repete o gasto.
             if tentativa == tentativas or isinstance(erro, UsageLimitExceeded):
@@ -212,7 +228,7 @@ async def _turno(
             )
             await s.commit()
             await registra_falha("turno_modelo_falhou", {"erro": repr(erro)[:500]}, cliente_id, agente.id)
-            await _envia(
+            enviadas = await _envia(
                 s,
                 canal,
                 credenciais,
@@ -223,6 +239,9 @@ async def _turno(
                 ultima,
                 pode_falar_agora,
             )
+            if not enviadas:
+                await s.commit()
+                return "nao_enviado"
             await repo.marca_respondido(s, cliente_id, conversa_id, max(m.criado_em for m in pendentes))
             await handoff.transferir(s, agente, canal, credenciais, conversa, handoff.MOTIVO_FALHA_NO_TURNO)
             await s.commit()
@@ -235,7 +254,7 @@ async def _turno(
                 Turno(
                     cliente_id=cliente_id,
                     conversa_id=conversa_id,
-                    modelo=agente.modelo_conversa,
+                    modelo=resultado.modelo or agente.modelo_conversa,
                     tokens_entrada=resultado.tokens_entrada,
                     tokens_saida=resultado.tokens_saida,
                     custo_estimado=resultado.custo_estimado,
@@ -250,15 +269,17 @@ async def _turno(
         textos = limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta)
         # O aviso de que é uma IA abre a conversa, uma vez só, antes da primeira resposta. Ele não
         # entra no prompt: assim o modelo não o repete nem o reescreve (fase 10, etapa 4).
+        aviso = ""
         if conversa.avisou_ia_em is None:
             aviso = agentes_servico.aviso_de_ia(agente, await repo.nome_da_empresa(s, cliente_id))
             if aviso:
-                textos = [aviso, *textos][: max(agente.max_mensagens_por_resposta, 2)]
-                conversa.avisou_ia_em = agora()
+                textos = limita_mensagens([aviso, *textos], agente.max_mensagens_por_resposta)
         enviadas = await _envia(
             s, canal, credenciais, agente, conversa, textos, comeco, ultima, pode_falar_agora
         )
-        if enviadas == 0 and textos:
+        if aviso and enviadas > 0:
+            conversa.avisou_ia_em = agora()
+        if enviadas == 0:
             # Nada chegou ao contato: a pergunta dele continua pendente, e marcar como respondida
             # a esconderia do próximo turno para sempre (A02).
             await grava_turno(
@@ -266,7 +287,7 @@ async def _turno(
                 Turno(
                     cliente_id=cliente_id,
                     conversa_id=conversa_id,
-                    modelo=agente.modelo_conversa,
+                    modelo=resultado.modelo or agente.modelo_conversa,
                     tokens_entrada=resultado.tokens_entrada,
                     tokens_saida=resultado.tokens_saida,
                     custo_estimado=resultado.custo_estimado,
@@ -293,7 +314,7 @@ async def _turno(
             Turno(
                 cliente_id=cliente_id,
                 conversa_id=conversa_id,
-                modelo=agente.modelo_conversa,
+                modelo=resultado.modelo or agente.modelo_conversa,
                 tokens_entrada=resultado.tokens_entrada,
                 tokens_saida=resultado.tokens_saida,
                 custo_estimado=resultado.custo_estimado,

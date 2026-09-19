@@ -118,7 +118,7 @@ Modelos de IA:
 - **Conteúdo de mídia é entrada hostil:** o texto extraído entra na conversa rotulado como dado do contato, nunca no prompt de sistema, e o turno que processa mídia roda sem tools que alteram estado, exceto handoff.
 - **Documentos da base:** copiados para `/var/lib/asimov/conhecimento/<cliente>/<agente>/`.
 - **Exclusão:** lógica em Cliente, Agente e Documento. Trechos de documento removido são apagados. Remover Agente apaga as credenciais e invalida o `token_webhook`. Job diário apaga do disco o arquivo de mídia com mais de `MIDIA_HORAS_NO_DISCO` horas (24 por padrão, então na prática de um a dois dias), em lotes até esgotar, mantendo `texto_extraido`. Três retenções diferentes, de propósito: o **arquivo** dura um dia, o **texto extraído** fica com a conversa, e a **conversa** não é apagada.
-- **Backup (fase 7, ainda não construído):** `deploy/backup.sh` com timer do systemd, diário às 3h: `pg_dump` em formato custom, `.env`, `prompts/` e a pasta de conhecimento, compactados em `/var/backups/asimov/`, retenção de 14 dias, cópia remota opcional via `rclone` se configurada. A mídia de contatos não entra no backup (tem retenção de 90 dias e o texto já está no banco).
+- **Backup:** `deploy/backup.sh` com timer do systemd, diário às 3h: `pg_dump` em formato custom, `.env`, `prompts/` e a pasta de conhecimento, compactados em `/var/backups/asimov/`, retenção de 14 dias, cada peça só publicada depois de gravada inteira, cópia remota opcional via `rclone` se configurada. A mídia de contatos não entra no backup (tem retenção de 90 dias e o texto já está no banco).
 
 ## 5. Organização interna
 

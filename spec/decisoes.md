@@ -2,6 +2,38 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-19: os achados da auditoria de inteligência viram correção
+
+A auditoria de 2026-09-19 (`docs/auditoria-inteligencia-2026-09-19.md`) levantou 16 achados. As
+sondas viraram regressões em `backend/testes/test_auditoria_inteligencia.py`, agora com a
+expectativa do comportamento corrigido, e a suíte está em 523 testes.
+
+O que mudou de decisão, e não só de código:
+
+- **Saída estruturada depende do modelo e das ferramentas.** Gemini anterior ao 3 aceita JSON
+  Schema, mas não junto de function tools, e a PydanticAI recusa a combinação antes de qualquer
+  chamada de rede. A escolha passa a olhar o perfil de cada candidato do fallback, e a busca web
+  nativa desses modelos cai para a busca local.
+- **O comportamento escrito à mão manda.** Salvar Perfil e Trabalho juntos não reescreve mais o
+  `persona.md` personalizado: só o prompt ainda gerenciado é regerado, e o mesmo vale ao renomear.
+  Perfil sem função deixou de descartar empresa, proibições e assinatura.
+- **A memória do contato é dado, nunca instrução.** O resumo e a ficha chegam escapados, e o motivo
+  do handoff escrito pelo modelo saiu da parte de sistema.
+- **O modelo de embeddings é fixado na primeira ingestão** (tabela `ConfiguracaoEmbeddings`,
+  migração `0028`). Cadastrar outra chave de provedor não troca o espaço vetorial; trocar de modelo
+  exige reindexar. Base antiga sem origem identificada recusa ingestão e pede reenvio do material.
+- **Conhecimento tem volume próprio, compartilhado por API e worker**, e o worker carrega as chaves
+  do banco antes de gerar embeddings. Ensinar site passou a conferir IP público a cada redirect e a
+  ler com teto durante o download.
+- **Falha de IA com transferência desligada não promete pessoa**, e o aviso de que é uma IA não corta
+  mais mensagem da resposta nem é marcado antes de o envio sair.
+- **A prova do agente existe nos dois lugares**: rota admin para o CLI e botão no Perfil, no painel.
+- **Personalidade é configuração, não prompt**: o copiloto lê e propõe tom, ritmo, restrição de
+  temas, transferência, memória e aviso de IA, e o `confirma` do CLI abre no valor atual.
+
+Arquivos de `spec/` atualizados: `dados.md` (entidade `ConfiguracaoEmbeddings`), `arquitetura.md`
+(backup construído) e `estado.md`.
+
 ## 2026-09-19: A situação mora no avatar
 
 A bolinha verde, amarela ou vermelha passou para o canto do retrato do agente, e o retrato virou o

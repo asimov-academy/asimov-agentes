@@ -144,3 +144,28 @@ async def busca(
     return [
         {"texto": texto, "documento": nome, "distancia": float(d)} for texto, nome, d in linhas
     ]
+
+
+async def modelo_fixado(sessao: AsyncSession, candidato: str) -> str:
+    """Configuração da instalação. Serializa primeira escolha entre API e workers.
+
+    Vetor antigo sem origem identificada não pode ser comparado com um modelo presumido.
+    Nenhum trecho é removido: o operador pode recuperar os originais e reenviar o material.
+    """
+    from sqlalchemy import text
+    from app.conhecimento.modelos import ConfiguracaoEmbeddings
+    from app.conhecimento.embeddings import SemEmbeddings
+    await sessao.execute(text("SELECT pg_advisory_xact_lock(28431901)"))
+    registro = await sessao.get(ConfiguracaoEmbeddings, 1)
+    if registro is not None:
+        return registro.modelo
+    if await sessao.scalar(select(Trecho.id).limit(1)) is not None:
+        raise SemEmbeddings(
+            "base antiga sem modelo de embeddings identificado; preserve os originais, "
+            "remova os materiais antigos e envie novamente para reindexar"
+        )
+    if not candidato:
+        raise SemEmbeddings("a base de conhecimento precisa da chave da OpenAI ou do Gemini")
+    sessao.add(ConfiguracaoEmbeddings(id=1, modelo=candidato))
+    await sessao.flush()
+    return candidato
