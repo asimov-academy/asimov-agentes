@@ -80,15 +80,80 @@ espera_url() {
   return 1
 }
 
+# instala_timer_backup: dump do banco e cópia do .env todo dia de madrugada, com retenção.
+# Roda no host, como o timer da WAHA: quem fala com o Docker é o host, nunca um contêiner.
+instala_timer_backup() {
+  local quando="*-*-* 03:20:00 America/Sao_Paulo"
+  command -v systemctl >/dev/null 2>&1 || return 0
+  if ! systemd-analyze calendar "$quando" >/dev/null 2>&1; then
+    quando="*-*-* 03:20:00"
+  fi
+  $SUDO tee /etc/systemd/system/asimov-backup.service >/dev/null <<UNIDADE || return 1
+[Unit]
+Description=Backup diário do Asimov Agentes
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=HOME=$HOME
+ExecStart=$RAIZ_PROJETO/deploy/backup.sh
+UNIDADE
+  $SUDO tee /etc/systemd/system/asimov-backup.timer >/dev/null <<UNIDADE || return 1
+[Unit]
+Description=Guarda o banco e o .env todo dia
+
+[Timer]
+OnCalendar=$quando
+RandomizedDelaySec=20m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIDADE
+  $SUDO systemctl daemon-reload >/dev/null 2>&1 || return 1
+  $SUDO systemctl enable --now asimov-backup.timer >/dev/null 2>&1 || return 1
+  return 0
+}
+
+# confere_maquina: o que a VPS precisa ter antes de a instalação começar a demorar.
+# Aviso, não impedimento: a pessoa pode saber de algo que a checagem não sabe, e travar a
+# instalação por 200 MB de RAM a menos seria pior que deixá-la tentar.
+confere_maquina() {
+  local memoria disco
+  memoria=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
+  disco=$(df -m --output=avail "$RAIZ_PROJETO" 2>/dev/null | tail -1 | tr -d ' ' || echo 0)
+  [ "${memoria:-0}" -ge 1900 ] || aviso "Esta VPS tem ${memoria} MB de memória. Abaixo de 2 GB, o build costuma ser morto no meio."
+  [ "${disco:-0}" -ge 8000 ] || aviso "Restam ${disco} MB de disco. As imagens do Docker pedem uns 8 GB."
+  return 0
+}
+
+# confere_proxy_do_dns: a nuvem laranja da Cloudflare responde pelo domínio e o Caddy nunca tira o
+# certificado; o operador fica esperando um SSL que não vem. O IP dela é o sintoma visível.
+confere_proxy_do_dns() {
+  local sub ips
+  sub=$(env_get SUBDOMINIO_BOT)
+  [ -n "$sub" ] || return 0
+  ips=$(dig +short "$sub" A 2>/dev/null || true)
+  case "$ips" in
+    104.16.* | 104.17.* | 104.18.* | 104.19.* | 104.20.* | 104.21.* | 172.6[4-9].* | 172.7[0-1].* | 188.114.* | 190.93.*)
+      aviso "O DNS de $sub aponta para a Cloudflare. Desligue a nuvem laranja (modo DNS only), senão o certificado nunca sai."
+      ;;
+  esac
+  return 0
+}
+
 tela_instalacao() {
   secao "Instalação"
   PASSO_ATUAL=0
-  PASSO_TOTAL=11
+  PASSO_TOTAL=12
   local sub
   sub=$(env_get SUBDOMINIO_BOT)
   # A IA é escolha de cada agente, feita depois: a imagem leva o SDK dos quatro provedores.
   env_set PROVEDORES "openai anthropic gemini groq"
 
+  confere_maquina
+  confere_proxy_do_dns
   passo firewall "Firewall (SSH, 80 e 443)" "Confira com: ufw status" firewall
   passo node "Node.js" "Veja o log." instala_node
   passo uv "uv" "Veja o log." instala_uv
@@ -104,4 +169,8 @@ tela_instalacao() {
   passo api_https "Certificado SSL em $sub" \
     "Confira se as portas 80 e 443 estão livres e se o domínio aponta para a VPS." \
     --sem-repetir espera_url "https://$sub/health" 36
+  # Depois de a plataforma estar no ar: backup de instalação que não subiu não serve para nada.
+  passo backup "Backup diário" "Veja: systemctl status asimov-backup.timer" instala_timer_backup
+  # O `.env` guarda a chave que decifra as credenciais dos canais: ninguém além do dono o lê.
+  chmod 600 "$RAIZ_PROJETO/.env" 2>/dev/null || true
 }

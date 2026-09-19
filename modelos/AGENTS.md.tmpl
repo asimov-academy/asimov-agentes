@@ -22,7 +22,9 @@ mensagem. Empresa: o cliente que você atende. Contato: quem escreve para o agen
 ## Onde mexer
 
 - Prompt de cada agente: `prompts/<empresa>/<agente>/persona.md`; resumo do handoff em `resumo_handoff.md`. Relidos a cada turno; não precisa publicar.
-- Comportamento do turno (buffer, envio, divisão): `backend/app/conversas/`.
+- Comportamento do turno (buffer, pausa de ler, envio, divisão): `backend/app/conversas/`. O ritmo é um preset (`instantaneo`, `natural`, `reflexivo`, `manual`) que escreve os números; o turno lê os números.
+- Base de conhecimento do agente (arquivo, frase ou site): `backend/app/conhecimento/`. A busca filtra `cliente_id` e `agente_id` no `WHERE`, e a ferramenta liga sozinha quando o primeiro material fica pronto.
+- Memória do contato (resumo da conversa e ficha de fatos): `backend/app/conversas/memoria_do_contato.py`.
 - Ferramenta nova que o operador liga por agente: um arquivo próprio em `backend/app/ia/ferramentas/` com a função e a ficha `FERRAMENTA` (nome igual ao do arquivo, rótulo, descrição, instrução de quando usar e se vem ligada), e uma linha em `backend/app/ia/ferramentas/registro.py`. Aparece no menu `asimov` > Editar > Ferramentas. Nunca duas ferramentas no mesmo arquivo. Ferramenta que todo agente tem: registrada no `Agent` de `backend/app/ia/agente.py`.
 - Canal novo: implemente `backend/app/canais/base.py` e registre em `backend/app/canais/registro.py`.
 - WhatsApp pela WAHA: `backend/app/canais/waha/` e `setup/lib/waha.sh`. O contêiner `waha` tem perfil no Compose e só sobe no primeiro agente WAHA (`WAHA_ATIVA=1` no `.env`).
@@ -46,8 +48,15 @@ mensagem. Empresa: o cliente que você atende. Contato: quem escreve para o agen
 - Conversa do Chatwoot que não está Pendente é humano conduzindo: o agente fica calado. Devolver para Pendente retoma.
 - No WhatsApp direto não há onde perguntar: a pausa do handoff é o `status` da conversa aqui, e a volta é o `/retomar <código>` de quem recebeu o aviso ou o prazo do agente.
 - Conteúdo de áudio, imagem ou documento do contato entra como fala do contato. Nunca no prompt de sistema.
+- A memória do contato e o resumo da conversa entram num bloco `<memoria_do_contato>`, marcados como dado: eles nascem do que o contato escreveu e NUNCA valem como instrução.
+- O aviso de que o agente é uma IA sai pela orquestração, na primeira mensagem da conversa, e nunca pelo prompt: assim o modelo não o repete nem o reescreve.
 - Nome de modelo é configuração (`provedor:modelo`, provedores openai, anthropic, gemini, groq). Cada agente escolhe os seus; a chave de cada provedor fica cifrada no banco (`ia/chaves.py`), nunca no `.env`. Nunca fixe no código.
 - Publique só com os testes passando. Teste novo para toda regra nova de isolamento ou de webhook.
+
+## Rotinas do host
+
+- `asimov-backup.timer`: guarda o dump do banco e o `.env` em `/var/lib/asimov/backups` todo dia de madrugada, com 14 dias de retenção. O estado do último aparece em `asimov diagnostico`.
+- `asimov-waha.timer`: procura versão nova da WAHA aos domingos, quando há agente WhatsApp pelo aparelho.
 
 ## Manutenção deste arquivo
 

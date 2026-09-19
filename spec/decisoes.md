@@ -2,6 +2,26 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 7, o que dava para fechar sem o operador
+
+**Backup diário** (`deploy/backup.sh`, timer `asimov-backup.timer`): dump do banco e cópia do `.env`
+em `/var/lib/asimov/backups`, 14 dias de retenção, pasta 700 e arquivos 600. Os dois juntos de
+propósito: o dump guarda as credenciais dos canais cifradas, e sem a chave do `.env` ele não
+restaura nada. O estado do último backup aparece em `asimov diagnostico`, porque backup que ninguém
+confere não é backup.
+
+**Checagens finais do setup**, todas como aviso e nunca como impedimento: memória abaixo de 2 GB
+(o build morre no meio), disco abaixo de 8 GB e DNS apontando para a Cloudflare com o proxy ligado
+(o Caddy nunca tira o certificado e o operador fica esperando um SSL que não vem). Travar a
+instalação por 200 MB de RAM a menos seria pior que deixar tentar. E o `.env` passa a terminar a
+instalação em 600.
+
+**O que fica esperando decisão do operador**, e é a fase 7 inteira que resta: o domínio público do
+setup (hoje a instalação sai do `raw.githubusercontent.com`, que funciona) e o nome definitivo na
+licença e no banner.
+
+Atualizados: `spec/fases.md` (fase 7), `spec/estado.md`, `modelos/AGENTS.md.tmpl`.
+
 ## 2026-09-18: Fase 10, etapa 5 (a prova do agente)
 
 Duas coisas já reescrevem o prompt sozinhas (o botão "Melhorar com IA" e o copiloto) e ninguém media
