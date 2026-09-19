@@ -8,6 +8,8 @@ import {
   type Periodo,
   type VisaoGeral as Dados,
 } from "../api/cliente";
+import { Busca } from "../design/Busca";
+import { Segmentos } from "../design/Segmentos";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
@@ -125,6 +127,8 @@ export function VisaoGeral({
   aoSaberSituacao: (situacao: Dados["situacao"]) => void;
 }) {
   const [dias, setDias] = useState<Periodo>(7);
+  // O que se digita na lupa, só para achar a empresa na lista.
+  const [procura, setProcura] = useState("");
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
@@ -178,36 +182,24 @@ export function VisaoGeral({
         }
         acoes={
           <>
-          <div className="flex rounded-md border border-borda p-0.5" role="group" aria-label="Período">
-            {PERIODOS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setDias(p)}
-                aria-pressed={p === dias}
-                className={`rounded px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                  p === dias ? "bg-texto text-void" : "text-muted hover:text-texto"
-                }`}
-              >
-                {NOME_DO_PERIODO[p]}
-              </button>
-            ))}
-          </div>
-
+          {/* A ordem do cabeçalho é a mesma no painel inteiro: buscar, filtrar, agir. */}
           {empresas.length > 1 && (
-            <select
-              value={empresa}
-              aria-label="Empresa"
-              onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="rounded-md border border-borda bg-surface px-3 py-2 text-xs text-muted transition-colors hover:text-texto focus:border-ciano"
-            >
-              <option value="">Todas as empresas</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
+            <Busca
+              valor={procura}
+              aoMudar={setProcura}
+              rotulo="Escolher empresa"
+              placeholder="nome da empresa"
+              opcoes={empresas}
+              escolhida={empresa}
+              aoEscolher={aoTrocarEmpresa}
+            />
           )}
+          <Segmentos
+            rotulo="Período"
+            opcoes={PERIODOS.map((p) => ({ rotulo: NOME_DO_PERIODO[p], valor: p }))}
+            valor={dias}
+            aoMudar={setDias}
+          />
           </>
         }
       />

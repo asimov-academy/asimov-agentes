@@ -18,7 +18,7 @@
       "runtimeExecutable": "env",
       "runtimeArgs": [
         "DATABASE_URL=postgresql+asyncpg://paim@/asimov_local?host=/tmp",
-        "REDIS_URL=redis://localhost:6390/0",
+        "REDIS_URL=redis://localhost:6390/3",
         "SUBDOMINIO_BOT=bot.exemplo.com.br",
         "SUBDOMINIO_APP=localhost:8778",
         "CHAVE_API_ADMIN=local",

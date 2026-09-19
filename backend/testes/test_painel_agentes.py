@@ -79,9 +79,10 @@ async def test_filtro_por_empresa_e_por_situacao(
     ).json()
     assert [a["nome"] for a in da_loja] == ["Ana"]
 
-    await dentro.patch(f"/painel/api/agentes/{ana['id']}", json={"ativo": False})
-    assert [a["nome"] for a in (await dentro.get("/painel/api/agentes", params={"ativo": False})).json()] == ["Ana"]
-    assert [a["nome"] for a in (await dentro.get("/painel/api/agentes", params={"ativo": True})).json()] == ["Caio"]
+    await dentro.patch(f"/painel/api/agentes/{ana['id']}", json={"situacao": "treinamento"})
+    assert [a["nome"] for a in (await dentro.get("/painel/api/agentes", params={"situacao": "treinamento"})).json()] == ["Ana"]
+    assert [a["nome"] for a in (await dentro.get("/painel/api/agentes", params={"situacao": "ativo"})).json()] == ["Caio"]
+    assert (await dentro.get("/painel/api/agentes", params={"situacao": "meio-ativo"})).status_code == 422
 
 
 async def test_empresa_que_nao_existe_no_filtro_e_404(dentro: httpx.AsyncClient):
@@ -116,7 +117,7 @@ async def test_agente_criado_pelo_painel_aparece_no_terminal(
     criado = resposta.json()
     assert criado["nome"] == "Ana"
     assert criado["empresa"] == "Loja Exemplo"
-    assert criado["ativo"] is True
+    assert criado["situacao"] == "ativo"
 
     do_terminal = (await http.get("/admin/agentes", headers=ADMIN)).json()
     assert [a["id"] for a in do_terminal] == [criado["id"]]
@@ -186,12 +187,80 @@ async def test_edicao_muda_so_o_que_veio(
     assert depois["nome"] == "Ana"
 
 
-async def test_desligar_e_religar_o_agente(
+async def test_as_tres_situacoes_do_agente(
     dentro: httpx.AsyncClient, http: httpx.AsyncClient, canal
 ):
     agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
-    assert (await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"ativo": False})).json()["ativo"] is False
-    assert (await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"ativo": True})).json()["ativo"] is True
+    for qual in ("treinamento", "inativo", "ativo"):
+        resposta = await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"situacao": qual})
+        assert resposta.json()["situacao"] == qual, resposta.text
+
+
+async def test_agente_sem_canal_nasce_em_treinamento_e_nao_pode_ficar_ativo(
+    dentro: httpx.AsyncClient, canal
+):
+    """Sem canal ele fala só no painel, e isso é o treinamento: marcar ativo não quer dizer nada."""
+    empresa = await cria_empresa(dentro, "Loja Exemplo")
+    agente = (
+        await dentro.post(
+            f"/painel/api/empresas/{empresa['id']}/agentes", json={"nome": "Ana", "canal": "nativo"}
+        )
+    ).json()
+    assert agente["situacao"] == "treinamento"
+
+    for tentada in ("ativo", "inativo"):
+        recusado = await dentro.patch(
+            f"/painel/api/agentes/{agente['id']}", json={"situacao": tentada}
+        )
+        assert recusado.status_code == 422, tentada
+        assert "Canais" in recusado.json()["detail"]
+
+    # Conectado ao Chatwoot, ele sai do treinamento sozinho.
+    ligado = await dentro.post(
+        f"/painel/api/agentes/{agente['id']}/canal",
+        json={"canal": "chatwoot", "conexao": CONEXAO_EXEMPLO, "handoff_destino": {"tipo": "caixa"}},
+    )
+    assert ligado.status_code == 200, ligado.text
+    assert ligado.json()["situacao"] == "ativo"
+
+
+async def test_foto_do_agente_sobe_some_e_a_cor_e_estavel(dentro: httpx.AsyncClient, http, canal, tmp_path, monkeypatch):
+    """A foto fica no diretório de mídia e sai com a sessão do painel; sem foto, a inicial colorida."""
+    from app.plataforma.config import config
+
+    monkeypatch.setattr(config(), "diretorio_midia", tmp_path)
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+
+    ficha = (await dentro.get(f"/painel/api/agentes/{agente['id']}")).json()
+    assert ficha["avatar"] is None and ficha["avatar_cor"] in ("ciano", "ok", "atencao", "texto")
+    assert (await dentro.get(f"/painel/api/agentes/{agente['id']}/avatar")).status_code == 404
+
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+    enviada = await dentro.put(
+        f"/painel/api/agentes/{agente['id']}/avatar", files={"arquivo": ("ana.png", png, "image/png")}
+    )
+    assert enviada.status_code == 200, enviada.text
+    assert enviada.json()["avatar"].startswith(f"/painel/api/agentes/{agente['id']}/avatar?v=")
+    lida = await dentro.get(f"/painel/api/agentes/{agente['id']}/avatar")
+    assert lida.status_code == 200 and lida.content == png
+
+    recusada = await dentro.put(
+        f"/painel/api/agentes/{agente['id']}/avatar", files={"arquivo": ("ana.svg", b"<svg/>", "image/svg+xml")}
+    )
+    assert recusada.status_code == 422
+
+    apagada = await dentro.delete(f"/painel/api/agentes/{agente['id']}/avatar")
+    assert apagada.status_code == 200 and apagada.json()["avatar"] is None
+    assert not list((tmp_path / "avatares").rglob("*.png"))
+
+
+async def test_cor_do_avatar_so_aceita_as_do_painel(dentro: httpx.AsyncClient, http, canal):
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    escolhida = await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"avatar_cor": "ok"})
+    assert escolhida.status_code == 200 and escolhida.json()["avatar_cor"] == "ok"
+    assert (
+        await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"avatar_cor": "#ff0000"})
+    ).status_code == 422
 
 
 async def test_campo_desconhecido_na_edicao_e_recusado(
@@ -367,6 +436,78 @@ async def test_conversa_de_teste_manda_e_le(
     leitura = await dentro.get(f"/painel/api/agentes/{agente['id']}/teste/{conversa}")
     assert leitura.status_code == 200
     assert "mensagens" in leitura.json()
+
+
+async def test_teste_aceita_arquivo_e_o_canal_nativo_o_entrega_ao_turno(
+    dentro: httpx.AsyncClient, fila, tmp_path, monkeypatch
+):
+    """Testar de verdade é mandar áudio, imagem e documento, como o contato manda no WhatsApp. A
+    rota só grava e agenda; quem lê o arquivo é o turno, pelo `baixar_midia` do canal nativo."""
+    from sqlalchemy import select
+
+    from app.canais.base import Anexo
+    from app.canais.nativo.canal import Nativo
+    from app.conversas.modelos import Mensagem
+    from app.plataforma.banco import fabrica_sessao
+    from app.plataforma.config import config
+
+    monkeypatch.setattr(config(), "diretorio_midia", tmp_path)
+    empresa = await cria_empresa(dentro, "Loja Exemplo")
+    agente = (
+        await dentro.post(
+            f"/painel/api/empresas/{empresa['id']}/agentes", json={"nome": "Ana", "canal": "nativo"}
+        )
+    ).json()
+
+    enviada = await dentro.post(
+        f"/painel/api/agentes/{agente['id']}/teste/arquivo",
+        files={"arquivo": ("recado.webm", b"som de verdade", "audio/webm;codecs=opus")},
+        data={"texto": "ouve isso"},
+    )
+    assert enviada.status_code == 200, enviada.text
+    assert enviada.json()["agendada"] is True
+
+    async with fabrica_sessao()() as s:
+        mensagem = (
+            await s.execute(select(Mensagem).where(Mensagem.conversa_id == enviada.json()["conversa_id"]))
+        ).scalar_one()
+    assert mensagem.tipo == "audio"
+    assert mensagem.texto == "ouve isso"
+    assert mensagem.anexo["tipo_mime"] == "audio/webm"
+
+    anexo = Anexo(**{k: mensagem.anexo.get(k) for k in ("tipo", "referencia", "tipo_mime", "tamanho_bytes", "nome")})
+    baixado = await Nativo().baixar_midia({}, anexo, 1024)
+    assert baixado.conteudo == b"som de verdade"
+    # Lido uma vez, o envio some da pasta.
+    assert not (tmp_path / "teste" / anexo.referencia).exists()
+
+
+async def test_teste_recusa_arquivo_acima_do_limite(dentro: httpx.AsyncClient, fila, tmp_path, monkeypatch):
+    from app.plataforma.config import config
+
+    monkeypatch.setattr(config(), "diretorio_midia", tmp_path)
+    monkeypatch.setattr(config(), "midia_limite_bytes", 10)
+    empresa = await cria_empresa(dentro, "Loja Exemplo")
+    agente = (
+        await dentro.post(
+            f"/painel/api/empresas/{empresa['id']}/agentes", json={"nome": "Ana", "canal": "nativo"}
+        )
+    ).json()
+    resposta = await dentro.post(
+        f"/painel/api/agentes/{agente['id']}/teste/arquivo",
+        files={"arquivo": ("foto.png", b"x" * 11, "image/png")},
+    )
+    assert resposta.status_code == 413
+
+
+async def test_canal_nativo_nao_le_caminho_que_nao_e_dele(tmp_path, monkeypatch):
+    from app.canais.base import Anexo
+    from app.canais.nativo.canal import Nativo
+    from app.plataforma.config import config
+
+    monkeypatch.setattr(config(), "diretorio_midia", tmp_path)
+    with pytest.raises(FileNotFoundError):
+        await Nativo().baixar_midia({}, Anexo(tipo="documento", referencia="../../etc/passwd"), 1024)
 
 
 async def test_teste_de_agente_que_nao_existe_e_404(dentro: httpx.AsyncClient, fila):

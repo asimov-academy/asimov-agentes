@@ -162,7 +162,8 @@ class AgenteSaida(BaseModel):
     avisa_que_e_ia: bool
     aviso_de_ia: str
     contatos_permitidos: list[str]
-    ativo: bool
+    situacao: str
+    """`ativo`, `treinamento` ou `inativo`."""
 
 
 def _saida(agente: Agente) -> AgenteSaida:

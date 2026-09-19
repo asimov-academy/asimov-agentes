@@ -24,7 +24,7 @@ async def listar_agentes() -> str:
                 "empresa": empresas.get(a.cliente_id, ""),
                 "empresa_id": str(a.cliente_id),
                 "canal": a.canal,
-                "ativo": a.ativo,
+                "situacao": a.situacao,
                 "modelo": a.modelo_conversa,
                 "ferramentas": a.ferramentas or [],
             }

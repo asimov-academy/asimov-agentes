@@ -55,7 +55,7 @@ async def confere_sessoes(sessao: AsyncSession, redis: Any) -> int:
     """Devolve quantos agentes estão com o número fora do ar agora."""
     fora = 0
     for agente in await agentes_repo.listar_de_todos_os_clientes(sessao):
-        if agente.canal != "waha" or not agente.ativo:
+        if agente.canal != "waha" or agente.desligado:
             continue
         nome = agentes_servico.credenciais(agente).get("sessao")
         if not nome:

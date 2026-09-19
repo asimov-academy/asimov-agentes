@@ -5,9 +5,9 @@ import {
   ErroDaApi,
   SemSessao,
   type CanalDisponivel,
-  type Empresa,
   type LinhaDeCanal,
 } from "../api/cliente";
+import { Busca } from "../design/Busca";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
@@ -37,35 +37,36 @@ const COR: Record<string, string> = {
   neutro: "bg-dim",
 };
 
-export function Canais({
-  empresas,
-  empresa,
-  aoTrocarEmpresa,
-}: {
-  empresas: Empresa[];
-  empresa: string;
-  aoTrocarEmpresa: (id: string) => void;
-}) {
+export function Canais() {
   const [linhas, setLinhas] = useState<LinhaDeCanal[] | null>(null);
   const [disponiveis, setDisponiveis] = useState<CanalDisponivel[]>([]);
   const [erro, setErro] = useState("");
   const [qr, setQr] = useState<{ agente: string; texto: string | null } | null>(null);
   const [ocupado, setOcupado] = useState("");
+  const [filtro, setFiltro] = useState("");
 
   const busca = useCallback(() => {
     setErro("");
     api
-      .situacaoDosCanais(empresa || undefined)
+      .situacaoDosCanais()
       .then(setLinhas)
       .catch((problema) => {
         if (problema instanceof SemSessao) throw problema;
         setErro(problema.message);
       });
-  }, [empresa]);
+  }, []);
 
   useEffect(busca, [busca]);
 
-  // O catálogo não depende da empresa escolhida: é o que a instalação sabe conectar.
+  const procurado = filtro.trim().toLowerCase();
+  const achadas = (linhas ?? []).filter(
+    (l) =>
+      !procurado ||
+      l.agente.toLowerCase().includes(procurado) ||
+      l.empresa.toLowerCase().includes(procurado),
+  );
+
+  // O catálogo é o que a instalação sabe conectar.
   useEffect(() => {
     api.canais().then(setDisponiveis).catch(() => setDisponiveis([]));
   }, []);
@@ -102,22 +103,13 @@ export function Canais({
         contexto="Por onde cada agente atende, e se está respondendo agora."
         acoes={
           <>
-          {empresas.length > 1 && (
-            <select
-              value={empresa}
-              aria-label="Empresa"
-              onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="rounded-md border border-borda bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
-            >
-              <option value="">Todas as empresas</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          )}
-          <Botao pequeno icone="sys-refresh" onClick={busca}>
+          <Busca
+            valor={filtro}
+            aoMudar={setFiltro}
+            rotulo="Buscar canal"
+            placeholder="agente ou empresa"
+          />
+          <Botao className="min-h-11" icone="sys-refresh" onClick={busca}>
             Conferir de novo
           </Botao>
           </>
@@ -183,15 +175,19 @@ export function Canais({
         <div className="mt-16">
           <Carregando tipo="pulso" o_que="perguntando a cada canal" />
         </div>
-      ) : linhas.length === 0 ? (
+      ) : achadas.length === 0 ? (
         <div className="mt-10">
-          <Vazio titulo="nenhum agente atendendo ainda" icone="cont-link">
-            Escolha uma integração acima para criar o primeiro.
-          </Vazio>
+          {procurado ? (
+            <Vazio titulo="nenhum canal com esse nome" icone="sys-search" />
+          ) : (
+            <Vazio titulo="nenhum agente atendendo ainda" icone="cont-link">
+              Escolha uma integração acima para criar o primeiro.
+            </Vazio>
+          )}
         </div>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
-          {linhas.map((l) => {
+          {achadas.map((l) => {
             const marca = CANAIS[l.canal]?.marca;
             return (
               <li
@@ -205,13 +201,14 @@ export function Canais({
                 <div className="min-w-0 basis-56">
                   <p className="truncate text-base text-texto">
                     {l.agente}
-                    {!empresa && <span className="text-muted">, em {l.empresa}</span>}
+                    <span className="text-muted">, em {l.empresa}</span>
                   </p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
                     {marca && <Marca nome={marca} tamanho={14} />}
                     <span className="truncate">
                       {ROTULO_DO_CANAL(l.canal)}
-                      {!l.ativo && " (agente inativo)"}
+                      {l.situacao_do_agente === "treinamento" && " (agente em treinamento)"}
+                      {l.situacao_do_agente === "inativo" && " (agente desativado)"}
                     </span>
                   </p>
                 </div>
@@ -248,6 +245,7 @@ export function Canais({
           subtitulo="Abra o WhatsApp no celular, vá em Aparelhos conectados e aponte a câmera."
           aoFechar={() => setQr(null)}
           largura="max-w-xl"
+          altura="conteudo"
         >
           {qr.texto === null ? (
             <div className="py-8">

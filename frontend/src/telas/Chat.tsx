@@ -5,8 +5,9 @@ import {
   SemSessao,
   type Conversa,
   type ConversaAberta,
-  type Empresa,
 } from "../api/cliente";
+import { Busca } from "../design/Busca";
+import { Segmentos } from "../design/Segmentos";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
@@ -56,32 +57,26 @@ const hora = (iso: string) =>
     minute: "2-digit",
   });
 
-export function Chat({
-  empresas,
-  empresa,
-  aoTrocarEmpresa,
-}: {
-  empresas: Empresa[];
-  empresa: string;
-  aoTrocarEmpresa: (id: string) => void;
-}) {
+export function Chat() {
   const [conversas, setConversas] = useState<Conversa[] | null>(null);
   const [status, setStatus] = useState("");
   const [aberta, setAberta] = useState<ConversaAberta | null>(null);
   const [abrindo, setAbrindo] = useState("");
   const [erro, setErro] = useState("");
   const [devolvendo, setDevolvendo] = useState(false);
+  // A lupa filtra a lista que já está na tela; a consulta continua trazendo as conversas recentes.
+  const [filtro, setFiltro] = useState("");
 
   const busca = useCallback(() => {
     setErro("");
     api
-      .conversas({ empresa: empresa || undefined, status: status || undefined })
+      .conversas({ status: status || undefined })
       .then(setConversas)
       .catch((problema) => {
         if (problema instanceof SemSessao) throw problema;
         setErro(problema.message);
       });
-  }, [empresa, status]);
+  }, [status]);
 
   useEffect(busca, [busca]);
 
@@ -112,47 +107,38 @@ export function Chat({
   }
 
   const marcaDaAberta = aberta ? CANAIS[aberta.canal]?.marca : undefined;
+  const procurado = filtro.trim().toLowerCase();
+  const achadas = (conversas ?? []).filter((c) =>
+    !procurado
+      ? true
+      : [c.contato, c.telefone, c.agente, c.empresa].some((campo) =>
+          (campo ?? "").toLowerCase().includes(procurado),
+        ),
+  );
 
   return (
     <>
       <Cabecalho
         titulo="Conversas"
         contexto={
-          conversas !== null && conversas.length > 0
-            ? `${conversas.length} ${conversas.length === 1 ? "conversa recente" : "conversas recentes"}`
+          conversas !== null && achadas.length > 0
+            ? `${achadas.length} ${achadas.length === 1 ? "conversa recente" : "conversas recentes"}`
             : undefined
         }
         acoes={
           <>
-          {empresas.length > 1 && (
-            <select
-              value={empresa}
-              aria-label="Empresa"
-              onChange={(e) => aoTrocarEmpresa(e.target.value)}
-              className="rounded-md border border-borda bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
-            >
-              <option value="">Todas as empresas</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          )}
-          <div className="flex rounded-md border border-borda p-0.5" role="group" aria-label="Situação">
-            {SITUACOES.map((s) => (
-              <button
-                key={s.rotulo}
-                onClick={() => setStatus(s.valor)}
-                aria-pressed={status === s.valor}
-                className={`rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                  status === s.valor ? "bg-texto text-void" : "text-muted hover:text-texto"
-                }`}
-              >
-                {s.rotulo}
-              </button>
-            ))}
-          </div>
+          <Busca
+            valor={filtro}
+            aoMudar={setFiltro}
+            rotulo="Buscar conversa"
+            placeholder="contato, agente ou empresa"
+          />
+          <Segmentos
+            rotulo="Situação"
+            opcoes={SITUACOES.map((s) => ({ rotulo: s.rotulo, valor: s.valor }))}
+            valor={status}
+            aoMudar={setStatus}
+          />
           </>
         }
       />
@@ -176,13 +162,17 @@ export function Chat({
             // Com o erro em cima, o "buscando conversas" embaixo diz o contrário dele: quem falha
             // para de procurar, e a saída é o Tentar de novo.
             !erro && <Carregando tipo="pontos" o_que="buscando conversas" />
-          ) : conversas.length === 0 ? (
-            <Vazio titulo="nenhuma conversa ainda" icone="comm-chat">
-              Fale com um agente pela aba Conversar da ficha dele.
-            </Vazio>
+          ) : achadas.length === 0 ? (
+            procurado ? (
+              <Vazio titulo="nenhuma conversa com esse nome" icone="sys-search" />
+            ) : (
+              <Vazio titulo="nenhuma conversa ainda" icone="comm-chat">
+                Converse com um agente pelo menu dele, na lista de agentes.
+              </Vazio>
+            )
           ) : (
             <ul className="flex flex-col gap-1">
-              {conversas.map((c) => {
+              {achadas.map((c) => {
                 const marca = CANAIS[c.canal]?.marca;
                 return (
                   <li key={c.id}>

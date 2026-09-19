@@ -8,13 +8,29 @@ Handoff: registra, o terminal mostra motivo, resumo e código, e o agente fica c
 o operador retomar.
 """
 
+import asyncio
+import re
 import uuid
+from pathlib import Path
 from typing import Any
 
-from app.canais.base import Anexo, ArquivoBaixado, EntradaWebhook, Evento
+from app.canais.base import Anexo, ArquivoBaixado, ArquivoGrandeDemais, EntradaWebhook, Evento
 from app.canais.nativo import memoria
+from app.plataforma.config import config
 
 ID_CONTATO = "terminal"
+PASTA_DE_ENVIOS = "teste"
+"""Dentro do diretório de mídia: o que o operador anexou no painel, até o turno ler."""
+
+
+def _le_e_apaga(caminho: Path, limite_bytes: int) -> bytes:
+    try:
+        if caminho.stat().st_size > limite_bytes:
+            raise ArquivoGrandeDemais
+        return caminho.read_bytes()
+    finally:
+        # Lido ou recusado, o envio some: o que foi lido a mídia guarda pelo hash, no lugar dela.
+        caminho.unlink(missing_ok=True)
 
 
 class Nativo:
@@ -120,4 +136,10 @@ class Nativo:
         return None
 
     async def baixar_midia(self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int) -> ArquivoBaixado:
-        raise NotImplementedError("o terminal só manda texto")
+        """O arquivo não vem de fora: o painel o deixou na pasta de envios ao gravar a mensagem."""
+        # A referência nasce aqui como `uuid4().hex`. Qualquer outra coisa não vira caminho.
+        if not re.fullmatch(r"[0-9a-f]{32}", anexo.referencia):
+            raise FileNotFoundError("anexo sem arquivo")
+        caminho = config().diretorio_midia / PASTA_DE_ENVIOS / anexo.referencia
+        conteudo = await asyncio.to_thread(_le_e_apaga, caminho, limite_bytes)
+        return ArquivoBaixado(conteudo=conteudo, tipo_mime=anexo.tipo_mime or "application/octet-stream")

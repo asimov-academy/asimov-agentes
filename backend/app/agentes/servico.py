@@ -6,7 +6,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.acessos.servico import usa_acesso
-from app.agentes import repo
+from app.agentes import avatar, repo
 from app.agentes.modelos import Agente
 from app.canais.base import Canal
 from app.canais.registro import obter_canal
@@ -236,6 +236,8 @@ async def criar_agente(
             token_webhook_cifrado=cripto.cifra_texto(token),
             arquivo_prompt=arquivo_prompt,
             arquivo_prompt_handoff=arquivo_resumo,
+            # Sem canal externo ele fala só com quem o está ajustando, e isso é treinamento.
+            situacao="ativo" if canal_obj.externo else "treinamento",
             **modelos_finais,
             **{k: v for k, v in opcoes.items() if v is not None},
         )
@@ -267,7 +269,7 @@ async def conectar_canal(
     conectar, a conexão é desfeita.
     """
     agente = await repo.obter(sessao, cliente_id, agente_id)
-    if agente is None or not agente.ativo:
+    if agente is None or agente.desligado:
         raise NaoEncontrado("agente não encontrado")
     if obter_canal(agente.canal).externo:
         raise Conflito(
@@ -290,9 +292,15 @@ async def conectar_canal(
     credenciais_ok = await usa_acesso(sessao, novo, novo.endereco(conexao), conexao, conecta)
     try:
         agente.canal = canal
+        # Ganhou canal, sai do treinamento: era o que faltava para ele atender de verdade. Quem
+        # estava desligado continua desligado, porque isso foi escolha do operador.
+        if agente.situacao == "treinamento":
+            agente.situacao = "ativo"
         agente.credenciais_cifradas = cripto.cifra(credenciais_ok)
         agente.handoff_destino = destino
         agente.retomada_automatica_horas = retomada_automatica_horas
+        # A cara do número que ele passa a atender, quando o canal souber dar uma.
+        await avatar.do_canal(agente, credenciais_ok)
         await sessao.commit()
     except Exception:
         await sessao.rollback()
@@ -423,7 +431,7 @@ async def remover_agente(
 
     # Slug liberado: um agente novo com o mesmo nome reaproveita a pasta de prompts.
     agente.slug = f"{agente.slug}~removido-{agente.id.hex[:8]}"
-    agente.ativo = False
+    agente.situacao = "inativo"
     agente.removido_em = agora()
     agente.credenciais_cifradas = cripto.cifra({})
     agente.token_webhook_hash = cripto.hash_token(cripto.novo_token())

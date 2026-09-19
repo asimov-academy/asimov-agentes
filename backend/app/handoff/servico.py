@@ -253,7 +253,7 @@ async def assumir_no_canal(
     if conversa is None:
         return False
     agente = await agentes_repo.obter(sessao, cliente_id, conversa.agente_id)
-    if agente is None or not agente.ativo:
+    if agente is None or agente.desligado:
         return False
     canal, credenciais = agentes_servico.canal_da_conversa(agente, conversa)
     try:
@@ -278,7 +278,7 @@ async def retomada_automatica(sessao: AsyncSession) -> int:
     retomadas = 0
     for aberto in await repo.vencidos(sessao, agora()):
         agente = await agentes_repo.obter(sessao, aberto.cliente_id, aberto.agente_id)
-        if agente is None or not agente.ativo:
+        if agente is None or agente.desligado:
             await repo.fecha(sessao, aberto.cliente_id, aberto.conversa_id, "tempo")
             await sessao.commit()
             continue

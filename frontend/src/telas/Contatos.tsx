@@ -4,12 +4,11 @@ import {
   SemSessao,
   type Contato,
   type ContatoAberto,
-  type Empresa,
 } from "../api/cliente";
+import { Busca } from "../design/Busca";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
-import { Campo } from "../design/Campo";
 import { Carregando } from "../design/Carregando";
 import { Marca } from "../design/Marca";
 import { Modal } from "../design/Modal";
@@ -24,15 +23,7 @@ import { CANAIS, ROTULO_DO_CANAL } from "./agente/canais";
 
 const data = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 
-export function Contatos({
-  empresas,
-  empresa,
-  aoTrocarEmpresa,
-}: {
-  empresas: Empresa[];
-  empresa: string;
-  aoTrocarEmpresa: (id: string) => void;
-}) {
+export function Contatos() {
   const [busca, setBusca] = useState("");
   const [contatos, setContatos] = useState<Contato[] | null>(null);
   const [aberto, setAberto] = useState<ContatoAberto | null>(null);
@@ -44,13 +35,13 @@ export function Contatos({
   const procura = useCallback(() => {
     setErro(null);
     api
-      .contatos(busca, empresa || undefined)
+      .contatos(busca)
       .then(setContatos)
       .catch((problema) => {
         if (problema instanceof SemSessao) throw problema;
         setErro({ titulo: "não deu para carregar os contatos", texto: problema.message });
       });
-  }, [busca, empresa]);
+  }, [busca]);
 
   // Espera a digitação parar: cada tecla não vira uma consulta.
   useEffect(() => {
@@ -64,36 +55,14 @@ export function Contatos({
         titulo="Contatos"
         contexto="Quem já conversou com algum agente."
         acoes={
-          <>
-
-        {empresas.length > 1 && (
-          <select
-            value={empresa}
-            aria-label="Empresa"
-            onChange={(e) => aoTrocarEmpresa(e.target.value)}
-            className="rounded-md border border-borda bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
-          >
-            <option value="">Todas as empresas</option>
-            {empresas.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.nome}
-              </option>
-            ))}
-          </select>
-        )}
-          </>
+          <Busca
+            valor={busca}
+            aoMudar={setBusca}
+            rotulo="Buscar contato"
+            placeholder="nome ou telefone"
+          />
         }
       />
-
-      <div className="mt-8 max-w-md">
-        <Campo
-          rotulo="Procurar"
-          icone="sys-search"
-          placeholder="nome ou telefone"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-      </div>
 
       {erro ? (
         <div className="mt-8">
@@ -157,6 +126,7 @@ export function Contatos({
           subtitulo={`${aberto.telefone ?? "sem telefone"}, em ${aberto.empresa}`}
           aoFechar={() => setAberto(null)}
           largura="max-w-2xl"
+          altura="conteudo"
         >
           <dl className="flex flex-col divide-y divide-borda border-y border-borda">
             <Linha rotulo="Fala com">{aberto.agente}</Linha>

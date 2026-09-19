@@ -218,7 +218,7 @@ async def agente(sessao: AsyncSession, agente_id: uuid.UUID) -> Agente | None:
 
 
 async def agentes(
-    sessao: AsyncSession, cliente_id: uuid.UUID | None = None, ativo: bool | None = None
+    sessao: AsyncSession, cliente_id: uuid.UUID | None = None, situacao: str | None = None
 ) -> list[tuple[Agente, str]]:
     """Agentes com o nome da empresa junto, que é o que a lista mostra em cada linha."""
     consulta = (
@@ -229,8 +229,8 @@ async def agentes(
     )
     if cliente_id is not None:
         consulta = consulta.where(Agente.cliente_id == cliente_id)
-    if ativo is not None:
-        consulta = consulta.where(Agente.ativo.is_(ativo))
+    if situacao is not None:
+        consulta = consulta.where(Agente.situacao == situacao)
     return [(linha[0], linha[1]) for linha in await sessao.execute(consulta)]
 
 

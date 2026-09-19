@@ -10,18 +10,21 @@ export function Passos({
   passos,
   atual,
   aoIr,
+  alcanca,
 }: {
   passos: string[];
   atual: number;
-  /** Voltar a um passo já respondido. O que ainda não foi respondido não é clicável. */
   aoIr?: (indice: number) => void;
+  /** Até que passo dá para ir, para frente e para trás. Sem isto, só para os já respondidos.
+   *  Quem decide é a tela: passo com campo obrigatório vazio segura os seguintes. */
+  alcanca?: number;
 }) {
   return (
     <ol className="flex gap-2 overflow-x-auto md:flex-col md:gap-0 md:overflow-visible">
       {passos.map((passo, i) => {
         const pronto = i < atual;
         const agora = i === atual;
-        const podeIr = pronto && aoIr;
+        const podeIr = aoIr && !agora && i <= (alcanca ?? atual - 1);
         return (
           <li key={passo} className="flex shrink-0 items-center gap-3 md:items-stretch">
             <div className="flex flex-col items-center">
@@ -51,7 +54,7 @@ export function Passos({
               {podeIr ? (
                 <button
                   onClick={() => aoIr(i)}
-                  className="whitespace-nowrap text-left text-sm text-muted transition-colors hover:text-texto"
+                  className="-my-2.5 min-h-11 whitespace-nowrap text-left text-sm text-muted transition-colors hover:text-texto"
                 >
                   {passo}
                 </button>

@@ -2,6 +2,229 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-19: A situação mora no avatar
+
+A bolinha verde, amarela ou vermelha passou para o canto do retrato do agente, e o retrato virou o
+botão que abre as três situações (`telas/agente/MenuDeSituacao.tsx`). Era um item do menu de
+reticências, longe da única coisa da linha que representa o agente inteiro. O selo de texto ao lado
+do nome saiu junto: com a bolinha no avatar ele dizia a mesma coisa duas vezes, e o nome do botão
+(`Ana, Em treinamento. Mudar a situação`) carrega a palavra para quem usa leitor de tela.
+
+O menu de reticências fica com Editar e Conversar.
+
+## 2026-09-19: A zona de perigo vira uma lixeira no rodapé
+
+Remover o agente estava no fim do Perfil, num quadro de borda vermelha: primeiro foi para o fim de
+Configurações e depois para o rodapé do popup, como a lixeira do canto esquerdo. Clicar nela troca o
+rodapé pela pergunta, com a consequência escrita e o botão vermelho ao lado, do mesmo jeito que o
+descarte pergunta ali. O quadro era uma caixa dentro da caixa para dizer a mesma frase, e ficava na
+aba que o operador menos abre.
+
+## 2026-09-19: O cabeçalho vira uma peça só, com uma ordem só
+
+Três telas, três aparências para a mesma coisa: a lupa de 44px ao lado de um grupo de opções de 28,
+cada um com o próprio arredondamento e peso de fonte, e o botão da ação em outra altura ainda.
+
+- **`design/Segmentos.tsx`**: o grupo de opções lado a lado (período, situação do agente, situação
+  da conversa), na altura dos outros controles. Cada tela desenhava o seu.
+- **Altura única de 44px** em tudo que fica no cabeçalho: lupa, segmentos e botões. O `pequeno` do
+  botão continua valendo dentro dos popups, onde a densidade é outra.
+- **Ordem única: buscar, filtrar, agir.** A lupa vinha à direita numa tela e à esquerda em outra.
+- A lupa com empresa escolhida usa a moldura dos outros controles, e não uma só dela; o ciano fica
+  no ícone, que é o que diz que há filtro valendo.
+
+Três testes seguram isso: nenhuma tela desenha grupo de opções à mão, nenhum botão do cabeçalho é
+`pequeno`, e a ordem das peças é sempre a mesma.
+
+## 2026-09-19: A lupa filtra a tela, e não escolhe empresa
+
+O filtro por empresa saiu de Agentes, Conversas, Canais e Contatos. No lugar, `design/Busca.tsx`:
+uma lupa que **abre para o lado** virando um campo, e o que se digita filtra a lista logo abaixo,
+por nome do agente, do contato ou da empresa. Escolher de uma lista de empresas era escolher antes
+de saber o que se procura; e a lista, num `select` ou num menu, ainda obrigava a achar o nome no
+meio dos outros.
+
+Nessas quatro telas o filtro passou a ser local: a consulta traz tudo (a lista de agentes e as
+conversas recentes cabem inteiras na tela) e a lupa corta o que está desenhado, sem ida ao servidor.
+Contatos é a exceção parcial: a busca dele já era do servidor, por nome ou telefone, e continua
+sendo; só o campo mudou de lugar, do corpo para o cabeçalho.
+
+**Visão geral e Oportunidades** também usam a mesma lupa, e o `FiltroDeEmpresa` foi apagado. Nelas
+os dados são de uma empresa por vez (números agregados, kanban), então a lupa recebe `opcoes`: o
+texto filtra a lista que abre embaixo do campo e o clique aplica. Fechada com uma empresa escolhida,
+ela mostra o nome ao lado da lupa, porque filtro escondido faz a pessoa achar que a tela está
+incompleta. Eram três controles diferentes para a mesma pergunta ("qual empresa?"): um `select`, um
+menu com a lista dentro e um chip.
+
+## 2026-09-19: As abas sobem para o cabeçalho do popup
+
+- **As abas da ficha ficam dentro do cabeçalho do popup** (`Modal` ganhou o slot `abas`), embaixo do
+  nome do agente: elas ficam paradas enquanto o corpo rola e param de gastar uma faixa do espaço
+  útil, que num popup de altura fixa é o que falta.
+- **O texto do botão de ícone deixou de vazar para fora do popup**: o balão se alinha pelo lado que
+  couber (`alinha="inicio"` no clipe do chat, que fica encostado na borda esquerda).
+- **A foto do agente entra na criação**, no passo do nome, ao lado do campo. Ela espera o agente
+  existir: a criação continua sendo uma chamada só, no fim, e a foto sobe depois dela. Se o envio
+  falhar, o agente fica criado do mesmo jeito e a foto se troca na ficha.
+- **Emoji e "dividir a resposta em até" dividem a linha** também no último passo da criação, como já
+  dividem na aba Comunicação.
+
+## 2026-09-19: O que a tela escondia atrás de um clique
+
+- **No terminal é treinamento, e só isso.** Agente sem canal externo não aceita nenhuma outra
+  situação (422), e o menu da lista mostra as três com as outras duas apagadas e o motivo escrito.
+  Antes só "ativo" era recusado, e desativar um agente que já não fala com ninguém não queria dizer
+  nada.
+- **O "ajustar à mão" sumiu**: os três números do ritmo (espera, velocidade e teto do digitando)
+  ficam à vista, com o que o preset escolheu. Escondê-los fazia o operador clicar só para saber o
+  que estava valendo. Trocar de preset agora atualiza os números na tela, e mexer num deles é o que
+  torna o ritmo manual. Os números dos presets viviam só no servidor; a cópia da tela é conferida
+  contra `conversas/divisao.py` por um teste.
+- **O prazo do handoff virou escolha** ("sem prazo", 1, 2, 4, 8 horas, 1 dia, 2 dias, 1 semana):
+  era uma régua de 0 a 720 horas, e ninguém arrasta até 37.
+- **Falar só de assuntos da empresa, lembrar do contato e passar para uma pessoa nascem ligados** e
+  saíram do onboarding: três interruptores que quase ninguém desliga na criação, cada um custando
+  uma leitura no meio do fluxo. O `server_default` dos dois primeiros virou verdadeiro (migração
+  0027) para o banco dizer o mesmo que a API; quem já existe não muda.
+- **A foto do agente tem dois ícones e nenhum texto** (enviar e remover), e a cor da inicial mudou
+  de lugar: foi para Configurações, com o resto do que se ajusta uma vez. Ela também não funcionava:
+  o clique salvava a cor e não avisava a ficha, que continuava desenhando a anterior.
+- **O rodapé dizia "salvei restringe_temas, memoria_ativa"**: faltavam nomes no mapa de campos. Ele
+  agora é `Record<keyof EdicaoDoAgente, string>`, e um teste confere que nenhum campo entra ou sai
+  sem nome em português.
+
+## 2026-09-19: A ficha na ordem de montar um agente, e a cara dele
+
+**Sem canal externo, o agente está em treinamento, e ninguém precisa marcar isso.** Ele nasce assim
+(`criar_agente`, canal nativo) e sai do treinamento sozinho quando ganha um canal
+(`conectar_canal`). Marcar "ativo" num agente sem canal é recusado com 422: sem canal ele fala só no
+painel, que é exatamente o que treinamento quer dizer.
+
+**O agente tem cara** (migração 0026: `avatar` e `avatar_cor`). A foto fica no diretório de mídia,
+em `avatares/<cliente>/`, e sai por `GET /painel/api/agentes/{id}/avatar`, com a sessão do painel:
+avatar de agente de cliente não é arquivo público. O endereço muda a cada envio, então o navegador
+nunca mostra a foto antiga. Sem foto, a inicial do nome num dos quatro tokens de cor do painel
+(`ciano`, `ok`, `atencao`, `texto`), escolhida pelo operador ou tirada do nome. Agente de WhatsApp
+pega a foto do número pareado sozinho, uma vez, por melhor esforço: a WAHA responde a URL do
+WhatsApp (que expira), e o arquivo passa a ser nosso.
+
+**A lista de agentes diz três coisas e para**: quem é (foto e nome), em que situação está e o que
+faz, em qual empresa ("Vendedor em Loja Exemplo"). Canal e modelo saíram: ninguém escolhe um agente
+por eles. À direita, um menu de reticências com Editar, Conversar e as três situações.
+
+**Conversar saiu das abas da ficha** e virou um item desse menu, que abre a conversa num popup:
+falar com o agente não é configurá-lo, e estava como oitava aba de configuração.
+
+**A ordem das abas é a de montar um agente**: Perfil, Trabalho, Comunicação, Treinamento,
+Ferramentas, Canais, Configurações.
+
+- **Perfil** é quem ele é: foto, nome, o que ele faz, como ele fala (o tom, que estava em
+  Comunicação) e o comportamento, que é o prompt. Ele vinha escondido atrás de um "ver o que o
+  agente vai ler", no fim de Trabalho. Salvar Trabalho continua reescrevendo esse texto, e o aviso
+  de que isso apaga a edição à mão ficou lá.
+- **Ferramentas** virou uma grade de cartões com ícone e nome; clicar liga, e o cartão fica verde
+  com um certo. Cada ferramenta ocupava três linhas de descrição para dizer o que uma calculadora
+  faz.
+
+Atualizados: spec/dados.md, spec/telas.md e spec/frontend.md.
+
+## 2026-09-19: Três situações do agente, e a terceira passada de UX
+
+**O agente tem três situações, não um liga e desliga** (`agente.situacao`, migração 0025, o campo
+`ativo` sai): `ativo` atende no canal e no painel, `treinamento` responde só no painel e no
+terminal, `inativo` fica calado em tudo. O degrau do meio é onde o agente passa o tempo entre ser
+criado e atender gente de verdade, e não existia. Num campo só porque dois booleanos deixariam
+"desligado e em treinamento" possível, e isso não quer dizer nada.
+
+- Quem decide: `ativo_por_token` (a porta de todo canal externo) só acha o agente ativo, e o turno
+  recusa o que está em treinamento fora do canal nativo, para o job agendado antes da troca não
+  escapar. O resto do backend (conectar canal, handoff, rotas da WAHA e do WhatsApp, vigia) usa
+  `agente.desligado`, que é só o inativo: em treinamento o agente se configura inteiro.
+- A situação se troca **na lista de agentes**, numa bolinha verde, amarela ou vermelha com o nome
+  ao lado, e saiu da ficha, onde era um interruptor a dois cliques. O filtro da lista virou Todos,
+  Ativo, Em treinamento e Desativado; `GET /painel/api/agentes?situacao=` no lugar de `?ativo=`.
+- O terminal mostra os três (`✓`, `● em treinamento`, `▲ desligado`) e o JSON de `/admin/agentes`
+  passa a trazer `situacao`. `GET /painel/api/canais/situacao` já tinha um `situacao` (a do canal),
+  então o do agente entra como `situacao_do_agente`.
+
+**Na mesma passada, com o operador olhando a tela:**
+
+- **Filtro por empresa virou uma lupa com busca** (`design/FiltroDeEmpresa.tsx`), nas seis telas que
+  tinham um `select` com todas as empresas. Filtrando, a lupa dá lugar ao nome com um X.
+- **A ficha perdeu o que não era dela**: o endereço do webhook (o operador não cola URL em lugar
+  nenhum desde que conectar canal virou uma aba), a prova das cinco perguntas (conversar com o
+  agente é a aba ao lado, e gasta modelo do mesmo jeito) e o interruptor de ativo.
+- **"O que ele faz" mudou de aba**: estava em Trabalho, entre o público e o texto da empresa, e é o
+  que o agente é. Foi para Perfil, ao lado do nome, e o salvar do Perfil passou a mandar as duas
+  coisas (PATCH do nome e perfil, que reescreve o prompt).
+- **Emoji e "dividir a resposta em até" dividem a linha** em Comunicação: a faixa do emoji sozinha
+  na largura do popup parecia o campo mais importante da aba, e é o menos.
+- **O logo do Chatwoot é o logo do Chatwoot**: `design/marcas.ts` desenhava um balão genérico.
+- O painel local (`.claude/launch.json`) passou a usar o banco 3 do Redis: a suíte de testes limpa o
+  0 e derrubava a sessão do operador no meio do trabalho.
+
+Atualizados: spec/dados.md e spec/frontend.md.
+
+## 2026-09-19: Segunda passada de UX, com o operador olhando a tela
+
+O operador viu a primeira passada no navegador e pediu mais. Isto substitui dois pontos da entrada
+de baixo (a barra de salvar por aba e a pergunta ao trocar de aba):
+
+- **Um Salvar só na ficha, no rodapé fixo do popup.** A aba visitada continua montada, então o que
+  foi mexido fica guardado enquanto o operador anda pelas outras, e o Salvar manda todas de uma vez,
+  dizendo o que salvou. A aba com mudança ganha um ponto. Trocar de aba não pergunta mais nada; só
+  fechar com mudança pendente pergunta, no próprio rodapé. A barra colada embaixo de cada aba ficava
+  por cima dos campos. Em Trabalho, o aviso de que salvar reescreve o prompt editado à mão aparece
+  na aba, já que o botão saiu de lá.
+- **Popup de tamanho fixo** (`Modal`, `altura="fixa"` por padrão): cabeçalho e rodapé parados, o
+  corpo rola por dentro. Trocar de passo ou de aba não muda mais o tamanho da caixa. Confirmação
+  curta (Contatos, Funil, Canais) segue com `altura="conteudo"`. O fim do onboarding usa a mesma
+  largura do resto do fluxo.
+- **X de fechar sem caixa**, com o alvo de 44px mantido.
+- **`BotaoIcone` novo no design system**: botão só de ícone, com nome acessível obrigatório e o
+  texto abrindo no hover e no foco. "Melhorar com IA" virou as estrelas dentro do campo de texto.
+- **Onboarding:** os passos são clicáveis para frente e para trás, até o primeiro obrigatório vazio.
+  Saíram o subtítulo que repetia o passo, os ícones dos cartões de objetivo e o "dividir a resposta"
+  (nasce em 3 e muda em Comunicação). "Conectar um canal", no fim, abria Configurações; agora abre
+  Canais.
+- **Conversa de teste com áudio, imagem e documento.** Rota nova
+  `POST /painel/api/agentes/{id}/teste/arquivo` (multipart). Ela só grava e agenda, como um webhook:
+  o arquivo fica em `DIRETORIO_MIDIA/teste/<referência>` e o canal nativo o entrega ao turno pelo
+  `baixar_midia`, que antes recusava mídia. Transcrição e visão rodam no worker, com os limites de
+  sempre (20 MB, 5 minutos de áudio). A referência é um `uuid4().hex` conferido por expressão
+  regular antes de virar caminho, e o envio é apagado depois de lido. No painel, o campo vazio
+  mostra o microfone e, com texto ou anexo, o enviar.
+
+Atualizado: spec/frontend.md.
+
+## 2026-09-19: Revisão de UX da ficha do agente
+
+Auditoria heurística das abas da ficha (`frontend/src/telas/agente/Ficha.tsx` e `Teste.tsx`).
+O que mudou e por quê:
+
+- **Sair com mudança pendente pergunta antes.** A spec já pedia, e o código não fazia: trocar de
+  aba, Esc, o X e o clique no fundo descartavam a edição calados. A pergunta aparece dentro do
+  popup (um `Aviso` com Descartar e sair, e Continuar editando), não em outro `Modal` por cima,
+  porque dois popups abertos disputam o Esc, e não em caixa nativa, que o teste de diálogos recusa.
+- **Barra de salvar contextual.** O botão virou "Salvar", sem ícone, e a barra só aparece quando há
+  mudança, colada embaixo, com Descartar ao lado. "Salvar os modelos" também salvava os telefones,
+  então o rótulo comprido informava errado. O texto "salvei o nome, a situação" continua.
+- **Remover agente no painel deixa de pedir o nome digitado.** É um item só e as conversas ficam
+  guardadas: dois cliques, o segundo num botão vermelho com o nome ("Remover Bella"). A API segue
+  exigindo `confirmacao`, que o painel manda sozinho; no terminal nada muda.
+- **"Salvar e reescrever o prompt" confirma quando o prompt foi editado à mão.** Antes a edição
+  manual sumia sem aviso. O rótulo comprido fica, porque diz a consequência.
+- **Ferramentas perde o interruptor travado "Passar a conversa para uma pessoa, sempre ligada".**
+  Ele contradizia o interruptor de verdade, em Comunicação. O prazo de volta só aparece quando a
+  transferência está ligada.
+- **Conversar:** campo de várias linhas (Enter envia, Shift+Enter quebra), enviar como ícone de
+  44px com nome e desligado com o campo vazio, a conversa como `role="log"`, mais altura e o vazio
+  em uma frase, que é a do custo.
+- A prova de cinco perguntas desceu para depois do salvar, o campo de telefones ganhou rótulo curto
+  com a ajuda fora do placeholder, e as abas ganharam `tabpanel` e setas.
+
+Atualizado: spec/frontend.md.
+
 ## 2026-09-18: Fase 7, o que dava para fechar sem o operador
 
 **Backup diário** (`deploy/backup.sh`, timer `asimov-backup.timer`): dump do banco e cópia do `.env`

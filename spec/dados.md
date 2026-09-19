@@ -64,12 +64,13 @@ A empresa atendida pelo operador.
 | emojis | quanto o agente usa emoji: `nenhum`, `pouco`, `medio` ou `muito`. `livre` é o valor dos agentes criados antes desta escolha, e para eles a plataforma não diz nada sobre emoji | sim, padrão `nenhum` (agente cru) |
 | tom | como o agente fala: `formal`, `normal` ou `descontraido`. Muda o jeito, nunca o conteúdo | sim, padrão `normal` |
 | transfere_para_humano | se o agente pode passar a conversa para uma pessoa. Desligado, a tool nem é oferecida ao modelo e nenhum caminho automático transfere | sim, padrão ligado |
-| restringe_temas | o agente só fala do que é da empresa e devolve outro assunto para o atendimento | sim, padrão desligado |
+| restringe_temas | o agente só fala do que é da empresa e devolve outro assunto para o atendimento | sim, padrão ligado |
 | ferramentas | lista de nomes do catálogo (`calculadora`, `busca_web`) | sim; o agente novo nasce só com as marcadas na criação (vazia sem escolha, desde a v0.8.11) |
 | contatos_permitidos | telefones que o agente atende, só dígitos; lista vazia (o normal) atende qualquer pessoa. Serve para testar um número novo sem responder a quem escrever para ele | sim, `[]` |
 | handoff_destino | estruturado por canal: no WhatsApp oficial `{tipo: numero, telefone, template: {nome, idioma}}` (o template leva o aviso fora da janela de 24 horas); na WAHA `{tipo: numero ou grupo, chat_id, telefone, nome}` (o número é normalizado para `<dígitos>@c.us`); no nativo, vazio; no Chatwoot `{tipo: usuario, time ou caixa, id, nome}` (caixa abre sem atribuir) | sim; vazio em agente anterior à v0.4.0 se comporta como caixa |
 | retomada_automatica_horas | inteiro | não; padrão 4 no WhatsApp direto (assumido); vazio no Chatwoot (retomada é devolver a conversa para pendente) |
-| ativo | booleano | sim |
+| situacao | `ativo` (atende no canal e no painel; o agente nasce assim só com canal externo), `treinamento` (responde só no painel; quem chega pelo canal não encontra ninguém) ou `inativo` (calado em tudo). Num campo só: dois booleanos deixariam "desligado e em treinamento" possível | sim, padrão `ativo` |
+| avatar, avatar_cor | a foto do agente (caminho dentro do diretório de mídia, servido pelo painel com sessão) e o token de cor da inicial, que é o padrão. Agente de WhatsApp pega a foto do número pareado uma vez, por melhor esforço | sim, vazios |
 | criado_em, atualizado_em, removido_em | data e hora | criado e atualizado sim |
 
 Credenciais por canal:

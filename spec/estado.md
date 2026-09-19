@@ -1,6 +1,6 @@
 # Estado do projeto
 
-Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-09-18.
+Atualize ao fim de cada fase ou versão publicada. Última atualização: 2026-09-19.
 
 ## Auditoria local
 
@@ -10,6 +10,27 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.28.0`: **o painel revisado tela a tela, com o operador olhando junto.** Uma auditoria de UX
+  que virou seis rodadas de correção no mesmo dia, tudo construído e com teste, **nada validado em
+  VPS**:
+  **Três situações do agente** (migração `0025`, o campo `ativo` sai): `ativo` atende no canal e no
+  painel, `treinamento` responde só no painel, `inativo` fica calado. Agente sem canal externo nasce
+  e permanece em treinamento (422 nas outras), e conectar um canal o tira de lá sozinho. Troca-se
+  pela bolinha no canto do avatar, na lista.
+  **O agente tem cara** (migração `0026`): foto enviada pelo operador, a do número pareado no
+  WhatsApp (melhor esforço, uma vez) ou a inicial num dos quatro tokens de cor do painel.
+  **A ficha na ordem de montar um agente**: Perfil (foto, nome, o que faz, tom e comportamento),
+  Trabalho, Comunicação, Treinamento, Ferramentas, Canais, Configurações. Um Salvar só, no rodapé
+  fixo, que guarda o que foi mexido entre as abas; as abas moram no cabeçalho do popup, que tem
+  tamanho fixo; remover é a lixeira do rodapé, que pergunta ali mesmo. Conversar deixou de ser aba:
+  virou item do menu da lista, num popup.
+  **A conversa de teste aceita áudio, imagem e documento** (`POST /painel/api/agentes/{id}/teste/arquivo`):
+  ela grava e agenda como um webhook, e o canal nativo entrega o arquivo ao turno.
+  **Cabeçalho padronizado**: uma lupa que abre para o lado (`design/Busca.tsx`, filtra a lista ou
+  escolhe a empresa), um grupo de opções (`design/Segmentos.tsx`) e o botão da ação, todos com 44px,
+  sempre na ordem buscar, filtrar, agir.
+  **Padrões ligados** (migração `0027`): falar só de assuntos da empresa e lembrar do contato nascem
+  ligados, e saíram da criação junto com passar para uma pessoa.
 - `v0.27.0`: **a base de conhecimento, a humanização inteira e a aba que faltava.** Cinco entregas
   numa noite, todas construídas e com teste, nenhuma validada em VPS:
   **Canais na ficha** (`Canal.tsx`, duas rotas novas no painel): ligar um agente a um canal só
@@ -127,10 +148,14 @@ Desligado por padrão. `asimov painel` liga, pede o DNS de `app.<dominio>` e mos
   `SameSite=Strict`, origem conferida e freio de tentativa por IP. Uma conta só.
 - **O painel em si** é o front em `frontend/`, servido em `/painel/app`: visão geral (veredito,
   handoffs esperando, ritmo, custo, resolução, quem respondeu, onde travou), agentes, canais, chat e
-  contatos. Menu lateral fixo, gaveta no celular.
-- **Agente sempre em popup**, com o fundo embaçado: criar em sete passos com prévia viva do jeito de
-  falar, terminando na conversa de teste; e a ficha em seis abas (perfil, comunicação, trabalho,
-  ferramentas, configurações, conversar), cada seção com o próprio salvar.
+  contatos. Menu lateral fixo, gaveta no celular. Toda tela tem o mesmo cabeçalho: buscar, filtrar,
+  agir.
+- **Agente sempre em popup**, com o fundo embaçado e tamanho fixo: criar em cinco passos (nome e
+  foto, objetivo, empresa, sobre e jeito), terminando na conversa de teste; e a ficha em sete abas
+  (perfil, trabalho, comunicação, treinamento, ferramentas, canais, configurações), com um Salvar
+  só, no rodapé, que manda o que foi mexido em todas elas.
+- **A lista de agentes** diz quem é (foto com a bolinha da situação), o nome e o que ele faz em qual
+  empresa. O avatar troca a situação; o menu de reticências abre a ficha ou a conversa de teste.
 - **Contrato** em `/painel/api/*`, com sessão por cookie e `X-Painel-CSRF` em toda escrita. Chama os
   mesmos `servico.py` do menu. Credencial sai mascarada, falha sai como resumo curto, e o
   `cliente_id` nunca vem do corpo.
@@ -153,10 +178,15 @@ Desligado por padrão. `asimov painel` liga, pede o DNS de `app.<dominio>` e mos
 - Ferramentas por agente, uma por arquivo em `ia/ferramentas/` (ficha em `base.py`, catálogo em `registro.py`): calculadora (`ia/ferramentas/calculadora.py`, sem `eval`, formato brasileiro, funções de porcentagem, parcela, juros e datas) e busca na web (`WebSearch` da PydanticAI: nativa do provedor, DuckDuckGo quando o modelo não tem), escolhidas na criação (nenhuma por padrão desde a v0.8.11). OpenAI pela `OpenAIResponsesModel`; Groq sem busca nativa fora dos modelos `compound`.
 - Consumo por agente e empresa (`GET /admin/consumo`), falhas registradas, log `webhook_ignorado` com motivo em nível info.
 - Exclusão lógica de agente (apaga o bot no Chatwoot, invalida o webhook, apaga credenciais, libera o slug) e de empresa sem agentes.
-- Migrações até `0020` (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji; **perfil e assinatura do agente, que escrevem o `persona.md` pelo painel**).
+- Migrações até `0027` (situação do agente em três estados, foto e cor do agente, e os padrões que
+  nascem ligados). Até a `0020`: (canal da conversa; agente novo sem ferramentas; contatos permitidos; arquivo de mídia apagado; fim da coluna `handoff_template`, que virou parte do `handoff_destino`; nível de emoji; **perfil e assinatura do agente, que escrevem o `persona.md` pelo painel**).
 
 ## Pendências conhecidas
 
+- A rodada de UX de 2026-09-19 (v0.28.0) não rodou em VPS. Em especial: a foto que vem do número
+  pareado na WAHA (`foto_do_numero`, escrita contra a documentação e coberta só por teste com
+  resposta falsa), o áudio gravado no navegador chegando ao turno como mídia, e as migrações `0025`
+  a `0027` num banco com dados.
 - Copiloto, o que a VPS ainda não exercitou: o ciclo de propor e confirmar uma mudança de ponta a ponta (rodado local, com as ferramentas de verdade, mas não lá), o caminho do Codex (só o Claude Code foi vinculado) e a instalação que pula o vínculo.
 - Copiloto, limites de hoje: cria agente só no canal nativo (conectar a um canal continua no passo a passo do painel), uma conversa por instalação, sem streaming (o painel faz polling de dois em dois segundos) e sem contar consumo, porque a assinatura não devolve custo por turno.
 - Sessão órfã na WAHA: agente removido e recriado deixa a sessão antiga viva, que manda webhook com token que já não vale (`webhook_token_desconhecido`). Falta uma conferência de sessões no menu, que liste e deixe apagar.

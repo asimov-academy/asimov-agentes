@@ -55,7 +55,7 @@ class Agente(ComId, ComCriacao, Base):
     """Com isto desligado, a tool de handoff nem é oferecida ao modelo: o agente atende sozinho até
     o fim. Quem vende sem equipe de atendimento não quer o agente prometendo uma pessoa que não existe."""
 
-    restringe_temas: Mapped[bool] = mapped_column(default=True, server_default="false")
+    restringe_temas: Mapped[bool] = mapped_column(default=True, server_default="true")
     """O agente só fala do que é da empresa dele e devolve qualquer outro assunto para o atendimento.
 
     Nasce ligado: quem contrata um agente de atendimento não quer o modelo respondendo receita de
@@ -74,7 +74,7 @@ class Agente(ComId, ComCriacao, Base):
     aviso_de_ia: Mapped[str] = mapped_column(String(300), default="", server_default="")
     """O texto do aviso. Vazio usa o padrão da plataforma, com o nome do agente e da empresa."""
 
-    memoria_ativa: Mapped[bool] = mapped_column(default=True, server_default="false")
+    memoria_ativa: Mapped[bool] = mapped_column(default=True, server_default="true")
     """O agente lembra do contato entre conversas (resumo e ficha). Nasce ligado: lembrar do que
     ficou combinado é o que o contato espera de quem já falou com ele. `server_default` falso de
     propósito: agente criado antes disto não começa a lembrar sozinho."""
@@ -95,7 +95,29 @@ class Agente(ComId, ComCriacao, Base):
     handoff_destino: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     retomada_automatica_horas: Mapped[int | None]
 
-    ativo: Mapped[bool] = mapped_column(default=True)
+    avatar: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    """Caminho do arquivo dentro do diretório de mídia. Vazio: a inicial do nome em `avatar_cor`."""
+
+    avatar_cor: Mapped[str] = mapped_column(String(20), default="", server_default="")
+    """Nome do token de cor do painel, nunca o hexadecimal. Vazio: a cor sai do nome."""
+
+    situacao: Mapped[str] = mapped_column(String(20), default="ativo", server_default="ativo")
+    """`ativo`, `treinamento` ou `inativo`, e num campo só: são três degraus da mesma coisa.
+
+    Em treinamento o agente existe inteiro e conversa no painel, mas fica fora dos canais: é onde
+    ele passa o tempo entre ser criado e atender gente de verdade. Inativo é calado em tudo.
+    """
+
+    @property
+    def desligado(self) -> bool:
+        """Não fala com ninguém, nem na conversa de teste."""
+        return self.situacao == "inativo"
+
+    @property
+    def atende_canais(self) -> bool:
+        """Responde a quem chega pelo WhatsApp ou pelo Chatwoot. Só o agente ativo atende."""
+        return self.situacao == "ativo"
+
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=agora, onupdate=agora
     )

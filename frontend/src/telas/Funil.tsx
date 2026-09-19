@@ -9,6 +9,7 @@ import {
   type Funil as Quadro,
   type OportunidadeDoFunil,
 } from "../api/cliente";
+import { Busca } from "../design/Busca";
 import { Aviso } from "../design/Aviso";
 import { Botao } from "../design/Botao";
 import { Cabecalho } from "../design/Cabecalho";
@@ -54,6 +55,8 @@ export function Funil({
   // O funil é de uma empresa: sem ela escolhida, a primeira da lista serve de padrão.
   const escolhida = empresa || empresas[0]?.id || "";
   const [quadro, setQuadro] = useState<Quadro | null>(null);
+  // O que se digita na lupa, só para achar a empresa na lista.
+  const [procura, setProcura] = useState("");
   const [erro, setErro] = useState("");
   const [arrastando, setArrastando] = useState("");
   const [sobre, setSobre] = useState("");
@@ -118,23 +121,20 @@ export function Funil({
         acoes={
           <>
             {empresas.length > 1 && (
-              <select
-                value={escolhida}
-                aria-label="Empresa"
-                onChange={(e) => aoTrocarEmpresa(e.target.value)}
-                className="rounded-md border border-borda bg-surface px-3 py-2 text-xs text-muted transition-colors hover:text-texto focus:border-ciano focus:outline-none"
-              >
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nome}
-                  </option>
-                ))}
-              </select>
+              <Busca
+                valor={procura}
+                aoMudar={setProcura}
+                rotulo="Trocar de empresa"
+                placeholder="nome da empresa"
+                opcoes={empresas}
+                escolhida={escolhida}
+                aoEscolher={aoTrocarEmpresa}
+              />
             )}
-            <Botao pequeno icone="cont-doc" onClick={() => setEtiquetas(true)}>
+            <Botao className="min-h-11" icone="cont-doc" onClick={() => setEtiquetas(true)}>
               Etiquetas
             </Botao>
-            <Botao tom="acento" pequeno icone="act-add" onClick={() => setAbrindo("nova")}>
+            <Botao tom="acento" className="min-h-11" icone="act-add" onClick={() => setAbrindo("nova")}>
               Nova oportunidade
             </Botao>
           </>
@@ -389,6 +389,7 @@ function Ficha({
       subtitulo={oportunidade?.contato ?? undefined}
       aoFechar={aoFechar}
       largura="max-w-2xl"
+      altura="conteudo"
       rodape={
         <>
           {oportunidade && (
@@ -537,6 +538,7 @@ function Etiquetas({
       subtitulo="Marcações do funil desta empresa"
       aoFechar={aoFechar}
       largura="max-w-xl"
+      altura="conteudo"
     >
       {erro && (
         <div className="mb-5">
