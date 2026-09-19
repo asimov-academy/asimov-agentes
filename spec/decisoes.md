@@ -2,6 +2,33 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 10, etapas 1 e 2 (ritmo com nome e persona com anti-padrão)
+
+**Ritmo vira preset** (migração `0022`, aditiva): instantâneo, natural, reflexivo e manual. O nome é
+um atalho que escreve os três números, e o que o turno lê continua sendo o número; o nome sai sempre
+dos números finais, senão a tela diria "Natural" para um agente que não digita como o Natural. No
+painel são três cartões com os números atrás de "Ajustar à mão"; no terminal, "Tempo de buffer" e
+"Digitação" viraram um item só, "Ritmo". Quatro números crus não são escolha para quem não construiu
+a plataforma.
+
+**Pausa de ler antes do digitando.** O indicador acendia no mesmo instante em que a mensagem chegava,
+que é o que mais denuncia robô. Agora o turno espera o tempo de ler o que chegou (45 caracteres por
+segundo, com sorteio e teto por ritmo) e só então acende o digitando. A pausa não conta como
+digitação: o `comeco` do envio anda junto com ela, senão a primeira bolha sairia mais rápida por
+causa da própria pausa. Na suíte ela é desligada por um fixture: é tempo real.
+
+**Duas regras novas em todo turno**, sem o operador pedir: conversa (variar a abertura, nada de
+frase de atendimento automático, não prometer preço ou prazo que não veio no material) e empatia
+(espelhar humor bom, não imitar irritação, nunca ficar na defensiva). Dizer ao modelo o que NÃO
+fazer funciona melhor do que pedir naturalidade, porque o padrão dele é transcrição corporativa.
+
+**"O que ele nunca deve dizer"** entra no perfil (uma regra por linha) e vira uma seção do
+`persona.md`. Ficou na aba Trabalho, e não na Comunicação como o plano dizia: é a aba que escreve o
+prompt, e ter dois lugares escrevendo o mesmo arquivo é como se perde o controle dele.
+
+Atualizados: `spec/fases.md` (fase 10), `spec/estado.md` (tabela), `docs/plano-humanizacao.md`
+segue valendo para as etapas 3 a 5.
+
 ## 2026-09-18: Fase 6, a base de conhecimento
 
 O agente passa a responder com o material do cliente, e não só com o prompt. Módulo `conhecimento/`

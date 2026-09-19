@@ -65,6 +65,12 @@ const EMOJIS: { valor: NivelDeEmoji; rotulo: string }[] = [
   { valor: "muito", rotulo: "Muito" },
 ];
 
+const RITMOS: { valor: string; rotulo: string; explica: string }[] = [
+  { valor: "instantaneo", rotulo: "Instantâneo", explica: "Responde na hora, sem esperar." },
+  { valor: "natural", rotulo: "Natural", explica: "Lê, digita e responde como uma pessoa." },
+  { valor: "reflexivo", rotulo: "Reflexivo", explica: "Espera mais e escreve devagar." },
+];
+
 const TONS: { valor: TomDeVoz; rotulo: string; explica: string }[] = [
   { valor: "formal", rotulo: "Formal", explica: "Português correto, sem gíria." },
   { valor: "normal", rotulo: "Normal", explica: "Como alguém da empresa no WhatsApp." },
@@ -83,7 +89,7 @@ type Rascunho = {
   humano: boolean;
   soDaEmpresa: boolean;
   partes: number;
-  buffer: number;
+  ritmo: string;
   modelo: string;
 };
 
@@ -99,7 +105,7 @@ const VAZIO: Rascunho = {
   humano: true,
   soDaEmpresa: true,
   partes: 3,
-  buffer: 8,
+  ritmo: "natural",
   modelo: "",
 };
 
@@ -193,7 +199,7 @@ export function Onboarding({
         transfere_para_humano: dados.humano,
         restringe_temas: dados.soDaEmpresa,
         max_mensagens_por_resposta: dados.partes,
-        buffer_segundos: dados.buffer,
+        ritmo: dados.ritmo,
         // Ferramenta não se escolhe aqui: o agente nasce cru e ganha ferramenta no treinamento,
         // depois de o operador ver como ele fala.
         // Vazio: o servidor usa a IA que a instalação já tem.
@@ -381,6 +387,33 @@ export function Onboarding({
                         {t.rotulo}
                       </span>
                       <span className="mt-0.5 block text-xs text-muted">{t.explica}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <p className="rotulo">Ritmo</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {RITMOS.map((r) => (
+                    <button
+                      key={r.valor}
+                      onClick={() => muda("ritmo", r.valor)}
+                      aria-pressed={dados.ritmo === r.valor}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        dados.ritmo === r.valor
+                          ? "border-ciano bg-ciano/5"
+                          : "border-borda hover:border-dim"
+                      }`}
+                    >
+                      <span
+                        className={`block text-sm font-semibold ${
+                          dados.ritmo === r.valor ? "text-ciano" : "text-texto"
+                        }`}
+                      >
+                        {r.rotulo}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted">{r.explica}</span>
                     </button>
                   ))}
                 </div>
