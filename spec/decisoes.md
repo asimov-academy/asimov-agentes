@@ -2,6 +2,33 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-19: imagens prontas no GHCR (distribuição em dois repositórios, fase 1)
+
+O aluno deixa de receber o código da aplicação: este repositório vai ficar privado e a instalação
+passa a sair de um repositório público só com o instalador (`asimov-agentes-setup`), que puxa
+imagens prontas. Esta é a primeira de quatro fases; as outras (repositório de setup, acesso às
+imagens e fechamento deste repositório) entram aqui quando forem feitas.
+
+- O build arg `PROVEDORES` some do `backend/Dockerfile`, do Compose, do setup e do `.env.example`.
+  O setup já gravava os quatro provedores desde a v0.20.0, então a imagem das instalações de hoje
+  não muda de tamanho. Contra uma imagem só com OpenAI, as dependências vão de 116 MB para 134 MB
+  (138 MB no copiloto, com o SDK do MCP).
+- `.github/workflows/imagens.yml`: em pull request constrói sem publicar, para amd64 e arm64, mostra
+  o tamanho de cada imagem e confere que ela importa o app (e, no copiloto, que o CLI responde). Em
+  tag `v*` roda o `testes.yml` antes, publica cada arquitetura pelo digest no runner dela (sem
+  emulação) e junta as duas na tag da versão e em `latest`.
+- Copiloto em duas imagens, `agentes-copiloto-claude_code` e `agentes-copiloto-codex`, e não uma com
+  os dois CLIs: o operador usa um só, e a imagem única carregaria Node, Codex e o binário do Claude
+  para todo mundo. O nome termina no valor de `AGENTE_CODIGO`, para o Compose do setup montar o
+  endereço sem `if`.
+- Esta máquina não tem Docker: o build é validado pelo workflow no pull request, e a instalação de
+  ponta a ponta fica para a VPS limpa da fase 2. Por isso este trabalho sai numa branch com PR,
+  exceção à regra de uma branch só (2026-09-19).
+- O Compose deste repositório continua com `build:`, para desenvolvimento. O que usa `image:` nasce
+  no repositório de setup.
+
+Arquivos atualizados: `spec/arquitetura.md`, `spec/decisoes.md`, `spec/estado.md`.
+
 ## 2026-09-19: a WAHA passa a subir na instalação
 
 Numa VPS nova, com a plataforma instalada e o painel no ar, ligar o canal WhatsApp (WAHA) pelo

@@ -1,0 +1,157 @@
+# Imagens da plataforma no GHCR. A VPS do aluno nunca constrói nada: ela só puxa o que sai daqui.
+#   - Pull request: constrói as três imagens para amd64 e arm64, sem publicar, e mostra o tamanho.
+#   - Tag `v*`: roda os testes, constrói, publica `<tag>` e `latest`, com as duas arquiteturas.
+# Cada arquitetura constrói no próprio runner (sem emulação) e publica pelo digest; o job
+# `manifesto` junta os dois digests debaixo das tags.
+name: imagens
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".dockerignore"
+      - ".github/workflows/imagens.yml"
+
+env:
+  REGISTRO: ghcr.io/asimov-academy
+
+jobs:
+  testes:
+    # No pull request o testes.yml já roda sozinho.
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/testes.yml
+
+  build:
+    needs: testes
+    # `testes` é pulado no pull request, e job pulado não pode segurar o build.
+    if: ${{ !cancelled() && (needs.testes.result == 'success' || needs.testes.result == 'skipped') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        imagem:
+          - nome: agentes-backend
+            target: producao
+            agente_codigo: ""
+            confere: python -c "import app.main, app.worker"
+          - nome: agentes-copiloto-claude_code
+            target: copiloto
+            agente_codigo: claude_code
+            confere: sh -c 'python -c "import app.copiloto.worker, mcp" && claude --version'
+          - nome: agentes-copiloto-codex
+            target: copiloto
+            agente_codigo: codex
+            confere: sh -c 'python -c "import app.copiloto.worker, mcp" && codex --version'
+        arquitetura:
+          - { nome: amd64, runner: ubuntu-24.04 }
+          - { nome: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.arquitetura.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: ${{ matrix.imagem.target }}
+          build-args: AGENTE_CODIGO=${{ matrix.imagem.agente_codigo }}
+          platforms: linux/${{ matrix.arquitetura.nome }}
+          load: true
+          tags: ${{ matrix.imagem.nome }}:local
+          cache-from: type=gha,scope=${{ matrix.imagem.nome }}-${{ matrix.arquitetura.nome }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.imagem.nome }}-${{ matrix.arquitetura.nome }}
+
+      - name: Tamanho da imagem
+        run: |
+          bytes=$(docker image inspect --format '{{.Size}}' "${{ matrix.imagem.nome }}:local")
+          linha="${{ matrix.imagem.nome }} (${{ matrix.arquitetura.nome }}): $((bytes / 1024 / 1024)) MB"
+          echo "$linha"
+          echo "- $linha" >>"$GITHUB_STEP_SUMMARY"
+
+      - name: A imagem sobe
+        # Importar o app pega dependência que faltou no `uv sync` antes de a imagem ser publicada;
+        # no copiloto, confere também que o CLI está no PATH. Os valores são de mentira: a
+        # configuração só exige que existam.
+        run: |
+          docker run --rm \
+            -e DATABASE_URL=postgresql+asyncpg://ci:ci@localhost/ci \
+            -e REDIS_URL=redis://localhost:6379/0 \
+            -e SUBDOMINIO_BOT=bot.exemplo.com.br \
+            -e CHAVE_API_ADMIN=chave-de-ci \
+            -e CHAVE_CRIPTOGRAFIA=chave-de-ci-sem-valor-real \
+            "${{ matrix.imagem.nome }}:local" ${{ matrix.imagem.confere }}
+
+      - name: Login no GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publica pelo digest
+        id: publica
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: ${{ matrix.imagem.target }}
+          build-args: AGENTE_CODIGO=${{ matrix.imagem.agente_codigo }}
+          platforms: linux/${{ matrix.arquitetura.nome }}
+          outputs: type=image,name=${{ env.REGISTRO }}/${{ matrix.imagem.nome }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.imagem.nome }}-${{ matrix.arquitetura.nome }}
+
+      - name: Guarda o digest
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          digest="${{ steps.publica.outputs.digest }}"
+          touch "$RUNNER_TEMP/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: digests-${{ matrix.imagem.nome }}-${{ matrix.arquitetura.nome }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  manifesto:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        imagem: [agentes-backend, agentes-copiloto-claude_code, agentes-copiloto-codex]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.imagem }}-*
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Junta amd64 e arm64 na tag da versão e em latest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          imagem="$REGISTRO/${{ matrix.imagem }}"
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            -t "$imagem:${{ github.ref_name }}" -t "$imagem:latest" \
+            $(printf "$imagem@sha256:%s " *)
+          docker buildx imagetools inspect "$imagem:${{ github.ref_name }}"

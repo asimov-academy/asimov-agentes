@@ -19,13 +19,12 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYDANTIC_AI_NO_BANNER=1
 WORKDIR /app
-# Provedores escolhidos no setup, separados por espaço: "openai gemini".
-ARG PROVEDORES="openai"
 
 FROM base AS producao
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN extras=""; for p in $PROVEDORES; do extras="$extras --extra $p"; done; \
-    uv sync --frozen --no-dev --no-install-project $extras
+# Os quatro provedores sempre: a imagem é publicada pronta, e a IA é escolha de cada agente.
+RUN uv sync --frozen --no-dev --no-install-project \
+    --extra openai --extra anthropic --extra gemini --extra groq
 COPY backend/ .
 COPY --from=front /front/dist ./app/painel/estaticos/app
 # O volume de mídia nasce com o dono desta pasta; sem isso a API (uid 1000) não grava.
@@ -42,13 +41,12 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-
 FROM producao AS copiloto
 USER root
 ARG AGENTE_CODIGO=claude_code
-ARG PROVEDORES="openai"
 ENV HOME=/home/app \
     PATH=/home/app/.local/bin:/opt/venv/bin:$PATH
 # O SDK do MCP entra só aqui: é este contêiner que serve as ferramentas ao CLI. Os provedores vêm
 # junto de novo porque `uv sync` deixa o ambiente exatamente com o que a linha pediu.
-RUN extras="--extra copiloto"; for p in $PROVEDORES; do extras="$extras --extra $p"; done; \
-    uv sync --frozen --no-dev --no-install-project $extras && chown -R app /opt/venv
+RUN uv sync --frozen --no-dev --no-install-project --extra copiloto \
+    --extra openai --extra anthropic --extra gemini --extra groq && chown -R app /opt/venv
 # A home existe por causa do CLI: é nela que ele guarda o login e é ela que o Compose monta.
 RUN mkdir -p /home/app && chown -R app /home/app \
     && apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \

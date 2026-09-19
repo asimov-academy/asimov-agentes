@@ -67,7 +67,7 @@ Modelos de IA:
 - Fallback com `FallbackModel` da PydanticAI: erro de API do principal (fora do ar, limite, chave) passa para o segundo.
 - Modelo é escolha de cada agente, feita ao criá-lo no terminal ou no painel a partir da lista de modelos da API do provedor (`ia/chaves.py`, que também guarda o filtro por função e as sugestões). A instalação não pergunta nada de IA (v0.20.0); `MODELO_*` no `.env` só existe em instalação antiga e segue valendo de padrão.
 - Chave de provedor fica cifrada no banco (`chave_provedor`), testada no provedor antes de guardar e nunca devolvida. API e worker releem as chaves antes de validar modelo e no começo do turno; `*_API_KEY` do `.env` antigo vale de reserva.
-- Imagem Docker instala os SDKs dos quatro provedores (`PROVEDORES`, gravado pelo setup).
+- Imagem Docker instala sempre os SDKs dos quatro provedores, fixos no `backend/Dockerfile`. As imagens saem prontas do GitHub Actions para o GHCR (`.github/workflows/imagens.yml`): `agentes-backend`, `agentes-copiloto-claude_code` e `agentes-copiloto-codex`, para amd64 e arm64, com a tag da versão e `latest`.
 - Embeddings (fase 6) ficam na Instalação, com OpenAI ou Gemini.
 
 ## 3. Autenticação e autorização
@@ -248,7 +248,7 @@ Falha no turno (modelo fora do ar, erro de tool): até 2 novas tentativas; persi
 ## 8. Segredos
 
 - Tudo em `.env`, gerado pelo setup. O repositório tem só `.env.example` com as chaves e nenhum valor.
-- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `IA_VINCULADA`, `IA_CLI`, `IA_CONTA`, `CREDENCIAL_IA_HOST`, `CREDENCIAL_IA_CONTAINER`, `COPILOTO_ATIVO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `IDIOMA_AUDIO` (desde a v0.14.1), `OPENAI_RACIOCINIO` (desde a v0.8.5), `PROVEDORES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`, `WAHA_API_KEY` e `VERSAO_WAHA` (as duas nascem na instalação, junto do contêiner da WAHA). Entra depois: `MODELO_EMBEDDINGS` (fase 6).
+- Variáveis: `MODO_INSTALACAO`, `DOMINIO_BASE`, `SUBDOMINIO_BOT`, `EMAIL_SSL`, `AGENTE_CODIGO`, `IA_VINCULADA`, `IA_CLI`, `IA_CONTA`, `CREDENCIAL_IA_HOST`, `CREDENCIAL_IA_CONTAINER`, `COPILOTO_ATIVO`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `CHAVE_API_ADMIN`, `CHAVE_CRIPTOGRAFIA`, `MODELO_CONVERSA`, `MODELO_FALLBACK`, `MODELO_VISAO`, `MODELO_TRANSCRICAO`, `IDIOMA_AUDIO` (desde a v0.14.1), `OPENAI_RACIOCINIO` (desde a v0.8.5), `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `LOG_NIVEL`, `WAHA_API_KEY` e `VERSAO_WAHA` (as duas nascem na instalação, junto do contêiner da WAHA). Entra depois: `MODELO_EMBEDDINGS` (fase 6).
 - Senha do Postgres, `CHAVE_API_ADMIN` e `CHAVE_CRIPTOGRAFIA` são geradas pelo setup com `openssl rand`, nunca pedidas ao operador.
 - A credencial da conta de IA do operador não entra nem no `.env` nem no banco: ela fica onde o CLI oficial guarda (`~/.claude/.credentials.json` ou `~/.codex/auth.json`, com a permissão dele), e só o container do copiloto monta essa pasta. O `.env` registra apenas que existe vínculo, com qual CLI, em que conta e onde fica a pasta.
 - Credenciais de canal não ficam no `.env`: ficam criptografadas no banco, por agente. Chave de provedor de IA também fica no banco, cifrada, uma por provedor (v0.20.0); `MODELO_*` e `*_API_KEY` só aparecem preenchidos em instalação feita até a v0.19. O token de administrador do Chatwoot também fica no banco, cifrado, em `acessos/`.
