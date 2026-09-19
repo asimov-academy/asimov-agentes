@@ -2,6 +2,22 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-19: uma branch só, e versão antes da homologação em VPS
+
+O operador pediu para manter `main` como a única branch do repositório. O fluxo de publicação de
+`spec/estado.md` deixa de ter branch de trabalho e PR: commit direto em `main`, tag e push.
+
+Junto veio a contradição que a revisão da `v0.29.0` apontou. `spec/estado.md` dizia que o roteiro de
+homologação da auditoria valia antes de virar versão, e a `v0.29.0` saiu declarando que nada tinha
+rodado em VPS nem com modelo real. Vale a prática: a versão sai antes da homologação, porque a
+correção só é exercitada depois que chega à VPS por `asimov atualizar`, e a única VPS que roda isso
+é a do operador. O texto da regra foi corrigido para dizer isso; a homologação segue pendente.
+
+Na mesma passagem entrou a correção do backup que virou a `v0.29.1`: `.parcial` órfão no caminho de
+falha e dump íntegro reportado como noite perdida.
+
+Arquivos atualizados: `spec/estado.md`.
+
 ## 2026-09-19: os achados da auditoria de inteligência viram correção
 
 A auditoria de 2026-09-19 (`docs/auditoria-inteligencia-2026-09-19.md`) levantou 16 achados. As

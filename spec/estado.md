@@ -16,8 +16,10 @@ do agente no CLI e no painel (I11, I12), personalidade pelo copiloto (I13), cons
 fallback registrado (I14), download de site só para IP público e com teto (I15) e backup com
 `prompts/` e conhecimento (I16). As sondas viraram 11 regressões em
 `backend/testes/test_auditoria_inteligencia.py`; a suíte está em 523 testes no backend e 87 no
-frontend. **Nada disso rodou em VPS nem com modelo real**: o roteiro de homologação do relatório
-continua valendo antes de virar versão.
+frontend. **Nada disso rodou em VPS nem com modelo real.** A versão saiu assim mesmo, por decisão
+do operador (spec/decisoes.md, 2026-09-19): a correção precisava chegar à VPS para ser exercitada, e
+a única VPS que roda isso é a dele. O roteiro de homologação do relatório continua pendente, agora
+depois da versão e não antes dela.
 
 Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-2026-09-18.md), com inventário, 22 achados priorizados e oito reproduções executáveis. Foram verificados os 266 testes e as 13 migrações da base publicada. O painel que surgiu em trabalho concorrente recebeu revisão parcial separada; esses resultados não validam suas alterações. Não muda a fase nem a versão publicada.
 
@@ -25,6 +27,14 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.29.1`: **correção do backup de madrugada**, achada na revisão do bump da `v0.29.0`. O caminho
+  de falha saía sem apagar `prompts-<carimbo>.tar.gz.parcial` e
+  `conhecimento-<carimbo>.tar.gz.parcial`, e a retenção só varre `*.tar.gz`: falha que se repetia
+  toda noite acumulava dois órfãos por noite em `/var/lib/asimov/backups`. No mesmo caminho o dump
+  do Postgres já estava íntegro no disco, mas só `backup_falhou` era gravado, e o menu fazia o
+  operador acreditar que não tinha banco para restaurar daquela noite; `backup_em` passa a ser
+  gravado logo depois do dump, e a tela de falha diz onde o dump está. Só Bash: 523 testes do
+  backend, `shellcheck` e `simula_onboarding.sh` passam. Nada rodou em VPS.
 - `v0.29.0`: **a auditoria de inteligência vira correção.** Os 16 achados de
   `docs/auditoria-inteligencia-2026-09-19.md`, corrigidos e cobertos por regressão, **nada validado
   em VPS nem com modelo real**:
@@ -271,10 +281,12 @@ O setup não pede para colar URL nenhuma no painel da Meta: a criação do agent
 
 ## Fluxo de publicação combinado com o operador
 
-1. Branch nova a partir de `main`.
-2. Testes (`backend`), `shellcheck` e, se mexeu no setup, `setup/testes/simula_onboarding.sh`. Mudança em leitura de tecla: teste num pty com bash 5 (AGENTS.md, armadilhas).
-3. Commit com autor `Vitor Paim <vitor.paim@asimov.academy>` via `git -c user.name=... -c user.email=...` (a máquina não tem identidade git global).
-4. PR, merge com `--delete-branch` e tag `vX.Y.Z` quando muda o setup ou o backend (o operador autorizou fazer os três). Subir `VERSAO` em `setup/lib/base.sh` e o padrão em `setup/install.sh` antes da tag.
+O repositório tem uma branch só, `main` (spec/decisoes.md, 2026-09-19). Sem branch de trabalho, sem PR.
+
+1. Commit direto em `main`, com autor `Vitor Paim <vitor.paim@asimov.academy>` via `git -c user.name=... -c user.email=...` (a máquina não tem identidade git global).
+2. Antes do commit: testes (`backend`), `shellcheck` e, se mexeu no setup, `setup/testes/simula_onboarding.sh`. Mudança em leitura de tecla: teste num pty com bash 5 (AGENTS.md, armadilhas).
+3. Quando muda o setup ou o backend: subir `VERSAO` em `setup/lib/base.sh` e o padrão em `setup/install.sh`, commitar e marcar a tag `vX.Y.Z` (o operador autorizou commit, tag e push).
+4. `git push origin main --follow-tags`. A tag precisa chegar ao GitHub: o `install.sh` baixa o tarball do codeload por ela.
 5. Dizer ao operador o comando de atualização da VPS (`asimov atualizar`).
 
 ## Nunca no repositório (é público)
