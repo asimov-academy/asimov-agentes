@@ -175,7 +175,7 @@ painel de antes do front e viraram desvio para `/painel/app`.
 ## 4. Casca e navegação
 
 Menu lateral fixo, recolhível, com a marca e o botão de recolher no topo, os itens em dois grupos
-(Operação e Atendimento) e a área da conta no rodapé. Fixo de verdade:
+(**Operação**, o que se administra, e **Atendimento**, o que sai das conversas) e a área da conta no rodapé. Fixo de verdade:
 **a página não rola, quem rola é o conteúdo da direita**. O menu é um bloco comum de uma linha que
 não rola, então ele não tem como se mexer; com `sticky` ele grudaria, mas ainda participaria da
 rolagem da página. A altura é `h-dvh`, não `h-screen`, porque no celular a barra do navegador some e
@@ -187,9 +187,9 @@ superior esquerdo. Itens, nesta ordem:
 | Visão geral | `/` | ativo |
 | Agentes | `/agentes` | ativo |
 | Canais | `/canais` | ativo |
-| Oportunidades | `/oportunidades` | ativo |
 | Conversas | `/chat` | ativo |
 | Contatos | `/contatos` | ativo |
+| Oportunidades | `/oportunidades` | ativo, em Atendimento: o funil nasce das conversas |
 | Copiloto | abre a coluna da direita | ativo, no rodapé do menu, logo acima da conta |
 | Perfil e configurações | `/configuracoes` | ativo, no rodapé do menu, com avatar e o endereço da instalação |
 
