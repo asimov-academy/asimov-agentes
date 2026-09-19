@@ -10,6 +10,22 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.27.0`: **a base de conhecimento, a humanização inteira e a aba que faltava.** Cinco entregas
+  numa noite, todas construídas e com teste, nenhuma validada em VPS:
+  **Canais na ficha** (`Canal.tsx`, duas rotas novas no painel): ligar um agente a um canal só
+  existia no terminal, e como todo agente nasce no nativo desde a v0.24.0, quem criava pelo navegador
+  ficava com um agente que não atendia ninguém.
+  **Fase 6, base de conhecimento** (módulo `conhecimento/`, migração `0021`): arquivo, frase ou site
+  viram trechos com vetor, a busca filtra empresa e agente, e a ferramenta liga sozinha quando o
+  primeiro material fica pronto. Um modelo de embeddings por instalação, OpenAI e depois Gemini.
+  **Fase 10, humanização** (migrações `0022` a `0024`): ritmo com nome e pausa de ler, regras de
+  conversa e de empatia em todo turno, o campo "o que ele nunca deve dizer", memória do contato
+  (resumo da conversa e ficha de fatos, entrando marcados como dado), sentimento com transferência
+  por frustração, o aviso de que é uma IA (desligado por padrão) e a prova do agente.
+  **Fase 7**: backup diário com timer e retenção, checagens finais do setup e o `AGENTS.md.tmpl` em dia.
+  **Painel**: Conhecimento saiu do menu, Configurações encolheu para conta, espaço, negócio e
+  assistente de código, o copiloto virou coluna da direita, o emoji virou faixa e a escolha de IA
+  saiu da criação. **Nada validado em VPS.**
 - `v0.26.0`: **o jeito do agente vira escolha, e o treinamento ganha lugar.** O agente passa a ter tom (formal, normal ou descontraído), transferência para humano opcional (desligada, a tool nem é oferecida ao modelo e nenhum caminho automático transfere) e a opção de falar só de assuntos da empresa (migração `0020`, aditiva). As três ficam no passo "Jeito" da criação, na aba Comunicação da ficha e em `asimov editar` > Jeito de falar. Ferramenta saiu da criação: o agente nasce cru. A ficha ganhou a aba **Treinamento**, desenhada e ainda sem funcionar, com as cinco formas de ensinar (texto, site, vídeo, documento e base compartilhada), que é onde a fase 6 vai morar. E o botão **Melhorar com IA** passou a rodar pela assinatura vinculada, em vez de exigir chave de provedor.
 - `v0.25.2`: o copiloto enxerga a credencial do operador. Primeiro teste em VPS: o contêiner subia com os volumes padrão (contêiner existente não pega volume novo), rodava com um uid que não abre um arquivo `600` do root, e faltava o `~/.claude.json`, onde o Claude Code guarda o estado de primeiro uso. O erro do CLI também chegava cego, porque o stdout era descartado.
 - `v0.25.1`: o painel sobrevive a `asimov atualizar`. O `painel.caddy` é versionado e o pacote da atualização passava por cima do bloco do operador: quem tinha o painel ligado perdia o host `app.<dominio>` (o `bot` respondia, o painel dava falha de TLS). A atualização reescreve o bloco quando ele some.
@@ -63,7 +79,7 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 - `v0.8.11`: agente nativo, primeira parte da fase 5, com ajustes na criação, conexão posterior a um canal, feedback de etapa e turno na conversa, busca na web com instrução de uso e raciocínio baixo, handoff no histórico do modelo, teto de chamadas por turno, calculadora completa no formato brasileiro, uma ferramenta por arquivo, resposta no formato estruturado nativo, mensagem sem markdown, data de Brasília no turno e agente que nasce cru (sem ferramentas marcadas e prompt de uma linha).
 - Instalação: `bash <(curl -sSL https://raw.githubusercontent.com/asimov-academy/asimov-agentes/main/setup/install.sh)`
 - Atualizar uma VPS instalada: `asimov atualizar` (ou `ASIMOV_ATUALIZAR=1` antes do comando de instalação).
-- Verificação local na última revisão: 468 testes do backend passando, 49 do painel no navegador, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5.
+- Verificação local na última revisão: 505 testes do backend passando, 55 do painel no navegador, `shellcheck` sem erro, `simula_onboarding.sh` completo (inclui o fluxo do WhatsApp), conversa no terminal testada num pty com bash 5. O Postgres local precisa da extensão `vector` para a suíte rodar.
 
 ## Fases
 
