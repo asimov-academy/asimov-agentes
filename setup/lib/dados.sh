@@ -139,8 +139,8 @@ tela_dados() {
   estado_tem dados_confirmados && return 0
   secao "Configuração"
 
-  local dominio email opcao digitado
-  dica "Domínio dos agentes. Eles ficam em bot.<domínio>; pode colar do jeito que estiver."
+  local dominio email opcao digitado ip
+  dica "Domínio dos agentes. Eles ficam em bot.<domínio>."
   while true; do
     pergunta digitado "Domínio" "$(estado_get dominio)"
     dominio=$(limpa_dominio "$digitado")
@@ -150,6 +150,13 @@ tela_dados() {
     fi
     falha "Domínio inválido. Ex: exemplo.com.br"
   done
+  # O registro é pedido aqui, e não só no `tela_dns`, porque o DNS leva minutos para propagar: quem
+  # cria agora espera menos na tela seguinte, que não passa enquanto o nome não resolver.
+  ip=$(ip_publico)
+  echo
+  aviso "Precisa de um registro DNS: $(destaque "bot.$dominio") apontando para o IP $(destaque "${ip:-desta VPS}")."
+  dica "Crie agora no painel do domínio; a conferência vem na tela seguinte."
+  echo
   while true; do
     pergunta email "E-mail para o SSL" "$(estado_get email)"
     [[ "$email" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] && break

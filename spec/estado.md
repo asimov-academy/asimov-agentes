@@ -27,6 +27,13 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.30.0`: **rodada de onboarding no CLI**, com o operador na frente da tela de uma VPS zerada.
+  Boas-vindas sem a lista de canais, que envelhecia a cada canal novo; a tela do domínio pede o
+  registro DNS de `bot.<domínio>` com o IP da VPS assim que o domínio é digitado, e não só no
+  `tela_dns`, porque o DNS leva minutos para propagar e a tela seguinte não passa enquanto o nome
+  não resolver; e o `cd <projeto> && claude` do resumo final virou o comando `asimov evoluir`, que
+  resolve o binário do CLI escolhido na instalação, entra na pasta do projeto e dá `exec`. Sem
+  migração. Nada validado em VPS.
 - `v0.29.1`: **correção do backup de madrugada**, achada na revisão do bump da `v0.29.0`. O caminho
   de falha saía sem apagar `prompts-<carimbo>.tar.gz.parcial` e
   `conhecimento-<carimbo>.tar.gz.parcial`, e a retenção só varre `*.tar.gz`: falha que se repetia

@@ -286,3 +286,15 @@ tela_vinculo_ia() {
   fi
   estado_set ia_perguntada "$(date -Is)"
 }
+
+# fluxo_evoluir: abre o CLI de código na pasta do projeto, que é o `cd ... && claude` do resumo
+# final virado comando. Não passa por `com_voltar`: quem chama dá `exec`, e o CLI fica no lugar do
+# `asimov`, com o terminal inteiro para ele.
+fluxo_evoluir() {
+  local binario
+  binario=$(ia_binario)
+  [ -n "$binario" ] || erro_fatal "O $(ia_nome) não está instalado nesta VPS" \
+    "Rode asimov ia para instalar e entrar na conta."
+  cd "$RAIZ_PROJETO" || erro_fatal "Não achei a pasta do projeto" "Esperava $RAIZ_PROJETO."
+  exec "$binario"
+}
