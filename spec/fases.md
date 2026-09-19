@@ -305,7 +305,7 @@ Commit: `feat: conta de IA vinculada na instalação e copiloto no painel`
 
 ## Fase 10: Humanização dos agentes
 
-Situação: **etapas 1 a 4 construídas** (2026-09-18). Falta a etapa 5 e validar em VPS.
+Situação: **construída inteira** (2026-09-18), as cinco etapas. Falta validar em VPS.
 
 Objetivo: o contato sente que está falando com alguém da empresa, e o operador escolhe isso sem
 saber o que é buffer nem o que é prompt.
@@ -329,8 +329,11 @@ O que entra, uma versão por etapa:
 4. **Sentimento, gatilhos e aviso de IA.** Campo `sentimento` na saída, transferência por frustração
    e por resposta repetida (só quando o agente transfere) e o aviso de atendimento automatizado por
    agente, que **nasce desligado** e o operador marca.
-5. **Regressão de persona.** `pydantic-evals` com casos por agente, mostrando as respostas antes e
-   depois quando a IA reescreve o prompt (Melhorar com IA e copiloto). Mostra, não bloqueia.
+5. **A prova do agente.** Cinco casos fixos (saudação, preço, reclamação, pedido de pessoa e
+   assunto de fora) rodados contra o agente de verdade, com o prompt que está valendo, no painel
+   (aba Trabalho, com antes e depois lado a lado) e no menu. Mostra, não bloqueia. Sem juiz
+   automático: a nota não é confiável a ponto de impedir o operador de salvar o próprio prompt, e o
+   que ele precisa é ver a diferença.
 - Testes: memória de um contato nunca aparece em conversa de outro contato, agente ou cliente; texto
   da memória não vira instrução do sistema; preset grava os quatro números e o contrário também.
 

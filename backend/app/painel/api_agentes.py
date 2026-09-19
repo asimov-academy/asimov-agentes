@@ -27,6 +27,7 @@ from app.copiloto import servico as copiloto
 from app.copiloto import vinculo
 from app.clientes import servico as clientes_servico
 from app.ia import chaves, ferramentas, redacao
+from app.ia import prova as agentes_prova
 from app.ia.provedores import PROVEDORES, PROVEDORES_TRANSCRICAO, ModeloInvalido
 from app.painel import canais as canais_do_painel
 from app.painel import repo
@@ -422,6 +423,23 @@ class PerfilDoAgente(BaseModel):
     nunca_dizer: str | None = Field(default=None, max_length=2000)
     """Uma linha por regra. Entra no `persona.md` como o que ele nunca pode dizer."""
     assina_nome: bool | None = None
+
+
+@router.post("/agentes/{agente_id}/prova")
+async def prova(agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)) -> dict[str, Any]:
+    """Roda os casos fixos contra o agente e devolve o que ele respondeu.
+
+    É o que o operador lê antes e depois de mexer no prompt. Mostra, não bloqueia: nada aqui impede
+    salvar. Gasta modelo, e por isso só roda quando alguém clica.
+    """
+    agente, _ = await _acha(s, agente_id)
+    await chaves.carregar(s)
+    try:
+        return {"casos": await agentes_prova.roda(agente)}
+    except TimeoutError as erro:
+        raise HTTPException(status_code=504, detail="o modelo demorou demais para responder") from erro
+    except DE_NEGOCIO as erro:
+        raise _erro_de_negocio(erro) from erro
 
 
 class PromptDoAgente(BaseModel):

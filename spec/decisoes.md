@@ -2,6 +2,24 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 10, etapa 5 (a prova do agente)
+
+Duas coisas já reescrevem o prompt sozinhas (o botão "Melhorar com IA" e o copiloto) e ninguém media
+o resultado. A prova roda cinco casos fixos contra o agente de verdade, com o modelo e o prompt dele:
+saudação, preço, reclamação com raiva, pedido de pessoa e assunto de fora. No painel ela fica na aba
+Trabalho, com antes e depois lado a lado; no menu, em "Ver como ele responde".
+
+**Sem juiz automático, e sem `pydantic-evals`.** O plano previa `LLMJudge` com piso de nota. Nota de
+juiz automático não é confiável a ponto de impedir o operador de salvar o próprio prompt, e o que ele
+precisa é ver a diferença: quem julga é quem vai responder ao cliente depois. Isso também evitou uma
+dependência nova e o custo de um modelo juiz por caso.
+
+**A prova não deixa rastro**: a conversa dela não existe no banco, não entra no histórico do contato
+e não conta como conversa do período. O consumo do modelo existe, e é do operador: por isso ela só
+roda no clique.
+
+Atualizados: `spec/fases.md` (etapa 5 da fase 10), `spec/estado.md`.
+
 ## 2026-09-18: Fase 10, etapa 4 (sentimento, gatilho e aviso de IA)
 
 **A resposta do modelo ganha um campo**, `sentimento` (positivo, neutro ou negativo), com padrão

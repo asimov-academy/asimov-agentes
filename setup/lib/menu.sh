@@ -92,8 +92,8 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    rotulos=("Nome" "Ritmo" "Mensagens por resposta" "Ferramentas" "Jeito de falar" "Base de conhecimento" "Modelos")
-    acoes=(edita_nome edita_ritmo edita_mensagens edita_ferramentas edita_jeito edita_conhecimento edita_modelo)
+    rotulos=("Nome" "Ritmo" "Mensagens por resposta" "Ferramentas" "Jeito de falar" "Base de conhecimento" "Ver como ele responde" "Modelos")
+    acoes=(edita_nome edita_ritmo edita_mensagens edita_ferramentas edita_jeito edita_conhecimento roda_prova edita_modelo)
     # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
     # ligar o agente num canal.
     case "$(jq -r '.canal' <<<"$AGENTE")" in
@@ -428,6 +428,22 @@ escolhe_documento() {
   ESC_ESCOLHE=$((quantos + 1)) escolha op "Remover qual?" "${nomes[@]}" "Voltar"
   [ "$op" -le "$quantos" ] || return 1
   jq -r --argjson i "$((op - 1))" '.[$i].id' <<<"$1"
+}
+
+# As mesmas cinco perguntas de sempre, com o prompt que está valendo. O painel tem o mesmo botão na
+# aba Trabalho, pela mesma rota: aqui o operador lê no terminal, lá ele compara com a rodada anterior.
+roda_prova() {
+  dica "Cinco perguntas de sempre, com o prompt de agora. Gasta modelo, como uma conversa de verdade."
+  api POST "$(caminho_do_agente "$AGENTE")/prova"
+  if [ "$API_STATUS" != 200 ]; then
+    printf '%s\n' "$(falha "$(detalhe_erro "$API_RESPOSTA")")"
+    return 0
+  fi
+  jq -r --arg cinza "$CINZA" --arg normal "$NORMAL" '.casos[] |
+    "\n  \($cinza)\(.pergunta)\($normal)\n  " +
+    (if .erro != "" then .erro else (.mensagens | join("\n  ")) end) +
+    (if .transferiu then "\n  \($cinza)(passou para uma pessoa)\($normal)" else "" end)' <<<"$API_RESPOSTA"
+  echo
 }
 
 edita_handoff() {
