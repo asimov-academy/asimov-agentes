@@ -299,6 +299,10 @@ export const api = {
 
   contato: (id: string) => chama<ContatoAberto>(`/contatos/${id}`),
 
+  /** Apaga o que o agente lembra do contato. É o pedido de exclusão chegando pelo operador. */
+  esqueceContato: (id: string) =>
+    chama<{ esquecido: boolean }>(`/contatos/${id}/memoria`, { method: "DELETE" }),
+
   /** Conversa de teste pelo canal nativo: o mesmo `asimov conversar` do terminal. */
   mandaTeste: (id: string, texto: string, conversa?: string) =>
     chama<{ conversa: string; conversa_id: string; agendada: boolean }>(
@@ -443,6 +447,7 @@ export type Agente = {
   restringe_temas: boolean;
   /** Preset de ritmo: `instantaneo`, `natural`, `reflexivo` ou `manual`. */
   ritmo: string;
+  memoria_ativa: boolean;
   contatos_permitidos: string[];
   handoff_destino: Record<string, unknown> | null;
   retomada_automatica_horas: number | null;
@@ -513,6 +518,7 @@ export type NovoAgente = {
   transfere_para_humano?: boolean;
   restringe_temas?: boolean;
   ritmo?: string;
+  memoria_ativa?: boolean;
   contatos_permitidos?: string[];
   /** Só a resposta: resumo, imagem e áudio nascem no mesmo provedor e mudam na ficha. */
   modelo_conversa?: string;
@@ -526,6 +532,7 @@ export type EdicaoDoAgente = {
   transfere_para_humano: boolean;
   restringe_temas: boolean;
   ritmo: string;
+  memoria_ativa: boolean;
   buffer_segundos: number;
   max_mensagens_por_resposta: number;
   digitacao_caracteres_por_segundo: number;
@@ -708,6 +715,11 @@ export type Contato = {
 export type ContatoAberto = Contato & {
   id_externo: string;
   criado_em: string;
+  /** Fatos duráveis que o agente lembra deste contato. */
+  memoria: string;
+  /** O que já aconteceu na conversa mais recente dele. */
+  resumo: string;
+  memoria_ativa: boolean;
   conversas: {
     id: string;
     canal: string;

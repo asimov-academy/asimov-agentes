@@ -305,7 +305,7 @@ Commit: `feat: conta de IA vinculada na instalação e copiloto no painel`
 
 ## Fase 10: Humanização dos agentes
 
-Situação: **etapas 1 e 2 construídas** (2026-09-18). Falta validar em VPS.
+Situação: **etapas 1, 2 e 3 construídas** (2026-09-18). Falta validar em VPS.
 
 Objetivo: o contato sente que está falando com alguém da empresa, e o operador escolhe isso sem
 saber o que é buffer nem o que é prompt.

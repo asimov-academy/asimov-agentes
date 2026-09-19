@@ -400,6 +400,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
   const [tom, setTom] = useState<TomDeVoz>(agente.tom);
   const [humano, setHumano] = useState(agente.transfere_para_humano);
   const [soDaEmpresa, setSoDaEmpresa] = useState(agente.restringe_temas);
+  const [memoria, setMemoria] = useState(agente.memoria_ativa);
   const [partes, setPartes] = useState(agente.max_mensagens_por_resposta);
   const [buffer, setBuffer] = useState(agente.buffer_segundos);
   const [velocidade, setVelocidade] = useState(agente.digitacao_caracteres_por_segundo);
@@ -540,6 +541,12 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
           rotulo="Falar só de assuntos da empresa"
           descricao="Puxou outro assunto, ele volta ao atendimento em uma frase."
         />
+        <Interruptor
+          ligado={memoria}
+          aoMudar={setMemoria}
+          rotulo="Lembrar de cada contato"
+          descricao="Ele guarda o que ficou combinado e não pergunta duas vezes. Em Contatos você vê e apaga."
+        />
       </div>
 
       <Rodape
@@ -557,6 +564,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
                   tom,
                   transfere_para_humano: humano,
                   restringe_temas: soDaEmpresa,
+                  memoria_ativa: memoria,
                   max_mensagens_por_resposta: partes,
                   buffer_segundos: buffer,
                   digitacao_caracteres_por_segundo: velocidade,
@@ -567,6 +575,7 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
                   tom,
                   transfere_para_humano: humano,
                   restringe_temas: soDaEmpresa,
+                  memoria_ativa: memoria,
                   max_mensagens_por_resposta: partes,
                   ritmo,
                 },

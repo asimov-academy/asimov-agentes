@@ -36,6 +36,7 @@ export function Contatos({
   const [busca, setBusca] = useState("");
   const [contatos, setContatos] = useState<Contato[] | null>(null);
   const [aberto, setAberto] = useState<ContatoAberto | null>(null);
+  const [esquecendo, setEsquecendo] = useState(false);
   // O erro carrega o próprio título: a lista e a ficha falham por motivos diferentes, e dizer
   // "não deu para carregar os contatos" quando o que não abriu foi uma ficha é mentira curta.
   const [erro, setErro] = useState<{ titulo: string; texto: string } | null>(null);
@@ -162,6 +163,48 @@ export function Contatos({
             <Linha rotulo="Primeira mensagem">{data(aberto.criado_em)}</Linha>
             <Linha rotulo="Última mensagem">{data(aberto.ultima_mensagem_em)}</Linha>
           </dl>
+
+          <h3 className="mt-8 text-lg font-semibold text-texto">O que o agente lembra</h3>
+          {aberto.memoria_ativa ? (
+            aberto.memoria || aberto.resumo ? (
+              <>
+                <div className="mt-3 flex flex-col gap-3 rounded-lg border border-borda p-4 text-sm text-texto">
+                  {aberto.memoria && <p className="whitespace-pre-line">{aberto.memoria}</p>}
+                  {aberto.resumo && (
+                    <p className="whitespace-pre-line border-t border-borda pt-3 text-muted">
+                      {aberto.resumo}
+                    </p>
+                  )}
+                </div>
+                <div className="mt-3">
+                  <Botao
+                    pequeno
+                    icone="act-delete"
+                    ocupado={esquecendo}
+                    onClick={async () => {
+                      setEsquecendo(true);
+                      try {
+                        await api.esqueceContato(aberto.id);
+                        setAberto(await api.contato(aberto.id));
+                      } finally {
+                        setEsquecendo(false);
+                      }
+                    }}
+                  >
+                    Esquecer este contato
+                  </Botao>
+                </div>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-dim">
+                Nada ainda. Ele passa a lembrar depois de algumas mensagens.
+              </p>
+            )
+          ) : (
+            <p className="mt-2 text-sm text-dim">
+              {aberto.agente} está com a memória desligada, na aba Comunicação da ficha dele.
+            </p>
+          )}
 
           <h3 className="mt-8 text-lg font-semibold text-texto">Conversas</h3>
           {aberto.conversas.length === 0 ? (

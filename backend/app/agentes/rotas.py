@@ -59,6 +59,9 @@ class NovoAgente(BaseModel):
         default=None,
         description="Preset de ritmo: instantaneo, natural ou reflexivo. Escreve buffer, velocidade e teto do digitando.",
     )
+    memoria_ativa: bool = Field(
+        default=True, description="O agente lembra do contato entre conversas (resumo e ficha)."
+    )
     contatos_permitidos: list[str] | None = Field(
         default=None,
         description="Telefones que o agente atende. Vazio (o padrão) atende qualquer pessoa; com lista, o resto é ignorado.",
@@ -82,6 +85,7 @@ class EdicaoAgente(BaseModel):
     tom: Literal["formal", "normal", "descontraido"] | None = None
     transfere_para_humano: bool | None = None
     restringe_temas: bool | None = None
+    memoria_ativa: bool | None = None
     ritmo: str | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
@@ -149,6 +153,7 @@ class AgenteSaida(BaseModel):
     transfere_para_humano: bool
     restringe_temas: bool
     ritmo: str
+    memoria_ativa: bool
     contatos_permitidos: list[str]
     ativo: bool
 
@@ -210,6 +215,7 @@ async def criar(
             tom=dados.tom,
             transfere_para_humano=dados.transfere_para_humano,
             restringe_temas=dados.restringe_temas,
+            memoria_ativa=dados.memoria_ativa,
             ritmo=dados.ritmo,
             contatos_permitidos=dados.contatos_permitidos,
         )

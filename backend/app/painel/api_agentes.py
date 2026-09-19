@@ -76,6 +76,7 @@ class AgenteDoPainel(BaseModel):
     transfere_para_humano: bool
     restringe_temas: bool
     ritmo: str
+    memoria_ativa: bool
     contatos_permitidos: list[str]
     handoff_destino: dict[str, Any] | None
     retomada_automatica_horas: int | None
@@ -112,6 +113,7 @@ def _saida(agente: Agente, empresa: str, com_webhook: bool = False) -> AgenteDoP
         transfere_para_humano=agente.transfere_para_humano,
         restringe_temas=agente.restringe_temas,
         ritmo=agente.ritmo,
+        memoria_ativa=agente.memoria_ativa,
         contatos_permitidos=list(agente.contatos_permitidos),
         handoff_destino=agente.handoff_destino,
         retomada_automatica_horas=agente.retomada_automatica_horas,
@@ -203,6 +205,7 @@ class NovoAgenteDoPainel(BaseModel):
     tom: Literal["formal", "normal", "descontraido"] = "normal"
     transfere_para_humano: bool = True
     restringe_temas: bool = True
+    memoria_ativa: bool = True
     ritmo: str | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = Field(default=None, max_length=200)
@@ -238,6 +241,7 @@ async def cria(
             tom=dados.tom,
             transfere_para_humano=dados.transfere_para_humano,
             restringe_temas=dados.restringe_temas,
+            memoria_ativa=dados.memoria_ativa,
             ritmo=dados.ritmo,
             contatos_permitidos=dados.contatos_permitidos,
         )
@@ -270,6 +274,7 @@ class EdicaoDoPainel(BaseModel):
     tom: Literal["formal", "normal", "descontraido"] | None = None
     transfere_para_humano: bool | None = None
     restringe_temas: bool | None = None
+    memoria_ativa: bool | None = None
     ritmo: Literal['instantaneo', 'natural', 'reflexivo', 'manual'] | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
