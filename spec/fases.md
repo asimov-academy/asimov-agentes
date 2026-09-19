@@ -192,16 +192,19 @@ Commit: `feat: base de conhecimento com RAG por agente`
 
 ## Fase 7: Polimento e distribuição
 
-Situação: parcial, repositório público, README e licença prontos.
+Situação: **quase inteira** (2026-09-18). Feitos: backup diário com timer e retenção, checagens
+finais do setup (memória, disco, proxy da Cloudflare e `.env` em 600) e a revisão do
+`modelos/AGENTS.md.tmpl`. Falta o que depende de decisão do operador: o domínio público do setup e o
+nome definitivo na licença e no banner.
 
 Objetivo: qualquer aluno instala pelo comando público e o critério de sucesso é verificado.
 
 O que entra:
-- `install.sh` publicado em página estática em `setup.<dominio>`, baixando a release marcada e conferindo checksum.
-- Backup diário com timer do systemd e retenção de 14 dias. O `limpar_midia` saiu daqui: entrou na v0.13.0, com 24 horas em vez de 90 dias.
-- Checagens finais do setup: memória e disco mínimos, aviso de proxy da Cloudflare, `.env` com permissão 600.
-- Revisão do texto da licença e do banner com o nome definitivo.
-- Revisão do `modelos/AGENTS.md.tmpl` contra o critério de até 100 linhas e só conteúdo não descobrível.
+- `install.sh` publicado em página estática em `setup.<dominio>`, baixando a release marcada e conferindo checksum. **Falta**: depende do domínio público, que é decisão do operador. Hoje a instalação sai do `raw.githubusercontent.com` do repositório público, que funciona.
+- **Feito**: backup diário (`deploy/backup.sh`, `asimov-backup.timer`), com dump do banco e cópia do `.env` em `/var/lib/asimov/backups`, retenção de 14 dias e o estado do último em `asimov diagnostico`. O `limpar_midia` saiu daqui: entrou na v0.13.0, com 24 horas em vez de 90 dias.
+- **Feito**: checagens finais do setup, todas como aviso e nunca como impedimento (memória abaixo de 2 GB, disco abaixo de 8 GB, DNS apontando para a Cloudflare com proxy ligado) e o `.env` em 600 no fim da instalação.
+- Revisão do texto da licença e do banner com o nome definitivo. **Falta**: decisão do operador.
+- **Feito**: revisão do `modelos/AGENTS.md.tmpl` (64 linhas, com base de conhecimento, memória do contato, ritmo e as rotinas do host).
 - Lista do que ficou adiado, gravada em spec/decisoes.md.
 
 Dependências: Fases 1 a 6.

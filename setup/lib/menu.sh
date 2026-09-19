@@ -214,12 +214,31 @@ fluxo_diagnostico() {
     confere_endereco "Painel" "https://$(env_get SUBDOMINIO_APP)/painel/entrar"
   fi
   echo
+  mostra_backup
+  echo
   if [ "$(estado_get versao)" != "$VERSAO" ]; then
     aviso "A versão instalada não é a do código. Rode: asimov atualizar"
   fi
   dica "404 com o arquivo no lugar é o servidor web com a configuração antiga em memória."
   dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc restart caddy"
   dica "  cd $RAIZ_PROJETO && source deploy/compose.sh && dc logs -n 50 api"
+}
+
+# mostra_backup: quando foi o último e quantos existem. Backup que ninguém confere não é backup.
+mostra_backup() {
+  local pasta=${PASTA_BACKUP:-/var/lib/asimov/backups} quando erro_em quantos
+  # `estado_get` sai diferente de zero quando a chave não existe, e com `set -e` isso derruba a
+  # tela inteira: a armadilha de sempre (AGENTS.md).
+  quando=$(estado_get backup_em || true)
+  erro_em=$(estado_get backup_falhou || true)
+  quantos=$(find "$pasta" -maxdepth 1 -name 'asimov-*.sql.gz' 2>/dev/null | wc -l | tr -d ' ' || true)
+  if [ -n "$erro_em" ]; then
+    falha "Último backup falhou em $erro_em. Veja o log: $LOG"
+  elif [ -n "$quando" ]; then
+    campo "Backup" "$quando ${CINZA}· $quantos guardados em $pasta${NORMAL}"
+  else
+    campo "Backup" "nenhum ainda ${CINZA}· roda de madrugada, pelo asimov-backup.timer${NORMAL}"
+  fi
 }
 
 # confere_endereco "rótulo" URL [--com-chave]: mostra o código HTTP de um endereço.
