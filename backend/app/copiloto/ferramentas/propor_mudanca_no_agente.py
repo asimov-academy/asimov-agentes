@@ -9,6 +9,7 @@ configuração: o caminho da escrita passa obrigatoriamente por um clique do ope
 """
 
 import uuid
+from typing import Literal
 
 from app.agentes import repo as agentes_repo
 from app.copiloto import sessao as sessao_do_copiloto
@@ -29,6 +30,12 @@ async def propor_mudanca_no_agente(
     emojis: str | None = None,
     buffer_segundos: int | None = None,
     max_mensagens_por_resposta: int | None = None,
+    tom: Literal["formal", "normal", "descontraido"] | None = None,
+    restringe_temas: bool | None = None,
+    transfere_para_humano: bool | None = None,
+    memoria_ativa: bool | None = None,
+    avisa_que_e_ia: bool | None = None,
+    ritmo: Literal["instantaneo", "natural", "reflexivo"] | None = None,
 ) -> str:
     """Propõe mudar um agente. Nada muda até o operador confirmar no painel.
 
@@ -37,6 +44,12 @@ async def propor_mudanca_no_agente(
     Uma proposta por pedido: se o operador pediu duas coisas no mesmo agente, junte na mesma.
 
     Args:
+        tom: Jeito de falar; use este campo em vez de reescrever o prompt para mudar o tom.
+        restringe_temas: Responder somente assuntos da empresa.
+        transfere_para_humano: Permitir transferência para uma pessoa.
+        memoria_ativa: Lembrar fatos do contato.
+        avisa_que_e_ia: Avisar que é um assistente virtual no início.
+        ritmo: Preset de espera e digitação.
         agente_id: id do agente, como veio de listar_agentes.
         resumo: uma frase dizendo ao operador o que muda e por quê.
         prompt: prompt novo, inteiro, para substituir o atual.
@@ -79,6 +92,15 @@ async def propor_mudanca_no_agente(
     if max_mensagens_por_resposta is not None:
         campos["max_mensagens_por_resposta"] = max_mensagens_por_resposta
 
+    personalidade = dict(tom=tom, restringe_temas=restringe_temas,
+        transfere_para_humano=transfere_para_humano, memoria_ativa=memoria_ativa,
+        avisa_que_e_ia=avisa_que_e_ia, ritmo=ritmo)
+    campos.update({k: v for k, v in personalidade.items() if v is not None})
+    from app.copiloto.aplicar import valida_personalidade
+    try:
+        valida_personalidade(campos)
+    except ValueError as erro:
+        return str(erro)
     if not campos and prompt is None:
         return "Nada para mudar: mande pelo menos um campo ou o prompt."
 

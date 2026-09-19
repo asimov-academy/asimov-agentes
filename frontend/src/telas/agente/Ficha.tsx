@@ -24,6 +24,7 @@ import { Modal } from "../../design/Modal";
 import { Selo } from "../../design/Selo";
 import { Canal } from "./Canal";
 import { Foto } from "./Foto";
+import { Prova } from "./Prova";
 import { EscolheIA } from "./EscolheIA";
 import { ROTULO_DO_CANAL } from "./canais";
 import { Treinamento } from "./Treinamento";
@@ -266,6 +267,8 @@ export function Ficha({
         if (salva) salvas.push(await salva());
       }
       setFeito(`salvei ${salvas.filter(Boolean).join(", ")}`);
+      setSujas({});
+      setVersao((v) => v + 1);
     } catch (problema) {
       const motivo = problema instanceof Error ? problema.message : String(problema);
       setErroAoSalvar(salvas.length ? `${motivo} (o resto foi salvo)` : motivo);
@@ -458,6 +461,7 @@ export function Ficha({
               </div>
             );
           })}
+          {aba === "perfil" && <Prova agenteId={agente.id} pendente={sujo || salvando} />}
         </div>
       )}
     </Modal>
@@ -646,7 +650,7 @@ function Perfil({
         <label className="block">
           <span className="rotulo">Comportamento</span>
           <span className="mt-1 block text-sm text-muted">
-            Como ele se comporta na conversa. O formulário de Trabalho reescreve este texto.
+            Como ele se comporta na conversa. Os ajustes de Perfil, Trabalho e Comunicação prevalecem em caso de conflito.
           </span>
           {prompt === null ? (
             <span className="mt-2 block">
@@ -875,7 +879,7 @@ function Trabalho({
       });
       atualiza(resposta.agente);
       setPrompt((p) => (p ? { ...p, texto: resposta.prompt, gerado: resposta.prompt } : p));
-      salvas.push("o trabalho dele, com o comportamento reescrito");
+      salvas.push("o trabalho dele");
     }
     return salvas.join(", ");
   });
@@ -891,7 +895,7 @@ function Trabalho({
   return (
     <section>
       <p className="max-w-[70ch] text-sm text-muted">
-        O que você responde aqui vira o prompt do agente.
+        Estas informações orientam o agente junto com o comportamento do Perfil.
       </p>
 
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -945,9 +949,8 @@ function Trabalho({
       {/* Sem botão aqui: o Salvar é o do rodapé. O aviso fica, porque é ele que impede a perda. */}
       {editadoAMao && formularioMudou && (
         <div className="mt-6">
-          <Aviso tom="atencao" titulo="salvar reescreve o comportamento">
-            Ele foi escrito à mão, em Perfil, e essa edição se perde. Para manter, descarte as
-            mudanças desta aba.
+          <Aviso tom="atencao" titulo="comportamento personalizado preservado">
+            O texto de Perfil será mantido. As informações salvas aqui prevalecem quando houver conflito.
           </Aviso>
         </div>
       )}

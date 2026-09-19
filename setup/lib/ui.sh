@@ -443,11 +443,17 @@ escolha_digitada() {
 # confirma "texto" -> 0 para sim. Setas trocam, Enter confirma, S e N respondem direto.
 confirma() {
   local __resposta="" __sim=1 __tecla
+  [ "${2:-true}" = false ] && __sim=0
   if ! tem_terminal; then
     _prompt "$1"
-    printf ' %s(S/n)%s: ' "$CINZA" "$NORMAL"
+    if [ "$__sim" = 1 ]; then
+      printf ' %s(S/n)%s: ' "$CINZA" "$NORMAL"
+    else
+      printf ' %s(s/N)%s: ' "$CINZA" "$NORMAL"
+    fi
     ler __resposta
-    [[ -z "$__resposta" || "$__resposta" =~ ^[SsYy]$ ]]
+    if [ -z "$__resposta" ]; then [ "$__sim" = 1 ]; return; fi
+    [[ "$__resposta" =~ ^[SsYy]$ ]]
     return
   fi
   descarta_pendentes

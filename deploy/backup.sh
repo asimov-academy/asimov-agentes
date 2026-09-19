@@ -7,6 +7,7 @@
 # (que tem a chave que decifra essas credenciais). Sem o `.env`, o dump não serve para restaurar.
 # Por isso a pasta é 700 e cada arquivo 600: quem lê o backup lê a instalação inteira.
 set -Eeuo pipefail
+umask 077
 
 RAIZ_PROJETO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # shellcheck source=setup/lib/base.sh
@@ -30,8 +31,15 @@ if dc exec -T postgres pg_dump -U "$(env_get POSTGRES_USER)" "$(env_get POSTGRES
   gzip >"$arquivo.parcial"; then
   mv "$arquivo.parcial" "$arquivo"
   chmod 600 "$arquivo"
-  cp "$RAIZ_PROJETO/.env" "$PASTA_BACKUP/env-$carimbo" 2>>"$LOG" || true
-  chmod 600 "$PASTA_BACKUP/env-$carimbo" 2>/dev/null || true
+  if ! cp "$RAIZ_PROJETO/.env" "$PASTA_BACKUP/env-$carimbo" 2>>"$LOG" ||
+    ! tar -czf "$PASTA_BACKUP/prompts-$carimbo.tar.gz.parcial" -C "$RAIZ_PROJETO" prompts 2>>"$LOG" ||
+    ! dc exec -T worker tar -czf - -C /var/lib/asimov conhecimento >"$PASTA_BACKUP/conhecimento-$carimbo.tar.gz.parcial" 2>>"$LOG"; then
+    estado_set backup_falhou "$(date -Is)"
+    exit 1
+  fi
+  mv "$PASTA_BACKUP/prompts-$carimbo.tar.gz.parcial" "$PASTA_BACKUP/prompts-$carimbo.tar.gz"
+  mv "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz.parcial" "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz"
+  chmod 600 "$PASTA_BACKUP/env-$carimbo" "$PASTA_BACKUP/prompts-$carimbo.tar.gz" "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz"
   estado_set backup_em "$(date -Is)"
   estado_set backup_falhou ""
   printf 'backup gravado em %s\n' "$arquivo" >>"$LOG"
@@ -45,3 +53,6 @@ fi
 # Retenção: o que passou do prazo sai, e o dump mais novo nunca sai, mesmo que o prazo seja curto.
 find "$PASTA_BACKUP" -maxdepth 1 -name 'asimov-*.sql.gz' -mtime "+$DIAS_DE_RETENCAO" -delete 2>>"$LOG" || true
 find "$PASTA_BACKUP" -maxdepth 1 -name 'env-*' -mtime "+$DIAS_DE_RETENCAO" -delete 2>>"$LOG" || true
+
+find "$PASTA_BACKUP" -maxdepth 1 -name 'prompts-*.tar.gz' -mtime "+$DIAS_DE_RETENCAO" -delete 2>>"$LOG" || true
+find "$PASTA_BACKUP" -maxdepth 1 -name 'conhecimento-*.tar.gz' -mtime "+$DIAS_DE_RETENCAO" -delete 2>>"$LOG" || true

@@ -17,6 +17,7 @@ apenas quando a conversa acumulou mensagens desde a última vez.
 """
 
 import uuid
+import time
 from typing import TYPE_CHECKING
 
 import structlog
@@ -63,9 +64,9 @@ def bloco(resumo: str, ficha: str) -> str:
     """O que vai para o turno, marcado como dado. Vazio quando não há nada lembrado."""
     partes = []
     if ficha.strip():
-        partes.append(f"Sobre o contato:\n{ficha.strip()}")
+        partes.append(f"Sobre o contato:\n{_sem_marcacao(ficha.strip())}")
     if resumo.strip():
-        partes.append(f"O que já aconteceu nesta conversa:\n{resumo.strip()}")
+        partes.append(f"O que já aconteceu nesta conversa:\n{_sem_marcacao(resumo.strip())}")
     if not partes:
         return ""
     return "<memoria_do_contato>\n" + "\n\n".join(partes) + "\n</memoria_do_contato>"
@@ -111,6 +112,7 @@ async def atualiza(
         f"Ficha atual:\n{(contato.memoria if contato else '') or '(vazia)'}\n\n"
         f"Mensagens novas:\n{_sem_marcacao(transcricao(novas))}"
     )
+    inicio = time.monotonic()
     try:
         ia = Agent(
             modelo or modelo_de_resposta(agente.modelo_auxiliar, agente.modelo_fallback),
@@ -122,6 +124,16 @@ async def atualiza(
         log.info("memoria_nao_atualizada", conversa_id=str(conversa.id), erro=repr(erro)[:200])
         return False
 
+    from app.consumo.modelos import Turno
+    from app.consumo.repo import grava_turno
+    from app.ia.agente import custo_estimado, modelo_efetivo
+    await grava_turno(sessao, Turno(
+        cliente_id=agente.cliente_id, conversa_id=conversa.id, funcao="memoria",
+        modelo=modelo_efetivo(resultado.new_messages(), agente.modelo_auxiliar),
+        tokens_entrada=resultado.usage.input_tokens, tokens_saida=resultado.usage.output_tokens,
+        custo_estimado=custo_estimado(resultado.new_messages()),
+        latencia_ms=int((time.monotonic() - inicio) * 1000),
+    ))
     conversa.resumo = resultado.output.resumo.strip()[:LIMITE_DO_RESUMO]
     conversa.resumido_ate = novas[-1].criado_em
     if contato is not None:

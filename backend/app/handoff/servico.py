@@ -32,8 +32,7 @@ if TYPE_CHECKING:
 log = structlog.get_logger()
 
 MENSAGEM_DE_EXPECTATIVA = (
-    "Tive um problema para te responder agora. Já chamei uma pessoa da equipe, "
-    "que vai continuar o atendimento por aqui."
+    "Tive um problema para te responder agora. Por favor, tente novamente em instantes."
 )
 MOTIVO_FALHA_NO_TURNO = "o agente não conseguiu responder (modelo ou tool com erro)"
 MOTIVO_PESSOA_RESPONDEU = "uma pessoa da equipe respondeu pelo aparelho"

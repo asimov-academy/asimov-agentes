@@ -44,17 +44,21 @@ def modelo(cfg: Config | None = None) -> str:
     return f"{escolhido}:{MODELOS[escolhido]}" if escolhido else ""
 
 
-async def gerar(textos: list[str], cfg: Config | None = None) -> list[list[float]]:
+async def gerar(textos: list[str], cfg: Config | None = None, *, modelo_fixo: str | None = None) -> list[list[float]]:
     """Vetores na ordem dos textos. Levanta `SemEmbeddings` com o que o operador precisa fazer."""
     if not textos:
         return []
     cfg = cfg or config()
-    escolhido = provedor(cfg)
+    escolhido = modelo_fixo.split(":", 1)[0] if modelo_fixo else provedor(cfg)
+    if modelo_fixo and modelo_fixo != f"{escolhido}:{MODELOS.get(escolhido)}":
+        raise SemEmbeddings("modelo de embeddings da base não é suportado nesta versão")
     if escolhido is None:
         raise SemEmbeddings(
             "a base de conhecimento precisa da chave da OpenAI ou do Gemini nesta instalação"
         )
     chave = chaves.chave_do_provedor(escolhido, cfg)
+    if not chave:
+        raise SemEmbeddings(f"a base usa {escolhido}; cadastre a chave desse provedor")
     saida: list[list[float]] = []
     async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as http:
         for inicio in range(0, len(textos), LOTE):

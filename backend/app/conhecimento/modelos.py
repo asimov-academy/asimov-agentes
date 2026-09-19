@@ -10,7 +10,16 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.plataforma.banco import Base, ComCriacao, ComId
@@ -62,3 +71,13 @@ class Trecho(ComId, ComCriacao, Base):
     ordem: Mapped[int] = mapped_column(Integer)
     texto: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(DIMENSAO))
+
+
+class ConfiguracaoEmbeddings(Base):
+    """Uma linha da instalação, para não misturar espaços vetoriais."""
+    __tablename__ = "configuracao_embeddings"
+    __table_args__ = (
+        CheckConstraint("id = 1", name="linha_unica"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    modelo: Mapped[str] = mapped_column(String(100))

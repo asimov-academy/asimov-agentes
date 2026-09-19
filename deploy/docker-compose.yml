@@ -23,6 +23,7 @@ x-backend: &backend
     - ../prompts:/app/prompts
     - ../modelos:/app/modelos:ro
     - midia:/var/lib/asimov/midia
+    - conhecimento:/var/lib/asimov/conhecimento
   depends_on:
     postgres:
       condition: service_healthy
@@ -163,6 +164,7 @@ services:
 volumes:
   postgres:
   midia:
+  conhecimento:
   waha_sessoes:
   waha_arquivos:
   redis:

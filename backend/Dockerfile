@@ -29,7 +29,7 @@ RUN extras=""; for p in $PROVEDORES; do extras="$extras --extra $p"; done; \
 COPY backend/ .
 COPY --from=front /front/dist ./app/painel/estaticos/app
 # O volume de mídia nasce com o dono desta pasta; sem isso a API (uid 1000) não grava.
-RUN useradd --system --uid 1000 app && mkdir -p /app/prompts /var/lib/asimov/midia \
+RUN useradd --system --uid 1000 app && mkdir -p /app/prompts /var/lib/asimov/midia /var/lib/asimov/conhecimento \
     && chown -R app /app /var/lib/asimov
 USER app
 # Sem access log: ele registra a URL inteira, e o token do webhook mora nela (auditoria de

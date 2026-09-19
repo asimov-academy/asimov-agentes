@@ -361,3 +361,16 @@ async def listar_ferramentas() -> list[FerramentaSaida]:
         FerramentaSaida(nome=f.nome, rotulo=f.rotulo, descricao=f.descricao, padrao=f.padrao)
         for f in ferramentas.CATALOGO.values()
     ]
+
+
+@router.post("/clientes/{cliente_id}/agentes/{agente_id}/prova")
+async def prova(cliente_id: uuid.UUID, agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)) -> dict[str, Any]:
+    from app.ia import chaves, prova as prova_agente
+    agente = await repo.obter(s, cliente_id, agente_id)
+    if agente is None:
+        raise HTTPException(status_code=404, detail="agente não encontrado")
+    await chaves.carregar(s)
+    try:
+        return {"casos": await prova_agente.roda(agente)}
+    except TimeoutError as erro:
+        raise HTTPException(status_code=504, detail="o modelo demorou demais para responder") from erro

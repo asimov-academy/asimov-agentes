@@ -208,6 +208,17 @@ Arquivo recebido de contato, com o cache do processamento.
 | texto | texto | sim |
 | embedding | vetor | sim |
 
+### ConfiguracaoEmbeddings (uma linha por instalação)
+
+O modelo que vetorizou a base. Fixado no primeiro material e nunca trocado sozinho: cadastrar outra
+chave de provedor não pode mudar o espaço vetorial dos trechos já gravados. Trocar de modelo exige
+reindexar o material.
+
+| Atributo | Tipo | Obrigatório |
+|---|---|---|
+| id | inteiro, sempre 1 | sim |
+| modelo | texto, `provedor:modelo` | sim |
+
 ### Turno (assumido; repetido ao longo do tempo, pertence a Conversa)
 
 Um ciclo de processamento após o buffer.

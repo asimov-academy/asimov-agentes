@@ -30,6 +30,16 @@ class PropostaInvalida(ValueError):
     """Mensagem em português, pronta para a tela."""
 
 
+def valida_personalidade(campos: dict[str, Any]) -> None:
+    if "tom" in campos and campos["tom"] not in ("formal", "normal", "descontraido"):
+        raise PropostaInvalida("tom desconhecido")
+    if "ritmo" in campos and campos["ritmo"] not in ("instantaneo", "natural", "reflexivo"):
+        raise PropostaInvalida("ritmo desconhecido")
+    for nome in ("restringe_temas", "transfere_para_humano", "memoria_ativa", "avisa_que_e_ia"):
+        if nome in campos and type(campos[nome]) is not bool:
+            raise PropostaInvalida(f"{nome} precisa ser verdadeiro ou falso")
+
+
 async def aplica(sessao: AsyncSession, proposta: dict[str, Any]) -> str:
     """Devolve uma frase curta dizendo o que foi feito, que volta ao copiloto e à tela."""
     if proposta.get("situacao") != "aguardando":
@@ -57,6 +67,7 @@ async def _muda_agente(sessao: AsyncSession, proposta: dict[str, Any]) -> str:
 
     campos = dict(proposta.get("campos") or {})
     _confere_limites(campos)
+    valida_personalidade(campos)
     if campos:
         agente = await agentes_servico.editar_agente(sessao, cliente_id, agente_id, campos)
     if proposta.get("prompt") is not None:
