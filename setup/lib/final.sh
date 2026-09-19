@@ -50,9 +50,8 @@ resumo_acesso_ao_painel() {
 }
 
 mostra_resumo() {
-  local sub comando
+  local sub
   sub=$(env_get SUBDOMINIO_BOT)
-  comando=$(ia_comando)
 
   secao "Pronto"
   if [ "$(estado_get agente_canal)" = nativo ]; then
@@ -92,7 +91,8 @@ mostra_resumo() {
   printf '    %sasimov ia%s            %s%s%s\n' "$CIANO" "$NORMAL" "$CINZA" \
     "$(vinculo_ligado && echo 'trocar a conta de IA que move o copiloto do painel' || echo "entrar na conta de $(ia_nome) e ligar o copiloto do painel")" "$NORMAL"
   printf '    %sasimov ajuda%s         %stodos os comandos%s\n' "$CIANO" "$NORMAL" "$CINZA" "$NORMAL"
-  printf '    %scd %s && %s%s   %sevoluir em vibecoding%s\n' "$CIANO" "$RAIZ_PROJETO" "$comando" "$NORMAL" "$CINZA" "$NORMAL"
+  printf '    %sasimov evoluir%s       %sabre o %s na pasta do projeto, para evoluir em vibecoding%s\n' \
+    "$CIANO" "$NORMAL" "$CINZA" "$(ia_nome)" "$NORMAL"
   echo
 }
 
