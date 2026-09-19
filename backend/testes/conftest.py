@@ -250,7 +250,14 @@ class FilaFalsa:
 
 @pytest.fixture(scope="session", autouse=True)
 async def schema() -> None:
+    """O schema sai dos modelos, não das migrações. A extensão de vetores é a exceção: ela não está
+    em modelo nenhum, e sem ela a coluna `vector` da base de conhecimento nem existe como tipo.
+
+    Quem cria a extensão na instalação é a migração `0021`; aqui ela é criada à mão porque a suíte
+    pula as migrações de propósito. Sem esta linha, banco novo (a CI é sempre um) derruba a suíte
+    inteira com "type vector does not exist", que foi o que aconteceu com a fase 6.""" 
     async with motor().begin() as conexao:
+        await conexao.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conexao.run_sync(Base.metadata.drop_all)
         await conexao.run_sync(Base.metadata.create_all)
 
