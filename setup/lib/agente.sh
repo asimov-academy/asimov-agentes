@@ -239,26 +239,27 @@ fluxo_agente_nativo() {
   done
 }
 
-# configura_ritmo_novo: buffer e digitação do agente nativo. Define AJUSTES_AGENTE (JSON).
-# O padrão dos canais (buffer de 8 s e digitação de uma pessoa) deixa o teste no terminal lento.
+# configura_ritmo_novo: o ritmo do agente novo. Define AJUSTES_AGENTE (JSON).
+# Os três presets são os mesmos do painel e do Editar agente, e quem escolhe os tempos vira `manual`
+# no servidor. O nome do ritmo é o que a plataforma guarda; os números saem dele.
 configura_ritmo_novo() {
   local op buffer velocidade maximo
   echo
   dica "Muda depois em Editar agente."
   echo
   escolha op "Ritmo das respostas" \
-    "Rápido, para testar  ${CINZA}responde 2 s depois da última mensagem${NORMAL}" \
-    "Como no WhatsApp  ${CINZA}espera 8 s e digita no ritmo de uma pessoa${NORMAL}" \
+    "Instantâneo  ${CINZA}responde na hora, bom para testar${NORMAL}" \
+    "Natural  ${CINZA}lê, digita e responde como uma pessoa${NORMAL}" \
+    "Reflexivo  ${CINZA}espera mais e escreve devagar${NORMAL}" \
     "Escolher os tempos"
   case "$op" in
-    1) buffer=2 velocidade=30 maximo=1 ;;
-    2) buffer=8 velocidade=6 maximo=20 ;;
-    *)
-      pergunta_numero buffer "Segundos de buffer (1 a 60)" 1 60 2
-      pergunta_numero velocidade "Caracteres digitados por segundo (1 a 30)" 1 30 6
-      pergunta_numero maximo "Máximo de segundos digitando por mensagem (1 a 30)" 1 30 20
-      ;;
+    1) AJUSTES_AGENTE='{"ritmo": "instantaneo"}' ; return 0 ;;
+    2) AJUSTES_AGENTE='{"ritmo": "natural"}' ; return 0 ;;
+    3) AJUSTES_AGENTE='{"ritmo": "reflexivo"}' ; return 0 ;;
   esac
+  pergunta_numero buffer "Segundos de buffer (1 a 60)" 1 60 8
+  pergunta_numero velocidade "Caracteres digitados por segundo (1 a 30)" 1 30 6
+  pergunta_numero maximo "Máximo de segundos digitando por mensagem (1 a 30)" 1 30 20
   AJUSTES_AGENTE=$(jq -n --argjson b "$buffer" --argjson v "$velocidade" --argjson m "$maximo" \
     '{buffer_segundos: $b, digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m}')
 }

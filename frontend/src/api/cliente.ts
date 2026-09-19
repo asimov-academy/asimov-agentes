@@ -441,6 +441,8 @@ export type Agente = {
   tom: TomDeVoz;
   transfere_para_humano: boolean;
   restringe_temas: boolean;
+  /** Preset de ritmo: `instantaneo`, `natural`, `reflexivo` ou `manual`. */
+  ritmo: string;
   contatos_permitidos: string[];
   handoff_destino: Record<string, unknown> | null;
   retomada_automatica_horas: number | null;
@@ -510,6 +512,7 @@ export type NovoAgente = {
   tom?: TomDeVoz;
   transfere_para_humano?: boolean;
   restringe_temas?: boolean;
+  ritmo?: string;
   contatos_permitidos?: string[];
   /** Só a resposta: resumo, imagem e áudio nascem no mesmo provedor e mudam na ficha. */
   modelo_conversa?: string;
@@ -522,6 +525,7 @@ export type EdicaoDoAgente = {
   tom: TomDeVoz;
   transfere_para_humano: boolean;
   restringe_temas: boolean;
+  ritmo: string;
   buffer_segundos: number;
   max_mensagens_por_resposta: number;
   digitacao_caracteres_por_segundo: number;
@@ -614,6 +618,8 @@ export type PerfilDoAgente = {
   publico?: string | null;
   site?: string | null;
   sobre_empresa?: string | null;
+  /** Uma regra por linha. Entra no prompt como o que ele nunca pode dizer. */
+  nunca_dizer?: string | null;
   assina_nome?: boolean;
 };
 

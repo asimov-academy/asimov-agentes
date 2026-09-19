@@ -58,6 +58,12 @@ const NOME_DA_ABA: Record<Aba, string> = {
   conversar: "Conversar",
 };
 
+const RITMOS: { valor: string; rotulo: string; explica: string }[] = [
+  { valor: "instantaneo", rotulo: "Instantâneo", explica: "Responde na hora, sem esperar." },
+  { valor: "natural", rotulo: "Natural", explica: "Lê, digita e responde como uma pessoa." },
+  { valor: "reflexivo", rotulo: "Reflexivo", explica: "Espera mais e escreve devagar." },
+];
+
 const TONS: { valor: TomDeVoz; rotulo: string; explica: string }[] = [
   { valor: "formal", rotulo: "Formal", explica: "Português correto, sem gíria." },
   { valor: "normal", rotulo: "Normal", explica: "Como alguém da empresa no WhatsApp." },
@@ -398,6 +404,8 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
   const [buffer, setBuffer] = useState(agente.buffer_segundos);
   const [velocidade, setVelocidade] = useState(agente.digitacao_caracteres_por_segundo);
   const [teto, setTeto] = useState(agente.digitacao_maximo_segundos);
+  const [ritmo, setRitmo] = useState(agente.ritmo);
+  const [aMao, setAMao] = useState(agente.ritmo === "manual");
   const { salva, salvando, feito, erro } = useSalvar(agente, atualiza);
 
   return (
@@ -439,7 +447,38 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
         />
       </div>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2">
+      <p className="rotulo mt-8">Ritmo</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        {RITMOS.map((r) => (
+          <button
+            key={r.valor}
+            onClick={() => {
+              setRitmo(r.valor);
+              setAMao(false);
+            }}
+            aria-pressed={ritmo === r.valor}
+            className={`rounded-md border px-3 py-2 text-left transition-colors ${
+              ritmo === r.valor ? "border-ciano bg-ciano/5" : "border-borda hover:border-dim"
+            }`}
+          >
+            <span
+              className={`block text-sm font-semibold ${ritmo === r.valor ? "text-ciano" : "text-texto"}`}
+            >
+              {r.rotulo}
+            </span>
+            <span className="mt-0.5 block text-xs text-muted">{r.explica}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={() => setAMao((antes) => !antes)}
+        className="mt-2 text-sm text-muted underline-offset-2 hover:text-texto hover:underline"
+      >
+        {aMao ? "Esconder os números" : "Ajustar à mão"}
+        {ritmo === "manual" && !aMao && " (você já ajustou)"}
+      </button>
+
+      <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <Numero
           rotulo="Dividir a resposta em até"
           valor={partes}
@@ -448,31 +487,44 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
           unidade="mensagens"
           aoMudar={setPartes}
         />
-        <Numero
-          rotulo="Esperar antes de responder"
-          valor={buffer}
-          min={1}
-          max={60}
-          unidade="segundos"
-          aoMudar={setBuffer}
-          ajuda="Tempo para a pessoa terminar de escrever."
-        />
-        <Numero
-          rotulo="Velocidade de digitação"
-          valor={velocidade}
-          min={1}
-          max={30}
-          unidade="caracteres por segundo"
-          aoMudar={setVelocidade}
-        />
-        <Numero
-          rotulo="Mostrar digitando por no máximo"
-          valor={teto}
-          min={1}
-          max={30}
-          unidade="segundos por mensagem"
-          aoMudar={setTeto}
-        />
+        {aMao && (
+          <>
+            <Numero
+              rotulo="Esperar antes de responder"
+              valor={buffer}
+              min={1}
+              max={60}
+              unidade="segundos"
+              aoMudar={(v) => {
+                setBuffer(v);
+                setRitmo("manual");
+              }}
+              ajuda="Tempo para a pessoa terminar de escrever."
+            />
+            <Numero
+              rotulo="Velocidade de digitação"
+              valor={velocidade}
+              min={1}
+              max={30}
+              unidade="caracteres por segundo"
+              aoMudar={(v) => {
+                setVelocidade(v);
+                setRitmo("manual");
+              }}
+            />
+            <Numero
+              rotulo="Mostrar digitando por no máximo"
+              valor={teto}
+              min={1}
+              max={30}
+              unidade="segundos por mensagem"
+              aoMudar={(v) => {
+                setTeto(v);
+                setRitmo("manual");
+              }}
+            />
+          </>
+        )}
       </div>
 
       <div className="mt-8 flex flex-col border-t border-borda pt-6">
@@ -496,16 +548,29 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
         feito={feito}
         erro={erro}
         aoSalvar={() =>
-          salva({
-            emojis,
-            tom,
-            transfere_para_humano: humano,
-            restringe_temas: soDaEmpresa,
-            max_mensagens_por_resposta: partes,
-            buffer_segundos: buffer,
-            digitacao_caracteres_por_segundo: velocidade,
-            digitacao_maximo_segundos: teto,
-          })
+          salva(
+            // Preset escreve os três números no servidor; à mão, manda os números e o ritmo vira
+            // `manual` lá, pelo mesmo caminho do terminal.
+            ritmo === "manual"
+              ? {
+                  emojis,
+                  tom,
+                  transfere_para_humano: humano,
+                  restringe_temas: soDaEmpresa,
+                  max_mensagens_por_resposta: partes,
+                  buffer_segundos: buffer,
+                  digitacao_caracteres_por_segundo: velocidade,
+                  digitacao_maximo_segundos: teto,
+                }
+              : {
+                  emojis,
+                  tom,
+                  transfere_para_humano: humano,
+                  restringe_temas: soDaEmpresa,
+                  max_mensagens_por_resposta: partes,
+                  ritmo,
+                },
+          )
         }
       />
     </section>
@@ -518,6 +583,7 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
   const [publico, setPublico] = useState(agente.perfil?.publico ?? "");
   const [site, setSite] = useState(agente.perfil?.site ?? "");
   const [sobre, setSobre] = useState(agente.perfil?.sobre_empresa ?? "");
+  const [nuncaDizer, setNuncaDizer] = useState(agente.perfil?.nunca_dizer ?? "");
   const [assina, setAssina] = useState(agente.assina_nome);
   const [aberto, setAberto] = useState(false);
   const [aMao, setAMao] = useState("");
@@ -544,6 +610,7 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
         publico: publico || null,
         site: site || null,
         sobre_empresa: sobre || null,
+        nunca_dizer: nuncaDizer || null,
         assina_nome: assina,
       });
       atualiza(resposta.agente);
@@ -615,6 +682,20 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
           rows={5}
           value={sobre}
           onChange={(e) => setSobre(e.target.value)}
+          className="mt-2 w-full rounded-md border border-borda bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none focus:ring-1 focus:ring-ciano"
+        />
+      </label>
+
+      <label className="mt-6 block">
+        <span className="rotulo">O que ele nunca deve dizer</span>
+        <span className="mt-1 block text-sm text-muted">
+          Uma regra por linha. É o jeito mais direto de cortar a promessa que a empresa não cumpre.
+        </span>
+        <textarea
+          rows={3}
+          value={nuncaDizer}
+          onChange={(e) => setNuncaDizer(e.target.value)}
+          placeholder={"entregamos em 24 horas\nque somos os mais baratos"}
           className="mt-2 w-full rounded-md border border-borda bg-surface px-3 py-2 text-sm text-texto transition-colors placeholder:text-dim focus:border-ciano focus:outline-none focus:ring-1 focus:ring-ciano"
         />
       </label>

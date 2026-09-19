@@ -7,7 +7,7 @@ mostra_agente() {
   fallback=$(jq -r '.modelo_fallback // ""' <<<"$AGENTE")
   campo "Empresa" "$AGENTE_EMPRESA"
   campo "Canal" "$(jq -r '.canal' <<<"$AGENTE")"
-  campo "Buffer" "$(jq -r '.buffer_segundos' <<<"$AGENTE") s"
+  campo "Ritmo" "$(jq -r '{instantaneo: "instantâneo", natural: "natural", reflexivo: "reflexivo", manual: "à mão"}[.ritmo // "natural"] // "natural"' <<<"$AGENTE") ${CINZA}· espera $(jq -r '.buffer_segundos' <<<"$AGENTE") s${NORMAL}"
   campo "Mensagens" "até $(jq -r '.max_mensagens_por_resposta' <<<"$AGENTE") por resposta"
   campo "Resposta" "$(jq -r '.modelo_conversa' <<<"$AGENTE")${fallback:+ ${CINZA}→ $fallback${NORMAL}}"
   campo "Resumo" "$(jq -r '.modelo_auxiliar' <<<"$AGENTE")"
@@ -92,8 +92,8 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Jeito de falar" "Base de conhecimento" "Modelos")
-    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_jeito edita_conhecimento edita_modelo)
+    rotulos=("Nome" "Ritmo" "Mensagens por resposta" "Ferramentas" "Jeito de falar" "Base de conhecimento" "Modelos")
+    acoes=(edita_nome edita_ritmo edita_mensagens edita_ferramentas edita_jeito edita_conhecimento edita_modelo)
     # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
     # ligar o agente num canal.
     case "$(jq -r '.canal' <<<"$AGENTE")" in
@@ -139,28 +139,46 @@ edita_nome() {
   fi
 }
 
-edita_buffer() {
-  local valor
+# Ritmo: espera, leitura e digitação num nome só. Eram dois itens de número no menu, e quem não
+# construiu a plataforma não tem como escolher "8 segundos" com informação nenhuma. O painel mostra
+# os mesmos três presets, pelo mesmo campo.
+edita_ritmo() {
+  local op atual ritmo buffer velocidade maximo
+  case "$(jq -r '.ritmo // "natural"' <<<"$AGENTE")" in
+    instantaneo) atual=1 ;;
+    reflexivo) atual=3 ;;
+    manual) atual=4 ;;
+    *) atual=2 ;;
+  esac
+  ESCOLHA_ATUAL=$atual escolha op "Em que ritmo ele responde?" \
+    "Instantâneo  ${CINZA}responde na hora, sem esperar${NORMAL}" \
+    "Natural  ${CINZA}lê, digita e responde como uma pessoa${NORMAL}" \
+    "Reflexivo  ${CINZA}espera mais e escreve devagar${NORMAL}" \
+    "Ajustar à mão  ${CINZA}os três números${NORMAL}"
+  case "$op" in
+    1) ritmo=instantaneo ;;
+    3) ritmo=reflexivo ;;
+    4) ritmo="" ;;
+    *) ritmo=natural ;;
+  esac
+  if [ -n "$ritmo" ]; then
+    salva_agente "$(jq -n --arg r "$ritmo" '{ritmo: $r}')"
+    return 0
+  fi
   dica "Quanto o agente espera o contato parar de mandar mensagens antes de responder."
-  pergunta_numero valor "Segundos (1 a 60)" 1 60 "$(jq -r '.buffer_segundos' <<<"$AGENTE")"
-  salva_agente "$(jq -n --argjson v "$valor" '{buffer_segundos: $v}')"
+  pergunta_numero buffer "Segundos de espera (1 a 60)" 1 60 "$(jq -r '.buffer_segundos' <<<"$AGENTE")"
+  dica "No celular, uma pessoa digita de 4 a 8 caracteres por segundo."
+  pergunta_numero velocidade "Caracteres por segundo (1 a 30)" 1 30 "$(jq -r '.digitacao_caracteres_por_segundo' <<<"$AGENTE")"
+  dica "Teto por mensagem, para resposta longa não demorar demais."
+  pergunta_numero maximo "Máximo de segundos digitando por mensagem (1 a 30)" 1 30 "$(jq -r '.digitacao_maximo_segundos' <<<"$AGENTE")"
+  salva_agente "$(jq -n --argjson b "$buffer" --argjson v "$velocidade" --argjson m "$maximo" \
+    '{buffer_segundos: $b, digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m}')"
 }
 
 edita_mensagens() {
   local valor
   pergunta_numero valor "Máximo de mensagens por resposta (1 a 10)" 1 10 "$(jq -r '.max_mensagens_por_resposta' <<<"$AGENTE")"
   salva_agente "$(jq -n --argjson v "$valor" '{max_mensagens_por_resposta: $v}')"
-}
-
-edita_digitacao() {
-  local velocidade maximo
-  dica "Antes de cada mensagem o agente fica digitando o tempo que uma pessoa levaria para escrever."
-  dica "No celular, uma pessoa digita de 4 a 8 caracteres por segundo."
-  pergunta_numero velocidade "Caracteres por segundo (1 a 30)" 1 30 "$(jq -r '.digitacao_caracteres_por_segundo' <<<"$AGENTE")"
-  dica "Teto por mensagem, para resposta longa não demorar demais."
-  pergunta_numero maximo "Máximo de segundos por mensagem (1 a 30)" 1 30 "$(jq -r '.digitacao_maximo_segundos' <<<"$AGENTE")"
-  salva_agente "$(jq -n --argjson v "$velocidade" --argjson m "$maximo" \
-    '{digitacao_caracteres_por_segundo: $v, digitacao_maximo_segundos: $m}')"
 }
 
 edita_ferramentas() {

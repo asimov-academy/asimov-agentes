@@ -33,6 +33,11 @@ class Agente(ComId, ComCriacao, Base):
     modelo_visao: Mapped[str] = mapped_column(String(100))
     modelo_transcricao: Mapped[str] = mapped_column(String(100))
 
+    ritmo: Mapped[str] = mapped_column(String(20), default="natural", server_default="natural")
+    """Preset de ritmo: `instantaneo`, `natural`, `reflexivo` ou `manual`. Ele não é lido no turno:
+    escolher um preset escreve os quatro números abaixo, e mexer num número à mão vira `manual`.
+    Guardar o nome é o que deixa a tela mostrar a escolha em vez de quatro números crus."""
+
     buffer_segundos: Mapped[int] = mapped_column(default=8)
     max_mensagens_por_resposta: Mapped[int] = mapped_column(default=3)
     digitacao_caracteres_por_segundo: Mapped[int] = mapped_column(default=6, server_default="6")
@@ -66,7 +71,8 @@ class Agente(ComId, ComCriacao, Base):
     Serve para testar um número novo sem responder a qualquer pessoa que escreva para ele."""
 
     perfil: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
-    """O que a aba Trabalho perguntou: `funcao`, `publico`, `site` e `sobre_empresa`. É daqui que
+    """O que a aba Trabalho perguntou: `funcao`, `publico`, `site`, `sobre_empresa` e o que ele
+    nunca deve dizer (`nunca_dizer`, uma regra por linha). É daqui que
     sai o `persona.md` gerado. Fica no agente, nunca na empresa: é o que impede um prompt de
     atravessar de uma empresa para outra. Vazio no agente criado antes da aba existir."""
 

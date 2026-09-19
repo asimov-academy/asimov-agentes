@@ -55,6 +55,10 @@ class NovoAgente(BaseModel):
     restringe_temas: bool = Field(
         default=True, description="Ligado (o padrão), o agente só fala do que é da empresa."
     )
+    ritmo: str | None = Field(
+        default=None,
+        description="Preset de ritmo: instantaneo, natural ou reflexivo. Escreve buffer, velocidade e teto do digitando.",
+    )
     contatos_permitidos: list[str] | None = Field(
         default=None,
         description="Telefones que o agente atende. Vazio (o padrão) atende qualquer pessoa; com lista, o resto é ignorado.",
@@ -78,6 +82,7 @@ class EdicaoAgente(BaseModel):
     tom: Literal["formal", "normal", "descontraido"] | None = None
     transfere_para_humano: bool | None = None
     restringe_temas: bool | None = None
+    ritmo: str | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
     modelo_fallback: str | None = None
@@ -143,6 +148,7 @@ class AgenteSaida(BaseModel):
     tom: str
     transfere_para_humano: bool
     restringe_temas: bool
+    ritmo: str
     contatos_permitidos: list[str]
     ativo: bool
 
@@ -204,6 +210,7 @@ async def criar(
             tom=dados.tom,
             transfere_para_humano=dados.transfere_para_humano,
             restringe_temas=dados.restringe_temas,
+            ritmo=dados.ritmo,
             contatos_permitidos=dados.contatos_permitidos,
         )
     except servico.NaoEncontrado as erro:

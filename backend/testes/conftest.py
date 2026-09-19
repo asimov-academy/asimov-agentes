@@ -262,6 +262,17 @@ async def banco_limpo(schema: None) -> None:
         await conexao.execute(text(f"TRUNCATE {tabelas} CASCADE"))
 
 
+@pytest.fixture(autouse=True)
+def sem_pausa_de_leitura(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A pausa de ler é tempo real: a suíte inteira esperaria segundos por turno.
+
+    Quem testa o ritmo devolve a função de verdade (`test_humanizacao.py`).
+    """
+    from app.conversas import turno
+
+    monkeypatch.setattr(turno, "pausa_de_leitura", lambda *a, **k: 0.0)
+
+
 @pytest.fixture
 def canal() -> Any:
     falso = ChatwootFalso()

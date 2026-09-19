@@ -30,7 +30,7 @@ from app.agentes import servico as agentes_servico
 from app.consumo.modelos import Turno
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import buffer, repo
-from app.conversas.divisao import limita_mensagens, tempos_de_digitacao
+from app.conversas.divisao import limita_mensagens, pausa_de_leitura, tempos_de_digitacao
 from app.conversas.modelos import Conversa, Mensagem
 from app.handoff import repo as handoff_repo
 from app.handoff import servico as handoff
@@ -166,6 +166,13 @@ async def _turno(
             return "nada_pendente"
 
         ultima = _ultima_recebida(pendentes)
+        # Pessoa lê antes de digitar. Sem esta pausa o "digitando" acende no mesmo instante em que
+        # a mensagem chega, que é o que mais denuncia robô (fase 10, etapa 1). Ela não conta como
+        # digitação: por isso o `comeco` do envio anda junto com ela.
+        pausa = pausa_de_leitura(" ".join(m.texto or "" for m in pendentes), agente.ritmo)
+        if pausa > 0:
+            await _espera(pausa)
+            comeco += pausa
         await _digitando(canal, credenciais, conversa.id_externo, True, ultima)
         # Grava a leitura antes do modelo: se a resposta falhar, a mídia não é lida de novo.
         await midia.processa_pendentes(s, agente, canal, credenciais, conversa_id, pendentes)

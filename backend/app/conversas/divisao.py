@@ -1,4 +1,8 @@
-"""Divisão da resposta em mensagens curtas e quanto tempo o agente fica "digitando" cada uma."""
+"""Divisão da resposta em mensagens curtas, a pausa de ler e quanto tempo o agente fica "digitando".
+
+O ritmo é a parte da humanização que não mora no modelo: buffer, pausa de leitura, velocidade de
+digitação e teto são orquestração, e o modelo só decide o conteúdo (spec/fases.md, fase 10).
+"""
 
 import random
 import re
@@ -6,6 +10,61 @@ import re
 DIGITANDO_MINIMO_SEGUNDOS = 1.0
 VARIACAO = 0.15
 """Ninguém digita sempre no mesmo ritmo: cada mensagem varia até 15% para mais ou para menos."""
+
+LEITURA_CARACTERES_POR_SEGUNDO = 45
+"""Quem lê no celular lê rápido, mas lê: sem esta pausa o digitando começa no mesmo instante em que
+a mensagem chega, que é o que mais denuncia robô."""
+
+RITMOS: dict[str, dict[str, int]] = {
+    "instantaneo": {
+        "buffer_segundos": 2,
+        "digitacao_caracteres_por_segundo": 30,
+        "digitacao_maximo_segundos": 1,
+        "leitura_maximo_segundos": 0,
+    },
+    "natural": {
+        "buffer_segundos": 8,
+        "digitacao_caracteres_por_segundo": 6,
+        "digitacao_maximo_segundos": 20,
+        "leitura_maximo_segundos": 4,
+    },
+    "reflexivo": {
+        "buffer_segundos": 15,
+        "digitacao_caracteres_por_segundo": 4,
+        "digitacao_maximo_segundos": 25,
+        "leitura_maximo_segundos": 8,
+    },
+}
+"""Os três presets do painel e do menu. `manual` não está aqui: são os números que o operador
+escolheu, e a pausa de leitura dele é a do `natural`."""
+
+CAMPOS_DO_RITMO = ("buffer_segundos", "digitacao_caracteres_por_segundo", "digitacao_maximo_segundos")
+
+
+def numeros_do_ritmo(ritmo: str) -> dict[str, int]:
+    """O que escrever no agente quando o operador escolhe um preset. Vazio no `manual`."""
+    preset = RITMOS.get(ritmo)
+    return {campo: preset[campo] for campo in CAMPOS_DO_RITMO} if preset else {}
+
+
+def ritmo_dos_numeros(numeros: dict[str, int]) -> str:
+    """O nome do preset que bate com os três números, ou `manual` quando não bate com nenhum."""
+    for nome, preset in RITMOS.items():
+        if all(numeros.get(campo) == preset[campo] for campo in CAMPOS_DO_RITMO):
+            return nome
+    return "manual"
+
+
+def pausa_de_leitura(
+    texto_recebido: str, ritmo: str = "natural", sorteio: random.Random | None = None
+) -> float:
+    """Segundos entre a mensagem chegar e o digitando começar, como quem lê antes de responder."""
+    teto = RITMOS.get(ritmo, RITMOS["natural"])["leitura_maximo_segundos"]
+    if teto <= 0:
+        return 0.0
+    sorteio = sorteio or random.Random()
+    lido = len(texto_recebido) / LEITURA_CARACTERES_POR_SEGUNDO
+    return min(max(lido * sorteio.uniform(1 - VARIACAO, 1 + VARIACAO), 0.8), teto)
 
 
 _CITACAO = re.compile(r"\(\s*\[([^\]]+)\]\((?:https?://[^)\s]+)\)\s*\)")

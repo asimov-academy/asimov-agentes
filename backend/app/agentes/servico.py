@@ -10,6 +10,7 @@ from app.agentes import repo
 from app.agentes.modelos import Agente
 from app.canais.base import Canal
 from app.canais.registro import obter_canal
+from app.conversas import divisao
 from app.clientes import repo as clientes_repo
 from app.clientes.modelos import Cliente
 from app.ia import ferramentas
@@ -51,6 +52,7 @@ CAMPOS_EDITAVEIS = frozenset(
         "retomada_automatica_horas",
         "digitacao_caracteres_por_segundo",
         "digitacao_maximo_segundos",
+        "ritmo",
         "ferramentas",
         "emojis",
         "tom",
@@ -206,6 +208,8 @@ async def criar_agente(
         opcoes["tom"] = _valida_tom(opcoes["tom"])
     if opcoes.get("contatos_permitidos") is not None:
         opcoes["contatos_permitidos"] = _valida_contatos(opcoes["contatos_permitidos"])
+    opcoes = {c: v for c, v in opcoes.items() if v is not None}
+    opcoes.update(_ritmo(opcoes, divisao.RITMOS["natural"]))
     token = cripto.novo_token()
     acesso: dict[str, Any] = {}
 
@@ -298,6 +302,23 @@ async def conectar_canal(
     return agente
 
 
+def _ritmo(campos: dict[str, Any], atuais: dict[str, int]) -> dict[str, Any]:
+    """Preset escreve os números; números que não batem com preset nenhum viram `manual`.
+
+    Guardar os dois evita a pergunta "quem manda": o ritmo é um atalho que escreve, e o que o turno
+    lê continua sendo o número. O nome sai sempre dos números finais, senão a tela diria "Natural"
+    para um agente que não digita como o Natural.
+    """
+    if "ritmo" in campos:
+        if campos["ritmo"] not in {*divisao.RITMOS, "manual"}:
+            raise CampoInvalido(f"ritmo desconhecido: {campos['ritmo']}")
+        return divisao.numeros_do_ritmo(campos["ritmo"])
+    if not any(campo in campos for campo in divisao.CAMPOS_DO_RITMO):
+        return {}
+    finais = {campo: campos.get(campo, atuais.get(campo)) for campo in divisao.CAMPOS_DO_RITMO}
+    return {"ritmo": divisao.ritmo_dos_numeros(finais)}
+
+
 async def editar_agente(
     sessao: AsyncSession,
     cliente_id: uuid.UUID,
@@ -337,6 +358,7 @@ async def editar_agente(
         campos["ferramentas"] = _valida_ferramentas(campos["ferramentas"])
     if "tom" in campos:
         campos["tom"] = _valida_tom(campos["tom"])
+    campos.update(_ritmo(campos, {c: getattr(agente, c) for c in divisao.CAMPOS_DO_RITMO}))
     if "contatos_permitidos" in campos:
         campos["contatos_permitidos"] = _valida_contatos(campos["contatos_permitidos"] or [])
     if no_canal and "nome" in campos and campos["nome"] != agente.nome:
@@ -460,6 +482,12 @@ def monta_persona(agente: Agente, empresa: str) -> str:
         linhas += ["", f"Sobre {empresa}:", perfil["sobre_empresa"].strip()]
     if perfil.get("site"):
         linhas.append(f"Site: {perfil['site']}")
+    nunca = [linha.strip(" -\t") for linha in (perfil.get("nunca_dizer") or "").splitlines()]
+    nunca = [linha for linha in nunca if linha]
+    if nunca:
+        # Entra como regra da empresa, e não como exemplo: o modelo repete o que vê como exemplo.
+        linhas += ["", "Nunca diga, em nenhuma hipótese:"]
+        linhas += [f"- {linha}" for linha in nunca[:20]]
     if agente.assina_nome:
         linhas += ["", f"Assine as respostas com o seu nome, {agente.nome}."]
     return "\n".join(linhas) + "\n"

@@ -75,6 +75,7 @@ class AgenteDoPainel(BaseModel):
     tom: str
     transfere_para_humano: bool
     restringe_temas: bool
+    ritmo: str
     contatos_permitidos: list[str]
     handoff_destino: dict[str, Any] | None
     retomada_automatica_horas: int | None
@@ -110,6 +111,7 @@ def _saida(agente: Agente, empresa: str, com_webhook: bool = False) -> AgenteDoP
         tom=agente.tom,
         transfere_para_humano=agente.transfere_para_humano,
         restringe_temas=agente.restringe_temas,
+        ritmo=agente.ritmo,
         contatos_permitidos=list(agente.contatos_permitidos),
         handoff_destino=agente.handoff_destino,
         retomada_automatica_horas=agente.retomada_automatica_horas,
@@ -201,6 +203,7 @@ class NovoAgenteDoPainel(BaseModel):
     tom: Literal["formal", "normal", "descontraido"] = "normal"
     transfere_para_humano: bool = True
     restringe_temas: bool = True
+    ritmo: str | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = Field(default=None, max_length=200)
     """Só a resposta é escolhida no onboarding. Resumo, visão e áudio nascem no mesmo provedor e
@@ -235,6 +238,7 @@ async def cria(
             tom=dados.tom,
             transfere_para_humano=dados.transfere_para_humano,
             restringe_temas=dados.restringe_temas,
+            ritmo=dados.ritmo,
             contatos_permitidos=dados.contatos_permitidos,
         )
     except DE_NEGOCIO as erro:
@@ -266,6 +270,7 @@ class EdicaoDoPainel(BaseModel):
     tom: Literal["formal", "normal", "descontraido"] | None = None
     transfere_para_humano: bool | None = None
     restringe_temas: bool | None = None
+    ritmo: Literal['instantaneo', 'natural', 'reflexivo', 'manual'] | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
     modelo_fallback: str | None = None
@@ -401,6 +406,8 @@ class PerfilDoAgente(BaseModel):
     publico: str | None = Field(default=None, max_length=500)
     site: str | None = Field(default=None, max_length=300)
     sobre_empresa: str | None = Field(default=None, max_length=4000)
+    nunca_dizer: str | None = Field(default=None, max_length=2000)
+    """Uma linha por regra. Entra no `persona.md` como o que ele nunca pode dizer."""
     assina_nome: bool | None = None
 
 
