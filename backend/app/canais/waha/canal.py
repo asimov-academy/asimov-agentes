@@ -515,6 +515,17 @@ class Waha:
         """No WhatsApp a conversa não tem dono: quem assumiu já está respondendo por ela."""
         return None
 
+    async def foto_do_numero(self, credenciais: dict[str, Any]) -> ArquivoBaixado | None:
+        """A foto do WhatsApp pareado, para o agente ter a cara do número que ele atende."""
+        chat_id = (credenciais.get("me") or {}).get("id") if isinstance(credenciais.get("me"), dict) else None
+        if not chat_id:
+            situacao = await api.situacao(credenciais["sessao"])
+            chat_id = (situacao.get("me") or {}).get("id")
+        if not chat_id:
+            return None
+        foto = await api.foto_do_numero(credenciais["sessao"], str(chat_id))
+        return None if foto is None else ArquivoBaixado(conteudo=foto[0], tipo_mime=foto[1])
+
     async def baixar_midia(
         self, credenciais: dict[str, Any], anexo: Anexo, limite_bytes: int
     ) -> ArquivoBaixado:

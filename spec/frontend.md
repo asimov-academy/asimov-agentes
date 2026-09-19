@@ -92,7 +92,9 @@ interface e cada linha da lista puxa para um lado, então a marca herda a cor do
 Nenhuma biblioteca de fora, aqui também.
 
 **Cabeçalho de seção.** `design/Cabecalho.tsx` em toda tela: título em `text-2xl`, o contexto na
-mesma linha quando cabe e as ações à direita, com a régua encostada. Título grande com subtítulo
+mesma linha quando cabe e as ações à direita, com a régua encostada. As ações são sempre as mesmas
+peças, na mesma altura (44px) e na mesma ordem: buscar (`Busca`), filtrar (`Segmentos`) e agir
+(`Botao`). Título grande com subtítulo
 embaixo comia um terço da tela antes de qualquer conteúdo.
 
 **Listagem.** A largura carrega informação que o operador consultaria abrindo a ficha, em colunas
@@ -299,9 +301,21 @@ Regras que valem para a tela:
 
 ### 5.2 Agentes: lista
 
-Lista à direita com filtro Todos, Ativos e Inativos. Cada linha: inicial ou avatar, nome, selo de
-situação, "Vendedor em <empresa>" (função mais empresa) e menu de ações (editar, ativar, remover).
-Botão "Criar agente" no canto superior direito.
+Lista à direita com filtro Todos, Ativo, Em treinamento e Desativado. Cada linha diz três coisas e
+para: quem é (foto ou inicial colorida, com a bolinha da situação no canto), o nome, e o que ele faz
+em qual empresa ("Vendedor em Loja Exemplo"). Canal e modelo ficam na ficha.
+
+**O avatar é o botão da situação**: clicar nele abre as três, que é onde a bolinha já está. À
+direita, o menu de reticências fica com o que sobra: Editar e Conversar (a conversa de teste num
+popup). Botão "Criar agente" no canto superior direito.
+
+O agente sem canal externo está sempre em treinamento, e conectar um canal o tira de lá sozinho: as
+outras duas situações ficam apagadas no menu, com o motivo escrito, e o servidor recusa as duas.
+
+A lupa do cabeçalho abre para o lado virando um campo (`design/Busca.tsx`, uma peça só para o painel
+inteiro). Em Agentes, Conversas, Canais e Contatos, o que se digita filtra a lista abaixo. Em Visão
+geral e Oportunidades, onde os dados são de uma empresa por vez, o texto filtra a lista de empresas
+que abre embaixo do campo e o clique aplica; fechada, ela mostra o nome da empresa escolhida.
 
 Criar agente abre o onboarding da seção 5.2.1, não um formulário.
 
@@ -317,8 +331,9 @@ popup reabre com ele.
 
 **Os passos:**
 
-1. **Nome**: como o agente se chama. É a primeira coisa, e daí em diante toda pergunta o chama pelo
-   nome ("Qual o objetivo de Marina?").
+1. **Nome**: como o agente se chama, com a foto dele ao lado (opcional). É a primeira coisa, e daí
+   em diante toda pergunta o chama pelo nome ("Qual o objetivo de Marina?"). A foto espera o agente
+   existir: a criação é uma chamada só, no fim, e o envio acontece depois dela.
 2. **Objetivo**: atendimento, suporte ou vendas, em três cartões com ícone.
 3. **Empresa**: o nome de onde ele vai trabalhar, com as empresas que já existem como atalho, mais
    o site, opcional.
@@ -327,9 +342,10 @@ popup reabre com ele.
    é jargão e não diz por que vale a pena responder. Quem reescreve é a **conta de IA vinculada**,
    pela assinatura do operador; sem vínculo, a chave de provedor da instalação (`ia/redacao.py`).
    Falhando, ele não perde o que escreveu e a mensagem diz o porquê.
-5. **Jeito**: o tom (formal, normal ou descontraído), o emoji, em quantas mensagens dividir a
-   resposta, se ele pode passar a conversa para uma pessoa e se fala só de assuntos da empresa
-   (que nasce ligado).
+5. **Jeito**: o tom (formal, normal ou descontraído), o ritmo e, dividindo a linha, o emoji e em
+   quantas mensagens dividir a resposta. Passar a conversa para uma pessoa, falar só de assuntos da
+   empresa e lembrar do contato nascem ligados e mudam na ficha: são interruptores que quase ninguém
+   desliga na criação.
 
 **A IA que responde saiu da criação** em 2026-09-18, pelo mesmo motivo da ferramenta: escolher
 provedor e modelo antes de ver o agente falar é decidir sem informação, e o nome do campo ("IA que
@@ -359,36 +375,56 @@ meio não deixa agente capenga no banco, nem empresa órfã (ela nasce junto com
 ### 5.3 Agente: ficha
 
 **Também em popup**, o mesmo da criação: ele abre sobre a lista, que fica embaçada atrás. Não existe
-página de edição de agente. Rota `/agentes/{id}` e `/agentes/{id}/{aba}`, para recarregar e
+página de edição de agente. As abas ficam dentro do cabeçalho do popup, embaixo do nome do agente:
+paradas enquanto o corpo rola. Rota `/agentes/{id}` e `/agentes/{id}/{aba}`, para recarregar e
 compartilhar o endereço caírem na mesma aba.
 
-Abas: **Perfil**, **Comunicação**, **Trabalho**, **Treinamento**, **Ferramentas e integrações**,
-**Configurações** e **Conversar**. A segunda é **Canais**, onde o agente é ligado a um canal: isso
-só existia no terminal, e como todo agente nasce no nativo desde a v0.24.0, quem criava pelo
-navegador ficava com um agente que não atendia ninguém. A aba mostra o canal ligado (com a
-credencial mascarada, o QR code e o reiniciar da WAHA) ou, no nativo, os três canais para escolher,
-com as mesmas perguntas do menu: Chatwoot (endereço, token de administrador, conta e caixas),
-WhatsApp pelo aparelho (cria a sessão e mostra o QR) e WhatsApp oficial (app, token, chave secreta,
-conta e número). Trocar de canal continua sendo remover e criar de novo, e a aba diz isso em vez de
-oferecer um botão que vai falhar. A última é a conversa de teste pelo canal nativo, que a spec antes punha na tela de
-Chat: falar com o agente é como se confere uma mudança antes de ela chegar em alguém, e isso
-pertence ao agente, não à lista de conversas. Registrado em spec/decisoes.md.
-Cada seção tem o próprio botão Salvar, e sair com alteração pendente pede confirmação. Salvar
-mostra o que mudou, não um "pronto" genérico.
+Abas, na ordem de montar um agente: **Perfil**, **Trabalho**, **Comunicação**, **Treinamento**,
+**Ferramentas**, **Canais** e **Configurações**. Conversar não é aba: falar com o agente não é
+configurá-lo, e virou um item do menu da lista, que abre a conversa de teste num popup.
 
-**Perfil**: nome, empresa, canal, situação (ativo ou inativo), criado em, endereço do webhook
-(mostrado uma vez, com copiar) e remover agente.
+**Canais** é onde o agente é ligado a um canal: isso só existia no terminal, e como todo agente
+nasce no nativo desde a v0.24.0, quem criava pelo navegador ficava com um agente que não atendia
+ninguém. A aba mostra o canal ligado (com a credencial mascarada, o QR code e o reiniciar da WAHA)
+ou, no nativo, os três canais para escolher, com as mesmas perguntas do menu: Chatwoot (endereço,
+token de administrador, conta e caixas), WhatsApp pelo aparelho (cria a sessão e mostra o QR) e
+WhatsApp oficial (app, token, chave secreta, conta e número). Trocar de canal continua sendo remover
+e criar de novo, e a aba diz isso em vez de oferecer um botão que vai falhar.
+A ficha tem um Salvar só, no rodapé fixo do popup: a aba visitada continua montada, o que foi mexido
+fica guardado entre as abas (a aba com mudança ganha um ponto) e o Salvar manda tudo de uma vez.
+Fechar com alteração pendente pede confirmação no próprio rodapé. Salvar mostra o que mudou, não um
+"pronto" genérico. O popup tem tamanho fixo e o corpo rola por dentro. A conversa de teste aceita
+áudio gravado na hora, imagem e documento (`POST /painel/api/agentes/{id}/teste/arquivo`). Remover agente pede um segundo clique
+num botão vermelho com o nome do agente; digitar o nome fica só no terminal.
 
-**Comunicação**: o jeito do agente, e é a mesma lista do passo 5 da criação. Tom (formal, normal ou
-descontraído), emoji numa **faixa que se arrasta** (nenhum, pouco, médio, muito), pelo componente
-`design/Faixa.tsx`: escolha de grau tem ordem, e quatro botões lado a lado escondem a ordem. Agente
-criado antes da escolha existir ganha "Como quiser" como primeira posição da faixa, para salvar
-outro campo da aba não trocar o emoji dele sem ninguém pedir. Mais dividir resposta em partes (até quantas), tempo
-de espera antes de responder (buffer, em segundos), velocidade de digitação e teto do digitando, e
-dois interruptores: **passar a conversa para uma pessoa** e **falar só de assuntos da empresa**.
-Desligar o primeiro desliga o handoff inteiro, inclusive o automático: a tool não é oferecida ao
-modelo e nem falha no turno nem arquivo grande transferem, porque prometer uma pessoa que não existe
-é pior do que dizer que não dá.
+**Perfil** é quem o agente é: foto (enviada, ou a do WhatsApp pareado, ou a inicial na cor
+escolhida), nome, o que ele faz, como ele fala (o tom) e o comportamento, que é o prompt. O endereço
+do webhook não aparece: o operador não cola URL em lugar nenhum desde que conectar canal virou uma
+aba. Remover o agente é uma lixeira no canto esquerdo do rodapé do popup: clicar nela troca o rodapé
+pela pergunta, com a consequência escrita e o botão vermelho ao lado. O quadro de "zona de perigo"
+dentro do corpo era uma caixa dentro da caixa para dizer a mesma frase.
+
+**Ferramentas** é uma grade de cartões com ícone e nome; clicar liga, e o cartão fica verde com um
+certo.
+
+**Comunicação**: como ele responde. O tom mudou para o Perfil, com o nome e o comportamento. Aqui
+ficam o emoji numa **faixa que se arrasta** (nenhum, pouco, médio, muito), pelo componente
+`design/Faixa.tsx` (escolha de grau tem ordem, e quatro botões lado a lado escondem a ordem; agente
+criado antes da escolha existir ganha "Como quiser" como primeira posição, para salvar outro campo
+da aba não trocar o emoji dele sem ninguém pedir), dividir a resposta em partes, os três números do
+ritmo e os interruptores.
+
+Os números do ritmo (espera antes de responder, velocidade de digitação e teto do digitando) ficam à
+vista, com o que o preset escolheu: escondê-los atrás de um "ajustar à mão" fazia o operador clicar
+só para saber o que estava valendo. Trocar de preset atualiza os três na tela; mexer num deles é o
+que torna o ritmo manual.
+
+Os interruptores nascem ligados e saíram da criação: **passar a conversa para uma pessoa**, **falar
+só de assuntos da empresa** e **lembrar de cada contato**. Desligar o primeiro desliga o handoff
+inteiro, inclusive o automático: a tool não é oferecida ao modelo e nem falha no turno nem arquivo
+grande transferem, porque prometer uma pessoa que não existe é pior do que dizer que não dá. Com ele
+ligado, a aba Ferramentas escolhe em quanto tempo o agente volta sozinho, numa lista ("sem prazo",
+1, 2, 4, 8 horas, 1 dia, 2 dias, 1 semana), não numa régua de 0 a 720.
 
 **Trabalho**: a seção que escreve o prompt.
 
@@ -481,6 +517,7 @@ DELETE /painel/api/agentes/{id}               remove
 GET    /painel/api/agentes/{id}/prompt        persona.md atual
 PUT    /painel/api/agentes/{id}/prompt        grava à mão
 POST   /painel/api/agentes/{id}/teste         turno de teste pelo canal nativo
+POST   /painel/api/agentes/{id}/teste/arquivo o mesmo turno, com áudio, imagem ou documento (multipart)
 GET    /painel/api/ferramentas                catálogo
 GET    /painel/api/modelos                    provedores e modelos por função
 GET    /painel/api/canais                     situação por agente

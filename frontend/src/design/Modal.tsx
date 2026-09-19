@@ -16,15 +16,23 @@ export function Modal({
   subtitulo,
   aoFechar,
   children,
+  abas,
   rodape,
   largura = "max-w-5xl",
+  altura = "fixa",
 }: {
   titulo: string;
   subtitulo?: string;
   aoFechar: () => void;
   children: ReactNode;
+  /** As abas do popup, quando ele tem: elas entram no cabeçalho, embaixo do título, e ficam
+   *  paradas enquanto o corpo rola. Fora dele, gastavam uma faixa inteira do espaço útil. */
+  abas?: ReactNode;
   rodape?: ReactNode;
   largura?: string;
+  /** `fixa`: o popup tem sempre o mesmo tamanho e o corpo rola por dentro, então trocar de passo
+   *  ou de aba não faz a caixa pular. `conteudo` é para a confirmação curta. */
+  altura?: "fixa" | "conteudo";
 }) {
   const caixa = useRef<HTMLDivElement>(null);
 
@@ -79,26 +87,39 @@ export function Modal({
         aria-modal="true"
         aria-label={titulo}
         tabIndex={-1}
-        className={`relative my-auto w-full ${largura} rounded-xl border border-borda bg-surface shadow-alto focus:outline-none`}
+        className={`relative my-auto flex w-full flex-col ${largura} ${
+          altura === "fixa" ? "h-[min(46rem,calc(100dvh-2rem))] md:h-[min(46rem,calc(100dvh-4rem))]" : ""
+        } rounded-xl border border-borda bg-surface shadow-alto focus:outline-none`}
       >
-        <header className="flex items-start justify-between gap-6 border-b border-borda p-6 md:px-8 md:py-6">
-          <div className="min-w-0">
-            <h2 className="text-2xl font-semibold tracking-tight text-texto">{titulo}</h2>
-            {subtitulo && <p className="mt-1 text-sm text-muted">{subtitulo}</p>}
+        <header className="shrink-0 border-b border-borda px-6 pt-6 md:px-8">
+          <div className="flex items-start justify-between gap-6 pb-6">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-semibold tracking-tight text-texto">{titulo}</h2>
+              {subtitulo && <p className="mt-1 text-sm text-muted">{subtitulo}</p>}
+            </div>
+            {/* Só o X, sem caixa: o alvo continua de 44px e o traço ganha peso no hover. */}
+            <button
+              onClick={aoFechar}
+              aria-label="Fechar"
+              title="Fechar"
+              className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:text-texto"
+            >
+              <Icone nome="sys-close" tamanho={24} />
+            </button>
           </div>
-          <button
-            onClick={aoFechar}
-            aria-label="Fechar"
-            className="shrink-0 rounded-md border border-borda p-2 text-muted transition-colors hover:border-texto/40 hover:text-texto"
-          >
-            <Icone nome="sys-close" tamanho={16} />
-          </button>
+          {abas}
         </header>
 
-        <div className="p-6 md:p-8">{children}</div>
+        <div
+          className={`flex min-h-0 flex-col p-6 md:p-8 ${
+            altura === "fixa" ? "flex-1 overflow-y-auto" : ""
+          }`}
+        >
+          {children}
+        </div>
 
         {rodape && (
-          <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-borda p-6 md:px-8">
+          <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-borda px-6 py-4 md:px-8">
             {rodape}
           </footer>
         )}

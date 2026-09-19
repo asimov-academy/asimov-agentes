@@ -187,6 +187,31 @@ async def qr_code_imagem(nome: str) -> str | None:
     return base64.b64encode(resposta.content).decode()
 
 
+async def foto_do_numero(sessao: str, chat_id: str) -> tuple[bytes, str] | None:
+    """A foto de perfil do próprio número, já baixada. `None` quando não há uma.
+
+    A WAHA devolve a URL do WhatsApp (`?refresh=true` força ela a perguntar de novo), e essa URL
+    expira: quem usa a foto aqui é a lista do painel, então ela vira arquivo nosso na hora.
+    """
+    resposta = await _chama(
+        "GET",
+        f"/api/contacts/profile-picture?contactId={chat_id}&session={sessao}&refresh=true",
+        "ler a foto do número",
+        aceita=(404, 422, 501),
+    )
+    url = resposta.get("profilePictureURL") if isinstance(resposta, dict) else None
+    if not url:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as http:
+            imagem = await http.get(str(url))
+    except httpx.HTTPError as erro:
+        raise _erro("baixar a foto do número", erro) from erro
+    if imagem.status_code >= 400 or not imagem.content:
+        return None
+    return imagem.content, imagem.headers.get("content-type", "image/jpeg")
+
+
 LIMITE_GRUPOS = 200
 
 

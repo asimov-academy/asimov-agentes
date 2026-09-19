@@ -23,10 +23,14 @@ async def obter(sessao: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUI
 
 
 async def por_slug(sessao: AsyncSession, cliente_id: uuid.UUID, slug: str) -> Agente | None:
-    """Pelo slug, dentro do cliente: é o que aparece na URL da página pública de privacidade."""
+    """Pelo slug, dentro do cliente: é o que aparece na URL da página pública de privacidade.
+
+    Aqui o treinamento conta como no ar, diferente do `ativo_por_token`: esta URL fica registrada na
+    Meta, e tirar o agente do ar por um dia não pode derrubar uma página que eles conferem.
+    """
     return await sessao.scalar(
         select(Agente).where(
-            Agente.cliente_id == cliente_id, Agente.slug == slug, Agente.ativo.is_(True)
+            Agente.cliente_id == cliente_id, Agente.slug == slug, Agente.situacao != "inativo"
         )
     )
 
@@ -58,11 +62,14 @@ async def listar_de_todos_os_clientes(sessao: AsyncSession) -> list[Agente]:
 
 
 async def ativo_por_token(sessao: AsyncSession, token_hash: str) -> Agente | None:
-    """Única busca sem cliente_id: é ela que descobre o cliente a partir da URL do webhook."""
+    """Única busca sem cliente_id: é ela que descobre o cliente a partir da URL do webhook.
+
+    Só o agente ativo: em treinamento ele conversa no painel e fica fora dos canais, e quem chega
+    pelo WhatsApp ou pelo Chatwoot não encontra ninguém."""
     return await sessao.scalar(
         select(Agente).where(
             Agente.token_webhook_hash == token_hash,
-            Agente.ativo.is_(True),
+            Agente.situacao == "ativo",
             Agente.removido_em.is_(None),
         )
     )

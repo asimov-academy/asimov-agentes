@@ -37,7 +37,7 @@ async def ver_agente(agente_id: str) -> str:
         "empresa": empresa.nome if empresa else "",
         "empresa_id": str(agente.cliente_id),
         "canal": agente.canal,
-        "ativo": agente.ativo,
+        "situacao": agente.situacao,
         "modelo_conversa": agente.modelo_conversa,
         "modelo_fallback": agente.modelo_fallback,
         "buffer_segundos": agente.buffer_segundos,

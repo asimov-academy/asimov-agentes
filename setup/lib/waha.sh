@@ -122,7 +122,7 @@ agentes_waha_pareados() {
   local lista linha
   api GET /admin/agentes
   [ "$API_STATUS" = 200 ] || return 0
-  lista=$(jq -c '[.[] | select(.canal == "waha" and .ativo)]' <<<"$API_RESPOSTA")
+  lista=$(jq -c '[.[] | select(.canal == "waha" and .situacao != "inativo")]' <<<"$API_RESPOSTA")
   while IFS= read -r linha; do
     api GET "$(caminho_do_agente "$linha")/waha"
     if [ "$API_STATUS" = 200 ] && [ "$(jq -r '.pareado' <<<"$API_RESPOSTA")" = true ]; then
@@ -255,7 +255,7 @@ reconfigura_sessoes_waha() {
   [ "$API_STATUS" = 200 ] || return 0
   while IFS= read -r linha; do
     api POST "$(caminho_do_agente "$linha")/waha/webhook" '{}'
-  done < <(jq -c '.[] | select(.canal == "waha" and .ativo)' <<<"$API_RESPOSTA")
+  done < <(jq -c '.[] | select(.canal == "waha" and .situacao != "inativo")' <<<"$API_RESPOSTA")
   return 0
 }
 
@@ -273,7 +273,7 @@ avisa_numeros_fora_do_ar() {
     if waha_situacao "$linha" && [ "$WAHA_STATUS" != WORKING ] && [ "$WAHA_STATUS" != SCAN_QR_CODE ]; then
       AVISO_WAHA+="${AVISO_WAHA:+; }$nome ($WAHA_STATUS)"
     fi
-  done < <(jq -c '.[] | select(.canal == "waha" and .ativo)' <<<"$API_RESPOSTA")
+  done < <(jq -c '.[] | select(.canal == "waha" and .situacao != "inativo")' <<<"$API_RESPOSTA")
   return 0
 }
 

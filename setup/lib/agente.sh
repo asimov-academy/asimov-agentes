@@ -412,7 +412,7 @@ tela_primeiro_agente() {
 }
 
 lista_agentes() {
-  local clientes tipo nome canal modelo destino ativo webhook
+  local clientes tipo nome canal modelo destino situacao webhook
   api GET /admin/clientes
   exige_api
   clientes=$API_RESPOSTA
@@ -428,17 +428,21 @@ lista_agentes() {
     ($clientes | map({(.id): .nome}) | add // {}) as $nomes
     | group_by(.cliente_id) | sort_by($nomes[.[0].cliente_id] // "?") | .[]
     | "empresa\u001f\($nomes[.[0].cliente_id] // "?")",
-      (.[] | ["agente", .nome, .canal, .modelo_conversa, (.handoff_destino | tojson), .ativo, .url_webhook] | map(tostring) | join("\u001f"))
-  ' <<<"$API_RESPOSTA" | while IFS=$'\x1f' read -r tipo nome canal modelo destino ativo webhook; do
+      (.[] | ["agente", .nome, .canal, .modelo_conversa, (.handoff_destino | tojson), .situacao, .url_webhook] | map(tostring) | join("\u001f"))
+  ' <<<"$API_RESPOSTA" | while IFS=$'\x1f' read -r tipo nome canal modelo destino situacao webhook; do
     if [ "$tipo" = empresa ]; then
       printf '  %s%s%s\n' "$NEGRITO" "$nome" "$NORMAL"
       continue
     fi
-    if [ "$ativo" = true ]; then
-      printf '    %s✓%s %s' "$VERDE" "$NORMAL" "$(destaque "$nome")"
-    else
-      printf '    %s▲%s %s %spausado%s' "$AMARELO" "$NORMAL" "$(destaque "$nome")" "$AMARELO" "$NORMAL"
-    fi
+    # As três situações do agente, na mesma ordem do painel: atendendo, em treinamento (fala só
+    # no painel e no terminal) e desligado.
+    case "$situacao" in
+      ativo) printf '    %s✓%s %s' "$VERDE" "$NORMAL" "$(destaque "$nome")" ;;
+      treinamento)
+        printf '    %s●%s %s %sem treinamento%s' "$AMARELO" "$NORMAL" "$(destaque "$nome")" "$AMARELO" "$NORMAL"
+        ;;
+      *) printf '    %s▲%s %s %sdesligado%s' "$VERMELHO" "$NORMAL" "$(destaque "$nome")" "$VERMELHO" "$NORMAL" ;;
+    esac
     if [ "$canal" = nativo ]; then
       printf '  %snativo · %s · sem canal: asimov conversar, ou asimov editar para conectar%s\n' "$CINZA" "$modelo" "$NORMAL"
       continue

@@ -78,16 +78,24 @@ export const api = {
       body: JSON.stringify({ nome }),
     }),
 
-  /** Lista de agentes. `ativo` sem valor traz todos. */
-  agentes: (empresa?: string, ativo?: boolean) => {
+  /** Lista de agentes. Sem `situacao`, traz as três. */
+  agentes: (empresa?: string, situacao?: Situacao) => {
     const busca = new URLSearchParams();
     if (empresa) busca.set("cliente_id", empresa);
-    if (ativo !== undefined) busca.set("ativo", String(ativo));
+    if (situacao) busca.set("situacao", situacao);
     const query = busca.toString();
     return chama<Agente[]>("/agentes" + (query ? `?${query}` : ""));
   },
 
   agente: (id: string) => chama<Agente>(`/agentes/${id}`),
+
+  /** A foto do agente. Sem ela, a lista desenha a inicial na cor dele. */
+  mandaFoto: (id: string, arquivo: File) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    return chama<Agente>(`/agentes/${id}/avatar`, { method: "PUT", body: corpo });
+  },
+  removeFoto: (id: string) => chama<Agente>(`/agentes/${id}/avatar`, { method: "DELETE" }),
 
   /** A criação é uma chamada só, no fim do onboarding: passo nenhum grava pela metade. */
   criaAgente: (empresa: string, dados: NovoAgente) =>
@@ -316,6 +324,18 @@ export const api = {
       },
     ),
 
+  /** Áudio, imagem ou documento na conversa de teste. O texto, se vier, é a legenda. */
+  mandaArquivoDeTeste: (id: string, arquivo: File, texto: string, conversa?: string) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    if (texto) corpo.append("texto", texto);
+    if (conversa) corpo.append("conversa", conversa);
+    return chama<{ conversa: string; conversa_id: string; agendada: boolean }>(
+      `/agentes/${id}/teste/arquivo`,
+      { method: "POST", body: corpo },
+    );
+  },
+
   leTeste: (id: string, conversa: string, depois: number) =>
     chama<LeituraDoTeste>(
       `/agentes/${id}/teste/${encodeURIComponent(conversa)}?depois=${depois}`,
@@ -431,7 +451,10 @@ export type Agente = {
   nome: string;
   slug: string;
   canal: string;
-  ativo: boolean;
+  situacao: Situacao;
+  /** Endereço da foto, quando há uma. Muda a cada envio, então o navegador nunca mostra a antiga. */
+  avatar: string | null;
+  avatar_cor: CorDeAvatar;
   criado_em: string;
   /** Só na ficha: ele carrega o token do webhook dentro. */
   url_webhook: string | null;
@@ -541,9 +564,16 @@ export type NovoAgente = {
   modelo_conversa?: string;
 };
 
+/** Onde o agente fala hoje: em tudo, só no painel, ou em lugar nenhum. */
+export type Situacao = "ativo" | "treinamento" | "inativo";
+
+/** O fundo da inicial, em nome de token do painel. */
+export type CorDeAvatar = "ciano" | "ok" | "atencao" | "texto";
+
 export type EdicaoDoAgente = {
   nome: string;
-  ativo: boolean;
+  situacao: Situacao;
+  avatar_cor: CorDeAvatar;
   emojis: NivelDeEmoji | "livre";
   tom: TomDeVoz;
   transfere_para_humano: boolean;
@@ -677,7 +707,7 @@ export type LinhaDeCanal = {
   agente: string;
   empresa: string;
   canal: string;
-  ativo: boolean;
+  situacao_do_agente: Situacao;
   situacao: SituacaoDoCanal;
 };
 

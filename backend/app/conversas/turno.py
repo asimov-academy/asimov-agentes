@@ -124,8 +124,12 @@ async def _turno(
         if conversa is None:
             return "sem_conversa"
         agente = await agentes_repo.obter(s, cliente_id, conversa.agente_id)
-        if agente is None or not agente.ativo:
+        if agente is None or agente.desligado:
             return "agente_inativo"
+        # Em treinamento ele só responde no painel. O webhook já não acha o agente, mas o turno
+        # pode ter sido agendado antes de o operador tirá-lo do ar.
+        if not agente.atende_canais and conversa.canal != "nativo":
+            return "agente_em_treinamento"
         # A chave pode ter sido informada agora há pouco, pela API, que é outro processo.
         await chaves.carregar(s)
 

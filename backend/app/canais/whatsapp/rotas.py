@@ -41,7 +41,7 @@ class TemplateSaida(BaseModel):
 
 async def _agente(s: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID) -> Agente:
     agente = await agentes_repo.obter(s, cliente_id, agente_id)
-    if agente is None or not agente.ativo:
+    if agente is None or agente.desligado:
         raise HTTPException(status_code=404, detail="agente não encontrado")
     if agente.canal != "whatsapp":
         raise HTTPException(status_code=422, detail="este agente não atende pelo WhatsApp oficial")

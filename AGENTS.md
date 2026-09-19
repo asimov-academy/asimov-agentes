@@ -43,7 +43,7 @@ Fale com o operador em português, curto e direto.
 - Canal novo implementa `canais/base.py`. NUNCA espalhe `if canal == ...` fora de `canais/`: o que muda entre canais vira atributo ou método do contrato.
 - Copiloto do painel (`copiloto/`): o CLI de código do operador, pela assinatura dele, falando com a plataforma só pelo MCP de `copiloto/mcp.py`. Ferramenta de leitura responde; ferramenta `propor_` NUNCA escreve, só registra proposta, e quem aplica é `copiloto/aplicar.py` no clique do operador. NUNCA ligue ferramenta de código do CLI.
 - Ferramenta dos agentes: um arquivo por ferramenta em `ia/ferramentas/` (ficha `FERRAMENTA` de `base.py`, com instrução de quando usar), listada em `registro.py`. NUNCA duas ferramentas no mesmo arquivo; um teste confere.
-- `frontend/` é o painel do operador no navegador (React, Vite, Tailwind), servido pela API em `/painel/app`. Todo onboarding e toda configuração de agente acontecem num popup grande com o fundo embaçado, nunca em página. Nunca fala com `/admin` e nunca carrega estático de CDN. Dentro dele: `api/cliente.ts` é o único que chama `fetch`, `design/` tem um componente por arquivo e `telas/` monta a tela. Toda peça de interface vem do `designsystem/` (as seis seções, não só a de componentes) e NUNCA de biblioteca de fora. Cor só pelo nome do token do `tailwind.config.ts`; um teste recusa hexadecimal solto, outro trava as dependências do `package.json` e outro o contraste mínimo do texto (4,5:1). Exceção única: o `painel/estaticos/painel.css` das telas de entrar e primeiro acesso, que não passa pelo Tailwind e guarda as cores no `:root` dele.
+- `frontend/` é o painel do operador no navegador (React, Vite, Tailwind), servido pela API em `/painel/app`. Todo onboarding e toda configuração de agente acontecem num popup grande com o fundo embaçado, nunca em página. Nunca fala com `/admin` e nunca carrega estático de CDN. Dentro dele: `api/cliente.ts` é o único que chama `fetch`, `design/` tem um componente por arquivo e `telas/` monta a tela. Controle que aparece em duas telas vira componente de `design/` (`Busca`, `Segmentos`, `BotaoIcone`, `Avatar`), e o cabeçalho é sempre buscar, filtrar, agir, tudo com 44px de altura; testes recusam grupo de opções desenhado à mão e botão `pequeno` ali. Toda peça de interface vem do `designsystem/` (as seis seções, não só a de componentes) e NUNCA de biblioteca de fora. Cor só pelo nome do token do `tailwind.config.ts`; um teste recusa hexadecimal solto, outro trava as dependências do `package.json` e outro o contraste mínimo do texto (4,5:1). Exceção única: o `painel/estaticos/painel.css` das telas de entrar e primeiro acesso, que não passa pelo Tailwind e guarda as cores no `:root` dele.
 
 ## Regras que não mudam
 
@@ -66,6 +66,8 @@ Fale com o operador em português, curto e direto.
 
 ## Armadilhas já pagas
 
+- `npx prettier` no `frontend/` reformata o repositório inteiro com largura 80: o projeto usa 100 e não tem configuração. Formate à mão.
+- A suíte do backend limpa o Redis inteiro, e a sessão do painel mora nele: o `painel-local` do `.claude/launch.json` usa o banco 3 para o teste não derrubar quem está com o painel aberto.
 - Bash com `set -e`: consulta que pode voltar vazia (`grep`, `dig`, `curl`) termina com `|| true`, senão o setup cai calado.
 - `exec 3<arquivo 2>/dev/null` silencia o stderr do script inteiro; use `{ exec 3<arquivo; } 2>/dev/null`.
 - Helpers de tela (`pergunta`, `escolha`, `le_tecla`) usam locais com prefixo `__`; nome igual ao da variável de quem chama quebra o `printf -v`.

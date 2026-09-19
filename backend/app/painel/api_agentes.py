@@ -12,11 +12,13 @@ import uuid
 from typing import Any, Literal
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.acessos.servico import AcessoNecessario
+from app.agentes import avatar as avatares
 from app.agentes import servico as agentes_servico
 from app.agentes.modelos import Agente
 from app.canais.base import CredencialInvalida, DestinoInvalido
@@ -57,7 +59,11 @@ class AgenteDoPainel(BaseModel):
     nome: str
     slug: str
     canal: str
-    ativo: bool
+    situacao: str
+    """`ativo`, `treinamento` ou `inativo`. A lista mostra os três, e é por lá que ele muda."""
+    avatar: str | None
+    """Endereço da foto, quando há uma. A cor abaixo vale para a inicial, que é o padrão."""
+    avatar_cor: str
     criado_em: str
     url_webhook: str | None
     """Só na ficha. A lista não precisa dele, e ele carrega o token do webhook dentro."""
@@ -95,7 +101,9 @@ def _saida(agente: Agente, empresa: str, com_webhook: bool = False) -> AgenteDoP
         nome=agente.nome,
         slug=agente.slug,
         canal=agente.canal,
-        ativo=agente.ativo,
+        situacao=agente.situacao,
+        avatar=f"/painel/api/agentes/{agente.id}/avatar?v={agente.avatar[-12:]}" if agente.avatar else None,
+        avatar_cor=avatares.cor_de(agente),
         criado_em=agente.criado_em.isoformat(),
         url_webhook=agentes_servico.url_webhook(agente) if com_webhook else None,
         credenciais=credenciais_visiveis(
@@ -182,12 +190,12 @@ async def cria_empresa(dados: NovaEmpresa, s: AsyncSession = Depends(sessao)) ->
 @router.get("/agentes")
 async def lista(
     cliente_id: uuid.UUID | None = Query(default=None),
-    ativo: bool | None = Query(default=None),
+    situacao: Literal["ativo", "treinamento", "inativo"] | None = Query(default=None),
     s: AsyncSession = Depends(sessao),
 ) -> list[AgenteDoPainel]:
     if cliente_id is not None and await clientes_repo.obter(s, cliente_id) is None:
         raise HTTPException(status_code=404, detail="empresa não encontrada")
-    return [_saida(a, empresa) for a, empresa in await repo.agentes(s, cliente_id, ativo)]
+    return [_saida(a, empresa) for a, empresa in await repo.agentes(s, cliente_id, situacao)]
 
 
 class NovoAgenteDoPainel(BaseModel):
@@ -269,7 +277,8 @@ class EdicaoDoPainel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: str | None = Field(default=None, min_length=1, max_length=200)
-    ativo: bool | None = None
+    situacao: Literal["ativo", "treinamento", "inativo"] | None = None
+    avatar_cor: str | None = Field(default=None, max_length=20)
     handoff_destino: dict[str, Any] | None = None
     buffer_segundos: int | None = Field(default=None, ge=1, le=60)
     max_mensagens_por_resposta: int | None = Field(default=None, ge=1, le=10)
@@ -299,9 +308,17 @@ async def edita(
 ) -> AgenteDoPainel:
     agente, empresa = await _acha(s, agente_id)
     mudancas = dados.model_dump(exclude_unset=True)
-    # `ativo` não passa pelo serviço de edição: ele é o liga e desliga do agente, e o serviço cuida
-    # de nome, modelos, ferramentas e destino.
-    ativo = mudancas.pop("ativo", None)
+    # A situação e a cor não passam pelo serviço de edição: uma diz onde o agente fala, a outra é
+    # a cara dele. O serviço cuida de nome, modelos, ferramentas e destino.
+    situacao = mudancas.pop("situacao", None)
+    cor = mudancas.pop("avatar_cor", None)
+    if cor is not None and cor not in avatares.CORES:
+        raise HTTPException(status_code=422, detail=f"cor desconhecida: {cor}")
+    if situacao is not None and situacao != "treinamento" and not obter_canal(agente.canal).externo:
+        raise HTTPException(
+            status_code=422,
+            detail="sem canal ele fala só aqui no painel, e isso é o treinamento. Conecte um canal na aba Canais",
+        )
     if mudancas:
         try:
             agente = await agentes_servico.editar_agente(
@@ -309,11 +326,55 @@ async def edita(
             )
         except DE_NEGOCIO as erro:
             raise _erro_de_negocio(erro) from erro
-    if ativo is not None and ativo != agente.ativo:
-        agente.ativo = ativo
+    if (situacao is not None and situacao != agente.situacao) or cor is not None:
+        agente.situacao = situacao or agente.situacao
+        agente.avatar_cor = cor or agente.avatar_cor
         await s.commit()
         await s.refresh(agente)
     return _saida(agente, empresa, com_webhook=True)
+
+
+# Foto do agente
+#
+# A imagem fica no diretório de mídia e é servida por aqui, com a sessão do painel: avatar de agente
+# de cliente não é arquivo público. `?v=` no endereço muda a cada envio, então o navegador nunca
+# mostra a foto antiga.
+
+
+@router.get("/agentes/{agente_id}/avatar")
+async def le_avatar(agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)) -> Response:
+    agente, _ = await _acha(s, agente_id)
+    caminho = avatares.caminho_do_arquivo(agente)
+    if caminho is None:
+        raise HTTPException(status_code=404, detail="este agente não tem foto")
+    return FileResponse(caminho, headers={"Cache-Control": "private, max-age=86400"})
+
+
+@router.put("/agentes/{agente_id}/avatar")
+async def grava_avatar(
+    agente_id: uuid.UUID,
+    arquivo: UploadFile = File(...),
+    s: AsyncSession = Depends(sessao),
+) -> AgenteDoPainel:
+    agente, empresa = await _acha(s, agente_id)
+    conteudo = await arquivo.read(avatares.LIMITE_BYTES + 1)
+    try:
+        await avatares.guarda(agente, conteudo, arquivo.content_type or "")
+    except avatares.ImagemRecusada as erro:
+        raise HTTPException(status_code=422, detail=str(erro)) from erro
+    await s.commit()
+    await s.refresh(agente)
+    return _saida(agente, empresa)
+
+
+@router.delete("/agentes/{agente_id}/avatar")
+async def apaga_avatar(agente_id: uuid.UUID, s: AsyncSession = Depends(sessao)) -> AgenteDoPainel:
+    """Volta à inicial colorida."""
+    agente, empresa = await _acha(s, agente_id)
+    await avatares.apaga(agente)
+    await s.commit()
+    await s.refresh(agente)
+    return _saida(agente, empresa)
 
 
 class RemocaoDoPainel(BaseModel):
@@ -554,17 +615,27 @@ async def situacao_dos_canais(
     if cliente_id is not None and await clientes_repo.obter(s, cliente_id) is None:
         raise HTTPException(status_code=404, detail="empresa não encontrada")
     linhas = []
-    for agente, empresa in await repo.agentes(s, cliente_id, ativo=None):
+    trouxe_foto = False
+    for agente, empresa in await repo.agentes(s, cliente_id, situacao=None):
+        situacao_do_canal = await canais_do_painel.situacao(agente)
+        # Número pareado e agente sem foto: é aqui que ele ganha a cara do WhatsApp. Melhor esforço,
+        # uma vez só, e nunca atrapalha a tela.
+        if situacao_do_canal.get("cor") == "ok":
+            trouxe_foto = await avatares.do_canal(
+                agente, agentes_servico.credenciais(agente)
+            ) or trouxe_foto
         linhas.append(
             {
                 "agente_id": str(agente.id),
                 "agente": agente.nome,
                 "empresa": empresa,
                 "canal": agente.canal,
-                "ativo": agente.ativo,
-                "situacao": await canais_do_painel.situacao(agente),
+                "situacao_do_agente": agente.situacao,
+                "situacao": situacao_do_canal,
             }
         )
+    if trouxe_foto:
+        await s.commit()
     return linhas
 
 
@@ -614,6 +685,45 @@ async def teste(
         )
     except nativo_servico.NaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
+    return {
+        "conversa": enviada.conversa,
+        "conversa_id": str(enviada.conversa_id),
+        "agendada": enviada.agendada,
+    }
+
+
+@router.post("/agentes/{agente_id}/teste/arquivo")
+async def teste_com_arquivo(
+    agente_id: uuid.UUID,
+    request: Request,
+    arquivo: UploadFile = File(...),
+    texto: str = Form(default="", max_length=4000),
+    conversa: str | None = Form(default=None, min_length=1, max_length=200),
+    s: AsyncSession = Depends(sessao),
+) -> dict[str, Any]:
+    """Áudio, imagem ou documento na conversa de teste, para o operador ver o agente ler mídia como
+    lê no WhatsApp. Aqui só grava e agenda: transcrição e visão rodam no turno, no worker."""
+    agente, _ = await _acha(s, agente_id)
+    # Um byte além do limite basta para recusar, sem pôr um arquivo enorme inteiro na memória.
+    conteudo = await arquivo.read(config().midia_limite_bytes + 1)
+    try:
+        enviada = await nativo_servico.enviar(
+            s,
+            request.app.state.fila,
+            agente.cliente_id,
+            agente_id,
+            texto.strip(),
+            conversa,
+            nativo_servico.Arquivo(
+                nome=arquivo.filename or "arquivo",
+                conteudo=conteudo,
+                tipo_mime=arquivo.content_type or "application/octet-stream",
+            ),
+        )
+    except nativo_servico.NaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except nativo_servico.ArquivoRecusado as erro:
+        raise HTTPException(status_code=413, detail=str(erro)) from erro
     return {
         "conversa": enviada.conversa,
         "conversa_id": str(enviada.conversa_id),

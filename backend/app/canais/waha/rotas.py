@@ -56,7 +56,7 @@ async def manutencao(request: Request, s: AsyncSession = Depends(sessao)) -> Non
     """
     fila = getattr(request.app.state, "fila", None)
     for agente in await agentes_repo.listar_de_todos_os_clientes(s):
-        if agente.canal == "waha" and agente.ativo:
+        if agente.canal == "waha" and not agente.desligado:
             await vigia.marca_pareamento(fila, agente.id)
 
 
@@ -71,7 +71,7 @@ async def saude() -> dict[str, Any]:
 
 async def _agente_waha(s: AsyncSession, cliente_id: uuid.UUID, agente_id: uuid.UUID) -> Agente:
     agente = await agentes_repo.obter(s, cliente_id, agente_id)
-    if agente is None or not agente.ativo:
+    if agente is None or agente.desligado:
         raise HTTPException(status_code=404, detail="agente não encontrado")
     if agente.canal != "waha":
         raise HTTPException(status_code=422, detail="este agente não atende pela WAHA")

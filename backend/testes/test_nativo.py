@@ -17,11 +17,20 @@ from app.conversas.modelos import Conversa, Mensagem
 from app.plataforma.config import config
 from testes.conftest import ADMIN, BOT_ID, CONEXAO_EXEMPLO, cria_cliente_e_agente, e_resposta, envia_webhook, payload_chatwoot, resposta_falsa
 from testes.test_handoff import ModeloQueTransfere
+from testes.test_painel import entra
 
 
 @pytest.fixture(autouse=True)
 def sem_espera(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(turno, "tempos_de_digitacao", lambda textos, *a, **k: [0] * len(textos))
+
+
+@pytest.fixture
+async def dentro(painel: httpx.AsyncClient) -> Any:
+    """O painel com sessão aberta: a situação do agente se muda por lá, não pelo terminal."""
+    await entra(painel)
+    painel.headers["X-Painel-CSRF"] = (await painel.get("/painel/api/eu")).json()["csrf"]
+    return painel
 
 
 @pytest.fixture
@@ -228,6 +237,39 @@ async def test_nativo_conectado_ao_chatwoot_atende_pelo_canal_e_segue_no_termina
     assert len(canal.enviadas) == 1
 
 
+# `dentro` depois de `redis`: a sessão do painel mora no Redis, e a fixture o limpa ao nascer.
+async def test_em_treinamento_conversa_no_painel_e_fica_fora_do_canal(http, canal, fila, redis, dentro, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """O degrau do meio: o agente existe inteiro, responde a quem o está ajustando e não atende
+    cliente nenhum. Inativo não responde nem no painel."""
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: _responde("Oi!"))
+    agente = await cria_nativo(http)
+    resp = await http.post(
+        _canal(agente),
+        json={"canal": "chatwoot", "conexao": CONEXAO_EXEMPLO, "handoff_destino": {"tipo": "caixa"}},
+        headers=ADMIN,
+    )
+    conectado = resp.json()
+    token = conectado["url_webhook"].rsplit("/", 1)[1]
+
+    mudou = await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"situacao": "treinamento"})
+    assert mudou.status_code == 200 and mudou.json()["situacao"] == "treinamento", mudou.text
+
+    # Quem chega pelo Chatwoot não encontra ninguém. O 200 é a regra do Chatwoot, que cala o bot
+    # na conversa quando recebe erro; o que importa é que nada foi agendado.
+    assert (await envia_webhook(http, token, payload_chatwoot(conversa=77))).status_code == 200
+    assert fila.jobs == []
+    assert canal.enviadas == []
+
+    # E o operador continua conversando com ele pelo painel.
+    teste = await _manda(http, conectado, "oi, está me ouvindo?")
+    assert await _roda_turno(fila, redis) == "respondido"
+    assert [m["texto"] for m in (await _le(http, conectado, teste["conversa"]))["mensagens"]] == ["Oi!"]
+
+    await dentro.patch(f"/painel/api/agentes/{agente['id']}", json={"situacao": "inativo"})
+    calado = await http.post(_terminal(conectado), json={"texto": "e agora?"}, headers=ADMIN)
+    assert calado.status_code == 404
+
+
 async def test_conectar_pede_token_e_recusa_agente_que_ja_tem_canal(http, canal, fila) -> None:  # type: ignore[no-untyped-def]
     nativo = await cria_nativo(http)
     chatwoot = await cria_cliente_e_agente(http, "Padaria Pão Quente", "Bia")
@@ -248,7 +290,9 @@ async def test_nativo_sem_webhook(http, fila) -> None:  # type: ignore[no-untype
 
     resp = await http.post(f"/webhook/nativo/{token}", json={"texto": "oi"})
 
-    assert resp.status_code == 401
+    # 404: o agente sem canal nasce em treinamento, e treinamento não é achado pelo token do
+    # webhook. Antes disso ele era encontrado e recusado na assinatura, com 401.
+    assert resp.status_code == 404
 
 
 async def test_remover_e_renomear_nativo_sem_token(http, fila) -> None:  # type: ignore[no-untyped-def]

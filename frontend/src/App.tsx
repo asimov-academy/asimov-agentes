@@ -92,62 +92,37 @@ export function App() {
             <Route
               path="/agentes"
               element={
-                <Agentes
-                  empresas={empresas}
-                  empresa={empresa}
-                  aoTrocarEmpresa={setEmpresa}
-                />
+                <Agentes empresas={empresas} />
               }
             />
             <Route
               path="/agentes/novo"
               element={
-                <Agentes
-                  empresas={empresas}
-                  empresa={empresa}
-                  aoTrocarEmpresa={setEmpresa}
-                  abrindo="novo"
-                />
+                <Agentes empresas={empresas} abrindo="novo" />
               }
             />
             <Route
               path="/agentes/:id"
               element={
-                <Agentes
-                  empresas={empresas}
-                  empresa={empresa}
-                  aoTrocarEmpresa={setEmpresa}
-                />
+                <Agentes empresas={empresas} />
               }
             />
             <Route
               path="/canais"
               element={
-                <Canais
-                  empresas={empresas}
-                  empresa={empresa}
-                  aoTrocarEmpresa={setEmpresa}
-                />
+                <Canais />
               }
             />
             <Route
               path="/chat"
               element={
-                <Chat
-                  empresas={empresas}
-                  empresa={empresa}
-                  aoTrocarEmpresa={setEmpresa}
-                />
+                <Chat />
               }
             />
             <Route
               path="/contatos"
               element={
-                <Contatos
-                  empresas={empresas}
-                  empresa={empresa}
-                  aoTrocarEmpresa={setEmpresa}
-                />
+                <Contatos />
               }
             />
             <Route
