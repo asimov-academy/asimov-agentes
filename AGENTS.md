@@ -28,7 +28,7 @@ Fale com o operador em português, curto e direto.
 
 ## Comandos de desenvolvimento
 
-- Testes locais do backend (Postgres com banco `asimov_teste` e Redis em `localhost:6390`): `redis-server --port 6390 --daemonize yes --save "" && cd backend && uv run pytest -q`. Outros endereços: `TESTE_DATABASE_URL` e `TESTE_REDIS_URL`. O Postgres local precisa da extensão `vector` (`CREATE EXTENSION vector`); a imagem da VPS já traz.
+- Testes locais do backend (Postgres com banco `asimov_teste` e Redis em `localhost:6390`): `redis-server --port 6390 --daemonize yes --save "" && cd backend && uv run pytest -q`. Outros endereços: `TESTE_DATABASE_URL` e `TESTE_REDIS_URL`. O Postgres local precisa ter o `pgvector` instalado (a suíte roda o `CREATE EXTENSION`); a imagem da VPS e a da CI já trazem.
 - Shellcheck: `uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR setup/instalar.sh setup/asimov.sh setup/install.sh setup/lib/*.sh deploy/*.sh`
 - Painel web: `cd frontend && npm ci` uma vez; depois `npm run build`, `npm run teste` e `npm run checa`. Para ver no navegador sem Docker, construa e copie: `npm run build && rm -rf ../backend/app/painel/estaticos/app && cp -R dist ../backend/app/painel/estaticos/app`.
 - Simular o onboarding sem VPS: `ASIMOV_TTY=setup/testes/respostas.txt bash setup/testes/simula_onboarding.sh`
