@@ -287,7 +287,8 @@ O repositório tem uma branch só, `main` (spec/decisoes.md, 2026-09-19). Sem br
 2. Antes do commit: testes (`backend`), `shellcheck` e, se mexeu no setup, `setup/testes/simula_onboarding.sh`. Mudança em leitura de tecla: teste num pty com bash 5 (AGENTS.md, armadilhas).
 3. Quando muda o setup ou o backend: subir `VERSAO` em `setup/lib/base.sh` e o padrão em `setup/install.sh`, commitar e marcar a tag `vX.Y.Z` (o operador autorizou commit, tag e push).
 4. `git push origin main --follow-tags`. A tag precisa chegar ao GitHub: o `install.sh` baixa o tarball do codeload por ela.
-5. Dizer ao operador o comando de atualização da VPS (`asimov atualizar`).
+5. `gh release create vX.Y.Z --verify-tag --latest --generate-notes`. A tag sozinha não aparece na página de Releases, e foi assim que as versões `v0.27.0` a `v0.29.0` ficaram invisíveis enquanto a `v0.26.0` seguia como Latest.
+6. Dizer ao operador o comando de atualização da VPS (`asimov atualizar`).
 
 ## Nunca no repositório (é público)
 
