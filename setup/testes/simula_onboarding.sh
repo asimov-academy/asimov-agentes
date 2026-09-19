@@ -16,7 +16,7 @@ espera_waha_no_ar() { :; }
 # Docker Hub e Compose não existem aqui: a tag nova vem de mentira e o `dc` só registra.
 curl() { case "$*" in *hub.docker.com*) echo '{"results":[{"name":"gows-2026.9.1"},{"name":"gows-arm-2026.9.1"},{"name":"gows-2026.8.2"},{"name":"gows-arm-2026.8.2"},{"name":"gows"},{"name":"dev"}]}' ;; *) return 1 ;; esac; }
 dc() { echo "dc $*" >>"$DIR/dc.log"; }
-qrencode() { printf '  [QR code de %s]\n' "${*: -1}"; }
+qrencode() { printf '  [QR code de %s]\n' "${*: -1}"; touch "$DIR/qr_visto"; }
 # CLI de IA: aqui o Codex é de mentira. O arquivo marca que o login já rolou, como a credencial
 # de verdade faria em ~/.codex.
 codex() {
@@ -72,11 +72,13 @@ api() {
         API_STATUS=201; API_RESPOSTA='{"id":"a3","cliente_id":"c1","nome":"Ana","canal":"nativo","situacao":"ativo","buffer_segundos":2,"arquivo_prompt":"loja-exemplo/ana/persona.md","credenciais":{}}'; echo "$3" >"$DIR/criado_nativo"
       fi ;;
     "GET /admin/clientes/c1/agentes/a4/waha")
-      # Primeira consulta: esperando a leitura. Segunda: número pareado.
+      # Esperando a leitura até o QR code ser desenhado; depois dele, número pareado. Quem marca
+      # é o `qrencode` de mentira, e não a consulta: o menu também pergunta o status, e uma
+      # contagem de consultas parearia o número antes de a tela do QR code aparecer.
       if [ -f "$DIR/qr_visto" ]; then
         API_STATUS=200; API_RESPOSTA='{"status":"WORKING","pareado":true,"numero":"5511988887777","nome":"Carlos","qr":null}'
       else
-        touch "$DIR/qr_visto"; API_STATUS=200; API_RESPOSTA='{"status":"SCAN_QR_CODE","pareado":false,"numero":null,"nome":null,"qr":"2@abc123"}'
+        API_STATUS=200; API_RESPOSTA='{"status":"SCAN_QR_CODE","pareado":false,"numero":null,"nome":null,"qr":"2@abc123"}'
       fi ;;
     "POST /admin/clientes/c1/agentes/a4/waha/numero") API_STATUS=200; API_RESPOSTA=$(jq -c '{existe: true, chat_id: (.telefone + "@c.us"), telefone: .telefone}' <<<"$3") ;;
     "GET /admin/clientes/c1/agentes/a4/waha/grupos") API_STATUS=200; API_RESPOSTA='[{"chat_id": "120363110@g.us", "nome": "Atendimento Loja Exemplo"}, {"chat_id": "120363111@g.us", "nome": "Avisos da equipe"}, {"chat_id": "120363112@g.us", "nome": "Carga e entrega"}, {"chat_id": "120363113@g.us", "nome": "Diretoria"}, {"chat_id": "120363114@g.us", "nome": "Estoque"}, {"chat_id": "120363115@g.us", "nome": "Financeiro"}, {"chat_id": "120363116@g.us", "nome": "Fornecedores"}, {"chat_id": "120363117@g.us", "nome": "Marketing"}, {"chat_id": "120363118@g.us", "nome": "Pós-venda"}, {"chat_id": "120363119@g.us", "nome": "Suporte técnico"}, {"chat_id": "1203631110@g.us", "nome": "Time de vendas"}, {"chat_id": "1203631111@g.us", "nome": "Urgências"}]' ;;
@@ -132,7 +134,6 @@ AGENTE='{"id":"a4","cliente_id":"c1","nome":"Carlos","canal":"waha","handoff_des
 com_voltar edita_waha
 jq -c . "$DIR/patch_waha"
 # Atualização da WAHA: tag nova no Docker Hub, troca a versão e registra.
-env_set WAHA_ATIVA 1
 env_set VERSAO_WAHA gows-2026.8.2
 com_voltar fluxo_waha
 printf 'VERSAO_WAHA=%s\n' "$(env_get VERSAO_WAHA)"

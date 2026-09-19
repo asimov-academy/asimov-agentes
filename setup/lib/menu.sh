@@ -207,9 +207,7 @@ fluxo_diagnostico() {
   confere_endereco "API, pelo domínio" "https://$sub/health"
   confere_endereco "Política de privacidade" "https://$sub/privacidade"
   confere_endereco "Ícone do app" "https://$sub/icone-app.png"
-  if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
-    confere_endereco "WAHA, por dentro" "http://127.0.0.1:8000/admin/canais/waha" --com-chave
-  fi
+  confere_endereco "WAHA, por dentro" "http://127.0.0.1:8000/admin/canais/waha" --com-chave
   if painel_ligado; then
     confere_endereco "Painel" "https://$(env_get SUBDOMINIO_APP)/painel/entrar"
   fi
@@ -645,10 +643,8 @@ menu_operador() {
     fi
     rotulos=("Criar agente" "Conversar com agente" "Listar agentes" "Editar agente" "Remover agente" "Ver consumo e falhas")
     acoes=(acao_novo_agente fluxo_conversar "com_pausa lista_agentes" fluxo_editar_agente "com_pausa fluxo_remover_agente" "com_pausa mostra_consumo")
-    if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
-      rotulos+=("WhatsApp (WAHA)")
-      acoes+=("com_pausa fluxo_waha")
-    fi
+    rotulos+=("WhatsApp (WAHA)")
+    acoes+=("com_pausa fluxo_waha")
     rotulos+=("Painel no navegador" "Conta de IA" "Token do Chatwoot" "Diagnóstico" "Sair")
     acoes+=("com_pausa fluxo_painel" "com_pausa fluxo_vinculo" "com_pausa fluxo_token_chatwoot" "com_pausa fluxo_diagnostico")
     ESC_ESCOLHE=${#rotulos[@]} escolha op "O que fazer?" "${rotulos[@]}"

@@ -146,7 +146,7 @@ confere_proxy_do_dns() {
 tela_instalacao() {
   secao "Instalação"
   PASSO_ATUAL=0
-  PASSO_TOTAL=12
+  PASSO_TOTAL=13
   local sub
   sub=$(env_get SUBDOMINIO_BOT)
   # A IA é escolha de cada agente, feita depois: a imagem leva o SDK dos quatro provedores.
@@ -169,6 +169,10 @@ tela_instalacao() {
   passo api_https "Certificado SSL em $sub" \
     "Confira se as portas 80 e 443 estão livres e se o domínio aponta para a VPS." \
     --sem-repetir espera_url "https://$sub/health" 36
+  # Depois de a API responder: `sobe_waha` avisa a plataforma da manutenção antes de mexer no
+  # contêiner. A WAHA entra na instalação porque o painel não sabe subir contêiner nenhum.
+  passo whatsapp "WhatsApp na VPS (WAHA)" \
+    "Veja: source deploy/compose.sh && dc logs waha" instala_waha
   # Depois de a plataforma estar no ar: backup de instalação que não subiu não serve para nada.
   passo backup "Backup diário" "Veja: systemctl status asimov-backup.timer" instala_timer_backup
   # O `.env` guarda a chave que decifra as credenciais dos canais: ninguém além do dono o lê.

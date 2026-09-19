@@ -17,11 +17,11 @@ atualiza() {
   instala_comando
   # O pacote da atualização traz o painel.caddy desligado por cima do bloco do operador.
   painel_garante_caddy
-  # Instalação que ligou o WhatsApp antes de o timer semanal e dos eventos de hoje.
-  if [ "$(env_get WAHA_ATIVA)" = 1 ]; then
-    instala_timer_waha || true
-    reconfigura_sessoes_waha
-  fi
+  # A WAHA passou a vir com a instalação: VPS instalada por uma versão anterior pode não ter o
+  # contêiner, o timer semanal nem os eventos de hoje nas sessões que já existem.
+  garante_waha
+  instala_timer_waha || true
+  reconfigura_sessoes_waha
   tela_handoff_pendente
   tela_vinculo_ia
   tela_painel_oferta
