@@ -7,7 +7,7 @@ edita o arquivo e a mudança vale na próxima mensagem, sem publicar de novo.
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, NativeOutput
@@ -43,11 +43,19 @@ class Resposta(BaseModel):
         description="Mensagens curtas, na ordem em que serão enviadas ao contato.",
         min_length=1,
     )
+    sentimento: Literal["positivo", "neutro", "negativo"] = Field(
+        default="neutro",
+        description="Como o contato parece estar nesta altura da conversa.",
+    )
+    """Um campo só, e com padrão: cada campo a mais custa token em todo turno e é mais uma chance de
+    o modelo errar o formato. Ele move o gatilho de transferência por frustração e o humor do dia no
+    painel (fase 10, etapa 4)."""
 
 
 @dataclass
 class ResultadoTurno:
     mensagens: list[str]
+    sentimento: str = "neutro"
     tokens_entrada: int = 0
     tokens_saida: int = 0
     custo_estimado: Decimal | None = None
@@ -334,6 +342,7 @@ async def roda_turno(
     novas = resultado.new_messages()
     return ResultadoTurno(
         mensagens=resultado.output.mensagens,
+        sentimento=resultado.output.sentimento,
         tokens_entrada=resultado.usage.input_tokens,
         tokens_saida=resultado.usage.output_tokens,
         custo_estimado=custo_estimado(novas),

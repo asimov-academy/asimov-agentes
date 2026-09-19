@@ -331,7 +331,7 @@ aplica_ritmo_do_whatsapp() {
 # Tom, emoji, o que ele pode falar e se existe alguém para assumir: é o jeito do agente, e o painel
 # tem as mesmas quatro escolhas na mesma rota.
 edita_jeito() {
-  local op tom humano temas memoria atual
+  local op tom humano temas memoria aviso atual
   case "$(jq -r '.tom // "normal"' <<<"$AGENTE")" in
     formal) atual=1 ;;
     descontraido) atual=3 ;;
@@ -356,8 +356,12 @@ edita_jeito() {
   dica "Ligado, ele guarda o que ficou combinado com cada contato e não pergunta duas vezes."
   confirma "Ele lembra de cada contato?" && memoria=true || memoria=false
 
-  salva_agente "$(jq -n --arg t "$tom" --arg e "$EMOJIS" --argjson h "$humano" --argjson r "$temas" --argjson m "$memoria" \
-    '{tom: $t, emojis: $e, transfere_para_humano: $h, restringe_temas: $r, memoria_ativa: $m}')"
+  dica "Uma linha na primeira mensagem de cada conversa. Quem atende na União Europeia precisa ligar."
+  confirma "Ele avisa que é um assistente virtual?" && aviso=true || aviso=false
+
+  salva_agente "$(jq -n --arg t "$tom" --arg e "$EMOJIS" --argjson h "$humano" --argjson r "$temas" \
+    --argjson m "$memoria" --argjson a "$aviso" \
+    '{tom: $t, emojis: $e, transfere_para_humano: $h, restringe_temas: $r, memoria_ativa: $m, avisa_que_e_ia: $a}')"
 }
 
 # O material que o agente sabe além do prompt. O painel tem a mesma coisa na aba Treinamento, pelas

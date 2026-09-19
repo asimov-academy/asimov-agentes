@@ -59,6 +59,8 @@ CAMPOS_EDITAVEIS = frozenset(
         "transfere_para_humano",
         "restringe_temas",
         "memoria_ativa",
+        "avisa_que_e_ia",
+        "aviso_de_ia",
         "contatos_permitidos",
         *CAMPOS_MODELO,
     }
@@ -301,6 +303,20 @@ async def conectar_canal(
         raise
     log.info("agente_conectado", agente_id=str(agente.id), canal=canal)
     return agente
+
+
+AVISO_DE_IA_PADRAO = "Oi! Sou o assistente virtual de {empresa}, e se você preferir eu chamo uma pessoa."
+AVISO_DE_IA_SEM_HUMANO = "Oi! Sou o assistente virtual de {empresa}."
+
+
+def aviso_de_ia(agente: Agente, empresa: str) -> str:
+    """O que o agente diz na primeira mensagem de uma conversa nova, quando o aviso está ligado."""
+    if not agente.avisa_que_e_ia:
+        return ""
+    if agente.aviso_de_ia.strip():
+        return agente.aviso_de_ia.strip()
+    padrao = AVISO_DE_IA_PADRAO if agente.transfere_para_humano else AVISO_DE_IA_SEM_HUMANO
+    return padrao.format(empresa=empresa or "nossa empresa")
 
 
 def _ritmo(campos: dict[str, Any], atuais: dict[str, int]) -> dict[str, Any]:

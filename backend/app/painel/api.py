@@ -168,6 +168,14 @@ class Situacao(BaseModel):
     texto: str
 
 
+class Humor(BaseModel):
+    """Como o modelo leu o contato nos turnos do período."""
+
+    positivo: int
+    neutro: int
+    negativo: int
+
+
 class VisaoGeral(BaseModel):
     dias: int
     desde: datetime
@@ -175,6 +183,7 @@ class VisaoGeral(BaseModel):
     variacao: Variacao
     serie: Serie
     modelos: list[GastoDoModelo]
+    humor: Humor
     resolucao: Resolucao
     agentes: list[TurnosDoAgente]
     falhas: list[FalhaDoPainel]

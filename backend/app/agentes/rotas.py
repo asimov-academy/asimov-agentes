@@ -62,6 +62,9 @@ class NovoAgente(BaseModel):
     memoria_ativa: bool = Field(
         default=True, description="O agente lembra do contato entre conversas (resumo e ficha)."
     )
+    avisa_que_e_ia: bool = Field(
+        default=False, description="Abre cada conversa nova dizendo que é um assistente virtual."
+    )
     contatos_permitidos: list[str] | None = Field(
         default=None,
         description="Telefones que o agente atende. Vazio (o padrão) atende qualquer pessoa; com lista, o resto é ignorado.",
@@ -86,6 +89,8 @@ class EdicaoAgente(BaseModel):
     transfere_para_humano: bool | None = None
     restringe_temas: bool | None = None
     memoria_ativa: bool | None = None
+    avisa_que_e_ia: bool | None = None
+    aviso_de_ia: str | None = None
     ritmo: str | None = None
     contatos_permitidos: list[str] | None = None
     modelo_conversa: str | None = None
@@ -154,6 +159,8 @@ class AgenteSaida(BaseModel):
     restringe_temas: bool
     ritmo: str
     memoria_ativa: bool
+    avisa_que_e_ia: bool
+    aviso_de_ia: str
     contatos_permitidos: list[str]
     ativo: bool
 
@@ -216,6 +223,7 @@ async def criar(
             transfere_para_humano=dados.transfere_para_humano,
             restringe_temas=dados.restringe_temas,
             memoria_ativa=dados.memoria_ativa,
+            avisa_que_e_ia=dados.avisa_que_e_ia,
             ritmo=dados.ritmo,
             contatos_permitidos=dados.contatos_permitidos,
         )

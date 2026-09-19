@@ -28,6 +28,7 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from app.agentes import repo as agentes_repo
 from app.agentes import servico as agentes_servico
 from app.consumo.modelos import Turno
+from app.consumo import repo as consumo_repo
 from app.consumo.repo import grava_turno, registra_falha
 from app.conversas import buffer, memoria_do_contato, repo
 from app.conversas.divisao import limita_mensagens, pausa_de_leitura, tempos_de_digitacao
@@ -37,7 +38,7 @@ from app.handoff import servico as handoff
 from app.ia import chaves
 from app.ia.agente import ResultadoTurno, roda_turno
 from app.midia import servico as midia
-from app.plataforma.banco import fabrica_sessao
+from app.plataforma.banco import agora, fabrica_sessao
 from app.plataforma.config import config
 
 log = structlog.get_logger()
@@ -243,6 +244,13 @@ async def _turno(
             log.info("resposta_descartada")
             return "substituido"
         textos = limita_mensagens(resultado.mensagens, agente.max_mensagens_por_resposta)
+        # O aviso de que é uma IA abre a conversa, uma vez só, antes da primeira resposta. Ele não
+        # entra no prompt: assim o modelo não o repete nem o reescreve (fase 10, etapa 4).
+        if conversa.avisou_ia_em is None:
+            aviso = agentes_servico.aviso_de_ia(agente, await repo.nome_da_empresa(s, cliente_id))
+            if aviso:
+                textos = [aviso, *textos][: max(agente.max_mensagens_por_resposta, 2)]
+                conversa.avisou_ia_em = agora()
         enviadas = await _envia(
             s, canal, credenciais, agente, conversa, textos, comeco, ultima, pode_falar_agora
         )
@@ -287,13 +295,18 @@ async def _turno(
                 custo_estimado=resultado.custo_estimado,
                 latencia_ms=latencia,
                 tools_chamadas=resultado.tools_chamadas or None,
+                sentimento=resultado.sentimento,
             ),
         )
         if resultado.correcoes:
             await registra_falha(
                 "resposta_corrigida", {"avisos": resultado.correcoes}, cliente_id, agente.id
             )
-        motivo = resultado.motivo_handoff or _motivo_por_midia(pendentes)
+        motivo = (
+            resultado.motivo_handoff
+            or _motivo_por_midia(pendentes)
+            or await _por_frustracao(s, cliente_id, conversa_id, agente, resultado)
+        )
         transferencia = None
         if motivo is not None:
             transferencia = await handoff.transferir(s, agente, canal, credenciais, conversa, motivo)
@@ -303,6 +316,28 @@ async def _turno(
         await memoria_do_contato.atualiza(s, agente, conversa, [*anteriores, *pendentes])
         log.info("turno_concluido", mensagens=enviadas, latencia_ms=latencia, handoff=transferencia)
         return "transferido" if transferencia == "transferido" else "respondido"
+
+
+TURNOS_NEGATIVOS_PARA_TRANSFERIR = 2
+"""Dois turnos seguidos com o contato irritado. Um só é o desabafo de quem já chegou bravo; dois é o
+agente não resolvendo, e aí uma pessoa resolve mais rápido (fase 10, etapa 4)."""
+
+
+async def _por_frustracao(
+    sessao: Any, cliente_id: uuid.UUID, conversa_id: uuid.UUID, agente: Any, resultado: ResultadoTurno
+) -> str | None:
+    """Transfere quando o contato está irritado há dois turnos. Só no agente que transfere.
+
+    O turno de agora já foi gravado quando isto roda, então ele é o primeiro da lista lida.
+    """
+    if not agente.transfere_para_humano or resultado.sentimento != "negativo":
+        return None
+    ultimos = await consumo_repo.ultimos_sentimentos(
+        sessao, cliente_id, conversa_id, TURNOS_NEGATIVOS_PARA_TRANSFERIR
+    )
+    if len(ultimos) < TURNOS_NEGATIVOS_PARA_TRANSFERIR or any(s != "negativo" for s in ultimos):
+        return None
+    return "o contato segue insatisfeito depois de duas respostas"
 
 
 def _motivo_por_midia(pendentes: list[Mensagem]) -> str | None:

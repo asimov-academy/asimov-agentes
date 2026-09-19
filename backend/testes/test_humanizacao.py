@@ -294,3 +294,96 @@ async def test_memoria_so_e_reescrita_quando_a_conversa_andou(http, canal, sessa
         await s.refresh(contato)
     assert conversa.resumo == "Ele comprou um tênis."
     assert contato.memoria == "Chama-se Zé."
+
+
+# Etapa 4: sentimento, gatilho por frustração e aviso de IA
+
+
+def responde_com_sentimento(sentimento: str, mensagens: list[str] | None = None):  # type: ignore[no-untyped-def]
+    """Modelo falso que devolve a resposta e o sentimento do contato."""
+    import json
+
+    from pydantic_ai.messages import TextPart, ToolCallPart
+
+    conteudo = {"mensagens": mensagens or ["Oi"], "sentimento": sentimento}
+
+    def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if info.output_tools:
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, conteudo)])
+        return ModelResponse(parts=[TextPart(json.dumps(conteudo, ensure_ascii=False))])
+
+    return FunctionModel(responde)
+
+
+async def test_sentimento_do_contato_fica_no_turno(http, canal, fila, sessao, redis, monkeypatch) -> None:
+    from sqlalchemy import select as seleciona
+
+    from app.consumo.modelos import Turno
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: responde_com_sentimento("negativo"))
+    monkeypatch.setattr(turno, "tempos_de_digitacao", lambda textos, *a, **k: [0] * len(textos))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    assert await roda_um_turno(http, sessao, redis, agente) == "respondido"
+
+    async with sessao() as s:
+        registro = await s.scalar(seleciona(Turno).where(Turno.funcao == "resposta"))
+    assert registro.sentimento == "negativo"
+
+
+async def test_dois_turnos_irritados_seguidos_chamam_uma_pessoa(
+    http, canal, fila, sessao, redis, monkeypatch
+) -> None:
+    from sqlalchemy import select as seleciona
+
+    from app.handoff.modelos import Handoff
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: responde_com_sentimento("negativo"))
+    monkeypatch.setattr(turno, "tempos_de_digitacao", lambda textos, *a, **k: [0] * len(textos))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+
+    assert await roda_um_turno(http, sessao, redis, agente, 1) == "respondido"
+    async with sessao() as s:
+        assert await s.scalar(seleciona(Handoff)) is None
+
+    # O turno que transfere diz isso no próprio resultado.
+    assert await roda_um_turno(http, sessao, redis, agente, 2) == "transferido"
+    async with sessao() as s:
+        aberto = await s.scalar(seleciona(Handoff))
+    assert aberto is not None and "insatisfeito" in aberto.motivo
+
+
+async def test_agente_que_nao_transfere_nao_cai_por_frustracao(
+    http, canal, fila, sessao, redis, monkeypatch
+) -> None:
+    from sqlalchemy import select as seleciona
+
+    from app.handoff.modelos import Handoff
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: responde_com_sentimento("negativo"))
+    monkeypatch.setattr(turno, "tempos_de_digitacao", lambda textos, *a, **k: [0] * len(textos))
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", transfere_para_humano=False)
+
+    assert await roda_um_turno(http, sessao, redis, agente, 1) == "respondido"
+    assert await roda_um_turno(http, sessao, redis, agente, 2) == "respondido"
+    async with sessao() as s:
+        assert await s.scalar(seleciona(Handoff)) is None
+
+
+async def test_aviso_de_ia_abre_a_conversa_uma_vez_so(http, canal, fila, sessao, redis, instrucoes) -> None:
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana", avisa_que_e_ia=True)
+    assert agente["avisa_que_e_ia"] is True
+
+    assert await roda_um_turno(http, sessao, redis, agente, 1) == "respondido"
+    primeira = canal.enviadas[0][1]
+    assert "assistente virtual" in primeira and "Loja Exemplo" in primeira
+
+    quantas = len(canal.enviadas)
+    assert await roda_um_turno(http, sessao, redis, agente, 2) == "respondido"
+    assert all("assistente virtual" not in texto for _, texto in canal.enviadas[quantas:])
+
+
+async def test_agente_nasce_sem_avisar_que_e_ia(http, canal, fila, sessao, redis, instrucoes) -> None:
+    agente = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    assert agente["avisa_que_e_ia"] is False
+    assert await roda_um_turno(http, sessao, redis, agente) == "respondido"
+    assert all("assistente virtual" not in texto for _, texto in canal.enviadas)

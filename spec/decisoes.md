@@ -2,6 +2,25 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 10, etapa 4 (sentimento, gatilho e aviso de IA)
+
+**A resposta do modelo ganha um campo**, `sentimento` (positivo, neutro ou negativo), com padrão
+neutro para o formato nunca falhar por causa dele. Um campo só: cada campo a mais custa token em
+todo turno e é mais uma chance de errar o formato. Ele fica no turno (migração `0024`), move o
+gatilho novo e vira o cartão "Contatos irritados" na Visão geral.
+
+**Transferência por frustração**: dois turnos seguidos lidos como negativos chamam uma pessoa, e só
+no agente que transfere. Um turno negativo é o desabafo de quem chegou bravo; dois é o agente não
+resolvendo.
+
+**O aviso de que é uma IA nasce desligado** (escolha do operador) e, ligado, abre cada conversa nova
+com uma linha. Ele é enviado pela orquestração, e não pelo prompt: assim o modelo não o repete nem o
+reescreve. A conversa grava `avisou_ia_em`, que é o que prova o cumprimento. O texto padrão sai do
+nome da empresa e muda quando o agente não transfere, para não prometer uma pessoa que não existe.
+O interruptor está na aba Comunicação e no Jeito de falar do terminal.
+
+Atualizados: `spec/fases.md`, `spec/estado.md`.
+
 ## 2026-09-18: Fase 10, etapa 3 (memória do contato)
 
 O agente passa a lembrar do contato entre conversas (migração `0023`, aditiva). Duas coisas, escritas
