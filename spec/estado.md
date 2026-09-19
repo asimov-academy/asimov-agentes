@@ -25,6 +25,25 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 ## Versão publicada
 
+- `v0.29.0`: **a auditoria de inteligência vira correção.** Os 16 achados de
+  `docs/auditoria-inteligencia-2026-09-19.md`, corrigidos e cobertos por regressão, **nada validado
+  em VPS nem com modelo real**:
+  **Motor**: a saída estruturada passa a olhar modelo e ferramentas juntos em cada candidato do
+  fallback, porque Gemini anterior ao 3 aceita JSON Schema mas não junto de function tools, e a
+  PydanticAI recusa a combinação antes de chamar a rede; nesses modelos a busca web nativa cai para
+  a local. A memória do contato chega escapada e como dado, e o motivo do handoff escrito pelo
+  modelo saiu da parte de sistema. O consumo registra a chamada da memória e o modelo que de fato
+  respondeu.
+  **Configuração**: salvar Perfil e Trabalho juntos não reescreve mais o comportamento escrito à
+  mão, e renomear também não; perfil sem função continua aplicando empresa, proibições e
+  assinatura; o aviso de que é uma IA não corta mensagem e só é marcado depois do envio sair;
+  falha com transferência desligada não promete pessoa; a prova do agente volta ao CLI e ao painel;
+  o `confirma` do CLI abre no valor atual; o copiloto lê e propõe tom, ritmo, restrição de temas,
+  transferência, memória e aviso de IA.
+  **Conhecimento** (migração `0028`): volume próprio compartilhado por API e worker, chaves
+  carregadas antes de gerar embeddings, modelo de embeddings fixado na primeira ingestão, site
+  baixado só de IP público, conferido a cada redirect e com teto durante a leitura, e backup com
+  `prompts/` e a pasta de conhecimento.
 - `v0.28.0`: **o painel revisado tela a tela, com o operador olhando junto.** Uma auditoria de UX
   que virou seis rodadas de correção no mesmo dia, tudo construído e com teste, **nada validado em
   VPS**:
