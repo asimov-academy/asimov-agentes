@@ -3,6 +3,7 @@ import {
   api,
   ErroDaApi,
   type Agente,
+  type CasoDaProva,
   type EdicaoDoAgente,
   type Ferramenta,
   type Modelos,
@@ -595,6 +596,91 @@ function Comunicacao({ agente, atualiza }: { agente: Agente; atualiza: (a: Agent
   );
 }
 
+/** As mesmas cinco perguntas, antes e depois de mexer no prompt.
+ *
+ *  Mostra, não bloqueia: nota de juiz automático não é confiável a ponto de impedir o operador de
+ *  salvar o próprio prompt. O que ele precisa é ver a diferença, e quem julga é quem vai responder
+ *  ao cliente depois.
+ */
+function Prova({ agente }: { agente: Agente }) {
+  const [agora, setAgora] = useState<CasoDaProva[] | null>(null);
+  const [antes, setAntes] = useState<CasoDaProva[] | null>(null);
+  const [rodando, setRodando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  return (
+    <section className="mt-8 border-t border-borda pt-6">
+      <p className="rotulo">Como ele responde hoje</p>
+      <p className="mt-1 max-w-[70ch] text-sm text-muted">
+        Cinco perguntas de sempre, com o prompt que está valendo agora. Rode, mexa no prompt e rode
+        de novo para ver o que mudou. Isso gasta modelo, como uma conversa de verdade.
+      </p>
+
+      <div className="mt-3">
+        <Botao
+          pequeno
+          icone="comm-chat"
+          ocupado={rodando}
+          onClick={async () => {
+            setRodando(true);
+            setErro("");
+            try {
+              const resposta = await api.prova(agente.id);
+              setAntes(agora);
+              setAgora(resposta.casos);
+            } catch (problema) {
+              setErro(problema instanceof ErroDaApi ? problema.message : String(problema));
+            } finally {
+              setRodando(false);
+            }
+          }}
+        >
+          {agora ? "Rodar de novo" : "Ver como ele responde"}
+        </Botao>
+      </div>
+
+      {erro && (
+        <div className="mt-3">
+          <Aviso tom="erro" titulo="a prova não rodou">
+            {erro}
+          </Aviso>
+        </div>
+      )}
+
+      {agora && (
+        <ul className="mt-4 flex flex-col gap-3">
+          {agora.map((caso, i) => (
+            <li key={caso.caso} className="rounded-lg border border-borda p-4">
+              <p className="text-sm text-texto">{caso.pergunta}</p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {antes?.[i] && (
+                  <div className="rounded-md border border-borda p-3">
+                    <p className="rotulo">antes</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-dim">
+                      {antes[i].erro || (antes[i].mensagens ?? []).join("\n")}
+                    </p>
+                  </div>
+                )}
+                <div className="rounded-md border border-ciano/40 p-3">
+                  <p className="rotulo">{antes?.[i] ? "depois" : "resposta"}</p>
+                  <p className="mt-1 whitespace-pre-line text-sm text-texto">
+                    {caso.erro || (caso.mensagens ?? []).join("\n")}
+                  </p>
+                  {caso.transferiu && (
+                    <span className="mt-2 inline-block">
+                      <Selo tom="atencao">passou para uma pessoa</Selo>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) => void }) {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [funcao, setFuncao] = useState(agente.perfil?.funcao ?? "");
@@ -726,6 +812,8 @@ function Trabalho({ agente, atualiza }: { agente: Agente; atualiza: (a: Agente) 
           descricao="Ele acrescenta o próprio nome no fim da resposta."
         />
       </div>
+
+      <Prova agente={agente} />
 
       <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-borda pt-6">
         <Botao tom="solido" pequeno icone="act-save" ocupado={salvando} onClick={salvaFormulario}>

@@ -387,3 +387,60 @@ async def test_agente_nasce_sem_avisar_que_e_ia(http, canal, fila, sessao, redis
     assert agente["avisa_que_e_ia"] is False
     assert await roda_um_turno(http, sessao, redis, agente) == "respondido"
     assert all("assistente virtual" not in texto for _, texto in canal.enviadas)
+
+
+# Etapa 5: a prova do agente
+
+
+async def test_prova_responde_os_cinco_casos_sem_gravar_conversa(http, canal, sessao, monkeypatch) -> None:
+    from sqlalchemy import select as seleciona
+
+    from app.conversas.modelos import Conversa as ConversaModelo
+    from app.ia import prova
+
+    perguntas: list[str] = []
+
+    def responde(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        perguntas.append(str(historico[-1].parts[-1].content))
+        return resposta_falsa(info, ["Claro, posso ajudar"])
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(responde))
+    agente_json = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+
+    import uuid as uuid_
+
+    from app.agentes import repo as agentes_repo
+
+    async with sessao() as s:
+        agente = await agentes_repo.obter(
+            s, uuid_.UUID(agente_json["cliente_id"]), uuid_.UUID(agente_json["id"])
+        )
+        casos = await prova.roda(agente)
+
+    assert [c["caso"] for c in casos] == [nome for nome, _ in prova.CASOS]
+    assert all(c["mensagens"] == ["Claro, posso ajudar"] for c in casos)
+    assert "quanto custa?" in perguntas
+    # A prova não deixa rastro: nenhuma conversa nasce dela.
+    async with sessao() as s:
+        assert await s.scalar(seleciona(ConversaModelo)) is None
+
+
+async def test_caso_que_falha_vira_linha_com_erro_e_nao_derruba_a_prova(
+    http, canal, sessao, monkeypatch
+) -> None:
+    import uuid as uuid_
+
+    from app.agentes import repo as agentes_repo
+    from app.ia import prova
+
+    def explode(historico: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        raise RuntimeError("provedor fora do ar")
+
+    monkeypatch.setattr("app.ia.provedores.construir_modelo", lambda nome: FunctionModel(explode))
+    agente_json = await cria_cliente_e_agente(http, "Loja Exemplo", "Ana")
+    async with sessao() as s:
+        agente = await agentes_repo.obter(
+            s, uuid_.UUID(agente_json["cliente_id"]), uuid_.UUID(agente_json["id"])
+        )
+        casos = await prova.roda(agente)
+    assert all(c["erro"] for c in casos)

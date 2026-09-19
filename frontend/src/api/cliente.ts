@@ -224,6 +224,9 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ chave }),
     }),
+  /** Roda os casos fixos contra o agente e devolve o que ele respondeu. Gasta modelo. */
+  prova: (id: string) => chama<{ casos: CasoDaProva[] }>(`/agentes/${id}/prova`, { method: "POST" }),
+
   /** O material que o agente sabe, além do prompt. */
   documentos: (id: string) => chama<BaseDoAgente>(`/agentes/${id}/documentos`),
   enviaDocumento: (id: string, arquivo: File) => {
@@ -481,6 +484,15 @@ export type ConexaoDoAgente = {
   conexao?: Record<string, unknown>;
   handoff_destino?: Record<string, unknown> | null;
   retomada_automatica_horas?: number | null;
+};
+
+export type CasoDaProva = {
+  caso: string;
+  pergunta: string;
+  mensagens?: string[];
+  sentimento?: string;
+  transferiu?: boolean;
+  erro: string;
 };
 
 export type MaterialDaBase = {
