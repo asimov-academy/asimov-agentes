@@ -5,6 +5,7 @@ from arq import cron
 from arq.connections import RedisSettings
 
 from app.canais.waha import vigia
+from app.conhecimento import servico as conhecimento
 from app.conversas.turno import processar_turno
 from app.handoff import servico as handoff
 from app.midia import servico as midia
@@ -33,6 +34,18 @@ async def assumir_conversa(
         return await handoff.assumir_no_canal(s, uuid.UUID(cliente_id), uuid.UUID(conversa_id), autor_externo)
 
 
+async def ingerir_documento(
+    ctx: dict[str, Any], cliente_id: str, documento_id: str, texto: str = ""
+) -> str:
+    """Material novo na base: extrai o texto, divide em trechos e gera os vetores.
+
+    No worker, e não na requisição, porque chama o provedor de embeddings: documento de cem páginas
+    são dezenas de chamadas, e a tela não pode ficar esperando isso.
+    """
+    async with fabrica_sessao()() as s:
+        return await conhecimento.ingerir(s, uuid.UUID(cliente_id), uuid.UUID(documento_id), texto)
+
+
 async def retomada_automatica(ctx: dict[str, Any]) -> int:
     """De minuto em minuto: conversa cujo prazo de handoff venceu volta para o agente."""
     async with fabrica_sessao()() as s:
@@ -57,7 +70,7 @@ async def confere_whatsapp(ctx: dict[str, Any]) -> int:
 
 
 class Configuracao:
-    functions = [processar_turno, assumir_conversa]
+    functions = [processar_turno, assumir_conversa, ingerir_documento]
     cron_jobs = [
         cron(pulso, second=30, run_at_startup=True),
         cron(retomada_automatica, second=0, run_at_startup=False),

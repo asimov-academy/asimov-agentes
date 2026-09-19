@@ -92,8 +92,8 @@ fluxo_editar_agente() {
       RESULTADO=""
     fi
     echo
-    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Jeito de falar" "Modelos")
-    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_jeito edita_modelo)
+    rotulos=("Nome" "Tempo de buffer" "Mensagens por resposta" "Digitação" "Ferramentas" "Jeito de falar" "Base de conhecimento" "Modelos")
+    acoes=(edita_nome edita_buffer edita_mensagens edita_digitacao edita_ferramentas edita_jeito edita_conhecimento edita_modelo)
     # No nativo o handoff aparece no próprio terminal: não há destino para escolher, mas dá para
     # ligar o agente num canal.
     case "$(jq -r '.canal' <<<"$AGENTE")" in
@@ -337,6 +337,72 @@ edita_jeito() {
 
   salva_agente "$(jq -n --arg t "$tom" --arg e "$EMOJIS" --argjson h "$humano" --argjson r "$temas" \
     '{tom: $t, emojis: $e, transfere_para_humano: $h, restringe_temas: $r}')"
+}
+
+# O material que o agente sabe além do prompt. O painel tem a mesma coisa na aba Treinamento, pelas
+# mesmas rotas: aqui o arquivo já está na VPS, e lá ele sobe pelo navegador.
+edita_conhecimento() {
+  local op caminho arquivo texto url documento_id documentos linhas
+  while true; do
+    caminho="$(caminho_do_agente "$AGENTE")/documentos"
+    api GET "$caminho"
+    exige_api
+    documentos=$API_RESPOSTA
+    linhas=$(jq -r '.[] | "  \(.nome)  [\(.status)\(if .status == "pronto" then ", \(.total_trechos) trechos" else "" end)]\(if .erro != "" then "  " + .erro else "" end)"' <<<"$documentos")
+    if [ -n "$linhas" ]; then
+      printf '%s\n\n' "$linhas"
+    else
+      dica "Ele ainda não sabe nada além do prompt."
+    fi
+
+    ESC_ESCOLHE=5 escolha op "Base de conhecimento" \
+      "Enviar um arquivo  ${CINZA}PDF, DOCX, TXT ou MD que já está na VPS${NORMAL}" \
+      "Ensinar uma frase  ${CINZA}uma afirmação por vez${NORMAL}" \
+      "Ensinar por site  ${CINZA}o texto de uma página${NORMAL}" \
+      "Remover um material" \
+      "Voltar"
+    case "$op" in
+      1)
+        pergunta arquivo "Caminho do arquivo na VPS"
+        if [ ! -f "$arquivo" ]; then
+          printf '%s\n' "$(falha "Não achei esse arquivo.")"
+          continue
+        fi
+        api_arquivo "$caminho" "$arquivo"
+        ;;
+      2)
+        pergunta texto "O que ele precisa saber"
+        api POST "$caminho/texto" "$(jq -n --arg t "$texto" '{texto: $t}')"
+        ;;
+      3)
+        pergunta url "Endereço da página"
+        api POST "$caminho/site" "$(jq -n --arg u "$url" '{url: $u}')"
+        ;;
+      4)
+        documento_id=$(escolhe_documento "$documentos") || continue
+        api DELETE "$caminho/$documento_id"
+        ;;
+      *) return 0 ;;
+    esac
+    if [ "$API_STATUS" = 200 ] || [ "$API_STATUS" = 201 ]; then
+      printf '%s\n' "$(ok "Pronto.")"
+    else
+      printf '%s\n' "$(falha "$(detalhe_erro "$API_RESPOSTA")")"
+    fi
+    pausa
+  done
+}
+
+# escolhe_documento JSON: imprime o id escolhido, ou sai diferente de 0 quando não há o que remover.
+escolhe_documento() {
+  local op quantos
+  local -a nomes=()
+  quantos=$(jq -r 'length' <<<"$1")
+  [ "$quantos" -gt 0 ] || return 1
+  while IFS= read -r linha; do nomes+=("$linha"); done < <(jq -r '.[] | .nome' <<<"$1")
+  ESC_ESCOLHE=$((quantos + 1)) escolha op "Remover qual?" "${nomes[@]}" "Voltar"
+  [ "$op" -le "$quantos" ] || return 1
+  jq -r --argjson i "$((op - 1))" '.[$i].id' <<<"$1"
 }
 
 edita_handoff() {

@@ -156,6 +156,10 @@ Commit: `feat: WhatsApp direto oficial e WAHA, handoff por aviso e agente nativo
 
 ## Fase 6: Base de conhecimento
 
+Situação: **construída** (2026-09-18), com os testes passando. Falta rodar numa VPS real com chave
+de verdade: o que a suíte prova é o isolamento, o ciclo de ingestão e os erros; o que só a VPS prova
+é a qualidade da resposta com material do cliente.
+
 Objetivo: cada agente responde com base nos documentos do próprio cliente.
 
 Onde ela mora no painel já está decidido e desenhado: a aba **Treinamento** da ficha do agente
@@ -164,11 +168,14 @@ e base compartilhada entre agentes). A tela existe vazia desde a v0.26.0, com se
 lugar combinado veio antes da máquina para nenhum tipo de material nascer num canto diferente.
 
 O que entra:
-- Entidades Documento e Trecho; modelo de embeddings da Instalação.
-- API: enviar, listar e remover documento.
+- Entidades Documento e Trecho (migração `0021`, aditiva); modelo de embeddings da Instalação.
+- API: enviar (arquivo, frase ou site), listar e remover material, no `/admin` e no `/painel/api`.
 - Job `ingerir_documento`: PDF, DOCX, TXT e MD, trechos de cerca de 800 tokens, embeddings em lote.
-- Tool `buscar_base_conhecimento` registrada em todo agente.
-- Opção "Subir base de conhecimento" no menu e passo opcional na tela 6.
+- Tool `buscar_base_conhecimento`, que **liga sozinha no agente quando o primeiro material fica
+  pronto**: sem isso o operador sobe a tabela de preços e o agente responde que não sabe, porque a
+  ferramenta estava desmarcada em outra aba.
+- "Base de conhecimento" em `asimov editar` e a aba Treinamento do painel funcionando em três das
+  cinco formas (texto, site e documento). Vídeo e base compartilhada entre agentes seguem desenhadas.
 - Testes: busca de um agente nunca devolve trecho de outro agente ou cliente; documento removido some da busca; hash repetido recusado.
 
 Dependências: Fase 4.

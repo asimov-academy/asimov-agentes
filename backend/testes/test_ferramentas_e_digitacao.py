@@ -35,7 +35,11 @@ async def test_agente_novo_nasce_sem_ferramentas_e_operador_liga(http, canal, fi
     assert (agente["digitacao_caracteres_por_segundo"], agente["digitacao_maximo_segundos"]) == (6, 20)
 
     catalogo = (await http.get("/admin/ferramentas", headers=ADMIN)).json()
-    assert [(f["nome"], f["padrao"]) for f in catalogo] == [("calculadora", False), ("busca_web", False)]
+    assert [(f["nome"], f["padrao"]) for f in catalogo] == [
+        ("calculadora", False),
+        ("busca_web", False),
+        ("base_conhecimento", False),
+    ]
 
     escolhidas = await cria_cliente_e_agente(http, "Padaria Pão Quente", "Bia", ferramentas=["busca_web", "calculadora"])
     assert escolhidas["ferramentas"] == ["calculadora", "busca_web"]

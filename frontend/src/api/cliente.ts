@@ -34,7 +34,12 @@ async function chama<T>(caminho: string, opcoes: RequestInit = {}): Promise<T> {
     headers: {
       Accept: "application/json",
       ...(escrita
-        ? { "Content-Type": "application/json", "X-Painel-CSRF": csrf }
+        ? {
+            // FormData traz o próprio `Content-Type`, com o limite dentro: escrever o nosso por
+            // cima quebra o upload.
+            ...(opcoes.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+            "X-Painel-CSRF": csrf,
+          }
         : {}),
       ...opcoes.headers,
     },
@@ -219,6 +224,26 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ chave }),
     }),
+  /** O material que o agente sabe, além do prompt. */
+  documentos: (id: string) => chama<BaseDoAgente>(`/agentes/${id}/documentos`),
+  enviaDocumento: (id: string, arquivo: File) => {
+    const corpo = new FormData();
+    corpo.append("arquivo", arquivo);
+    return chama<MaterialDaBase>(`/agentes/${id}/documentos`, { method: "POST", body: corpo });
+  },
+  enviaTexto: (id: string, texto: string, titulo = "") =>
+    chama<MaterialDaBase>(`/agentes/${id}/documentos/texto`, {
+      method: "POST",
+      body: JSON.stringify({ texto, titulo }),
+    }),
+  enviaSite: (id: string, url: string) =>
+    chama<MaterialDaBase>(`/agentes/${id}/documentos/site`, {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
+  removeDocumento: (id: string, documento: string) =>
+    chama<{ removido: boolean }>(`/agentes/${id}/documentos/${documento}`, { method: "DELETE" }),
+
   canais: () => chama<CanalDisponivel[]>("/canais"),
   /** O que o acesso do operador enxerga no canal: caixas do Chatwoot, contas e números da Meta. */
   descobreNoCanal: (canal: string, conexao: Record<string, unknown>) =>
@@ -445,6 +470,24 @@ export type ConexaoDoAgente = {
   conexao?: Record<string, unknown>;
   handoff_destino?: Record<string, unknown> | null;
   retomada_automatica_horas?: number | null;
+};
+
+export type MaterialDaBase = {
+  id: string;
+  nome: string;
+  /** Como o operador ensinou: `documento`, `texto` ou `site`. */
+  origem: string;
+  /** `processando`, `pronto` ou `erro`. */
+  status: string;
+  erro: string;
+  total_trechos: number;
+  criado_em: string;
+};
+
+export type BaseDoAgente = {
+  documentos: MaterialDaBase[];
+  /** `provedor:modelo` dos vetores, ou vazio quando a instalação não tem chave que sirva. */
+  modelo_embeddings: string;
 };
 
 export type NivelDeEmoji = "nenhum" | "pouco" | "medio" | "muito";

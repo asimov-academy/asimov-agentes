@@ -22,6 +22,9 @@ dependencies = [
     # Painel do operador no navegador: páginas e formulários. Nada de framework de front.
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
+    # Base de conhecimento: o vetor no Postgres e a leitura de .docx. O PDF já era do pypdf.
+    "pgvector>=0.5.0",
+    "python-docx>=1.2.0",
 ]
 
 [project.optional-dependencies]

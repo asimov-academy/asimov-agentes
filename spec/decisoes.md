@@ -2,6 +2,36 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-18: Fase 6, a base de conhecimento
+
+O agente passa a responder com o material do cliente, e não só com o prompt. Módulo `conhecimento/`
+(extração, divisão, embeddings, busca e rotas), migração `0021` com `documento` e `trecho`, e a
+extensão `vector` no Postgres.
+
+**Um modelo de embeddings por instalação, OpenAI e depois Gemini.** A dimensão do vetor é fixa na
+coluna (1536), então dois agentes com modelos diferentes quebrariam a busca. Os dois modelos aceitam
+esse tamanho: o `text-embedding-3-small` nasce assim e o `gemini-embedding-001` aceita pedir. Quem só
+tem chave da Anthropic ou da Groq não tem base, e a tela diz isso antes de o operador mandar material,
+em vez de deixar tudo virar erro depois.
+
+**A ferramenta de busca liga sozinha quando o primeiro material fica pronto.** Sem isso, o operador
+sobe a tabela de preços, pergunta o preço e o agente responde que não sabe, porque a ferramenta
+estava desmarcada em outra aba. Desligar continua sendo dele, em Ferramentas.
+
+**Três formas de ensinar, não cinco.** Texto, site e documento funcionam. Vídeo pediria baixar e
+transcrever mídia de fora, e base compartilhada entre agentes pede uma entidade a mais; as duas
+seguem desenhadas na aba, com o selo de "em breve" só nelas.
+
+**A ingestão é job do worker.** A rota grava o material como `processando` e enfileira: documento de
+cem páginas são dezenas de chamadas ao provedor de embeddings, e a tela não pode esperar isso. Sem
+fila (instalação sem worker, e os testes), ela roda na própria requisição.
+
+**Dependências novas**, as duas já previstas em `spec/arquitetura.md`: `pgvector` (o tipo do vetor no
+SQLAlchemy) e `python-docx`. O PDF continua no `pypdf`, que já era da mídia.
+
+Atualizados: `spec/fases.md` (fase 6), `spec/estado.md` (tabela), `spec/frontend.md` (aba
+Treinamento), `AGENTS.md` (o módulo saiu do futuro, e o Postgres local precisa da extensão).
+
 ## 2026-09-18: O painel ganha a aba Canais
 
 O operador não achava onde ligar um agente a um canal, e não achava porque não existia. Desde a

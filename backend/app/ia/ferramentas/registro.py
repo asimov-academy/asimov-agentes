@@ -6,12 +6,13 @@ FICHAS é a do menu. `transferir_para_humano` não está aqui: todo agente tem (
 
 from typing import Any
 
-from app.ia.ferramentas import busca_web, calculadora
+from app.ia.ferramentas import base_conhecimento, busca_web, calculadora
 from app.ia.ferramentas.base import Ferramenta
 
 FICHAS: tuple[Ferramenta, ...] = (
     calculadora.FERRAMENTA,
     busca_web.FERRAMENTA,
+    base_conhecimento.FERRAMENTA,
 )
 CATALOGO: dict[str, Ferramenta] = {ficha.nome: ficha for ficha in FICHAS}
 PADRAO = [ficha.nome for ficha in FICHAS if ficha.padrao]

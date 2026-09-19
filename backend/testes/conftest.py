@@ -33,6 +33,7 @@ os.environ["ANTHROPIC_API_KEY"] = ""
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["DIRETORIO_PROMPTS"] = tempfile.mkdtemp(prefix="prompts-")
 os.environ["DIRETORIO_MIDIA"] = tempfile.mkdtemp(prefix="midia-")
+os.environ["DIRETORIO_CONHECIMENTO"] = tempfile.mkdtemp(prefix="conhecimento-")
 os.environ["DIRETORIO_MODELOS"] = os.environ.get("TESTE_DIRETORIO_MODELOS", str(RAIZ / "modelos"))
 os.environ["LOG_NIVEL"] = "DEBUG"
 # O painel nasce desligado na instalação; nos testes ele sobe para as telas serem exercitadas.
