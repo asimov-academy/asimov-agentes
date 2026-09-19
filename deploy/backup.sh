@@ -27,20 +27,29 @@ chmod 700 "$PASTA_BACKUP"
 carimbo=$(date +%Y%m%d-%H%M%S)
 arquivo="$PASTA_BACKUP/asimov-$carimbo.sql.gz"
 
+parcial_prompts="$PASTA_BACKUP/prompts-$carimbo.tar.gz.parcial"
+parcial_conhecimento="$PASTA_BACKUP/conhecimento-$carimbo.tar.gz.parcial"
+
 if dc exec -T postgres pg_dump -U "$(env_get POSTGRES_USER)" "$(env_get POSTGRES_DB)" 2>>"$LOG" |
   gzip >"$arquivo.parcial"; then
   mv "$arquivo.parcial" "$arquivo"
   chmod 600 "$arquivo"
+  # O dump é o que restaura a instalação: registra a data agora, para o menu não dizer que a noite
+  # passou em branco quando só o resto falhar. A falha abaixo ainda aparece, e vence na tela.
+  estado_set backup_em "$(date -Is)"
   if ! cp "$RAIZ_PROJETO/.env" "$PASTA_BACKUP/env-$carimbo" 2>>"$LOG" ||
-    ! tar -czf "$PASTA_BACKUP/prompts-$carimbo.tar.gz.parcial" -C "$RAIZ_PROJETO" prompts 2>>"$LOG" ||
-    ! dc exec -T worker tar -czf - -C /var/lib/asimov conhecimento >"$PASTA_BACKUP/conhecimento-$carimbo.tar.gz.parcial" 2>>"$LOG"; then
+    ! tar -czf "$parcial_prompts" -C "$RAIZ_PROJETO" prompts 2>>"$LOG" ||
+    ! dc exec -T worker tar -czf - -C /var/lib/asimov conhecimento >"$parcial_conhecimento" 2>>"$LOG"; then
+    # A retenção lá embaixo só varre `*.tar.gz`: `.parcial` que sobrar aqui fica no disco para
+    # sempre, e uma falha que se repete toda noite enche a pasta.
+    rm -f "$parcial_prompts" "$parcial_conhecimento"
     estado_set backup_falhou "$(date -Is)"
+    printf 'backup: dump do banco gravado em %s, mas o .env, os prompts ou o conhecimento falhou\n' "$arquivo" >>"$LOG"
     exit 1
   fi
-  mv "$PASTA_BACKUP/prompts-$carimbo.tar.gz.parcial" "$PASTA_BACKUP/prompts-$carimbo.tar.gz"
-  mv "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz.parcial" "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz"
+  mv "$parcial_prompts" "$PASTA_BACKUP/prompts-$carimbo.tar.gz"
+  mv "$parcial_conhecimento" "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz"
   chmod 600 "$PASTA_BACKUP/env-$carimbo" "$PASTA_BACKUP/prompts-$carimbo.tar.gz" "$PASTA_BACKUP/conhecimento-$carimbo.tar.gz"
-  estado_set backup_em "$(date -Is)"
   estado_set backup_falhou ""
   printf 'backup gravado em %s\n' "$arquivo" >>"$LOG"
 else

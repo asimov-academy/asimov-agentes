@@ -234,6 +234,11 @@ mostra_backup() {
   quantos=$(find "$pasta" -maxdepth 1 -name 'asimov-*.sql.gz' 2>/dev/null | wc -l | tr -d ' ' || true)
   if [ -n "$erro_em" ]; then
     falha "Último backup falhou em $erro_em. Veja o log: $LOG"
+    # O dump pode estar íntegro e a falha ser só do .env, dos prompts ou do conhecimento: quem lê a
+    # tela precisa saber que existe banco para restaurar.
+    if [ -n "$quando" ]; then
+      dica "O dump do banco de $quando está em $pasta."
+    fi
   elif [ -n "$quando" ]; then
     campo "Backup" "$quando ${CINZA}· $quantos guardados em $pasta${NORMAL}"
   else
