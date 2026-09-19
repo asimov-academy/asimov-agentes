@@ -5,6 +5,7 @@ O texto devolvido é conteúdo do contato. Quem mostra ao modelo de resposta rot
 """
 
 import asyncio
+import os
 from dataclasses import dataclass, field
 from decimal import Decimal
 from io import BytesIO
@@ -27,6 +28,18 @@ ENDPOINT_TRANSCRICAO = {
     "openai": "https://api.openai.com/v1/audio/transcriptions",
     "groq": "https://api.groq.com/openai/v1/audio/transcriptions",
 }
+
+
+def _endpoint_transcricao(provedor: str) -> str | None:
+    """`OPENAI_BASE_URL` é a variável que o SDK da OpenAI já respeita nas chamadas de conversa e de
+    visão. A transcrição vai por `httpx`, fora do SDK, e sem isto seria a única chamada a escapar
+    de um provedor falso (a medição de recursos em `medicao/` usa um)."""
+    base = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
+    if provedor == "openai" and base:
+        return f"{base}/audio/transcriptions"
+    return ENDPOINT_TRANSCRICAO.get(provedor)
+
+
 EXTENSAO_AUDIO = {
     "audio/ogg": "ogg",
     "audio/opus": "ogg",
@@ -98,7 +111,7 @@ async def transcrever(nome_modelo: str, conteudo: bytes, tipo_mime: str) -> Extr
         if idioma:
             prompt = f"{prompt} O áudio está em {idioma}."
         return await _com_modelo(nome_modelo, prompt, conteudo, tipo_mime)
-    endpoint = ENDPOINT_TRANSCRICAO.get(provedor)
+    endpoint = _endpoint_transcricao(provedor)
     if endpoint is None:
         raise provedores.ModeloInvalido(f"{provedor} não transcreve áudio")
 

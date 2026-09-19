@@ -469,3 +469,15 @@ async def test_transcricao_manda_o_idioma_configurado(monkeypatch) -> None:  # t
 
     assert lido.texto == "Boa noite."
     assert enviados["language"] == "pt"
+
+
+def test_transcricao_segue_o_endereco_do_sdk_da_openai(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`OPENAI_BASE_URL` já desvia conversa e visão, que passam pelo SDK. A transcrição vai por
+    httpx e tem de desviar junto, senão a medição com provedor falso bate na OpenAI de verdade."""
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    assert extracao._endpoint_transcricao("openai") == "https://api.openai.com/v1/audio/transcriptions"
+
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://mock:9000/v1/")
+    assert extracao._endpoint_transcricao("openai") == "http://mock:9000/v1/audio/transcriptions"
+    assert extracao._endpoint_transcricao("groq") == "https://api.groq.com/openai/v1/audio/transcriptions"
+    assert extracao._endpoint_transcricao("anthropic") is None

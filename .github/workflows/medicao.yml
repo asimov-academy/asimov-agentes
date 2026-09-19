@@ -1,0 +1,115 @@
+# Medição de recursos da stack completa com 1 agente nativo e um provedor de IA falso: RAM, CPU e
+# disco em três fases (ocioso, carga de 1 agente, pico). Leva uns 45 minutos por arquitetura, então
+# só roda à mão ou quando a própria medição muda. O relatório sai no resumo do job e como artefato.
+name: medicao
+
+on:
+  workflow_dispatch:
+    inputs:
+      ocioso_s:
+        description: Segundos parado
+        default: "300"
+      carga_s:
+        description: Segundos de carga (1 conversa nova por minuto)
+        default: "1800"
+      pico:
+        description: Conversas simultâneas no pico
+        default: "10"
+  pull_request:
+    paths:
+      - "medicao/**"
+      - ".github/workflows/medicao.yml"
+
+jobs:
+  mede:
+    strategy:
+      fail-fast: false
+      matrix:
+        arquitetura:
+          - { nome: amd64, runner: ubuntu-24.04, waha: gows-2026.8.2 }
+          - { nome: arm64, runner: ubuntu-24.04-arm, waha: gows-arm-2026.8.2 }
+    runs-on: ${{ matrix.arquitetura.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      COMPOSE: docker compose --project-name asimov --env-file .env -f deploy/docker-compose.yml -f medicao/compose.medicao.yml --profile copiloto
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      # As mesmas imagens do imagens.yml, com o mesmo cache, sob o nome que o Compose espera.
+      - name: Imagem do backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: producao
+          load: true
+          tags: asimov-backend:local
+          cache-from: type=gha,scope=agentes-backend-${{ matrix.arquitetura.nome }}
+      - name: Imagem do copiloto
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: copiloto
+          build-args: AGENTE_CODIGO=claude_code
+          load: true
+          tags: asimov-copiloto:local
+          cache-from: type=gha,scope=agentes-copiloto-claude_code-${{ matrix.arquitetura.nome }}
+
+      - name: .env de mentira
+        run: |
+          {
+            echo "POSTGRES_USER=asimov"
+            echo "POSTGRES_DB=asimov"
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
+            echo "CHAVE_API_ADMIN=$(openssl rand -hex 32)"
+            echo "CHAVE_CRIPTOGRAFIA=$(openssl rand -base64 32 | tr '+/' '-_')"
+            echo "WAHA_API_KEY=$(openssl rand -hex 32)"
+            echo "VERSAO_WAHA=${{ matrix.arquitetura.waha }}"
+            # `localhost` faz o Caddy usar a autoridade interna dele, sem bater no Let's Encrypt.
+            echo "SUBDOMINIO_BOT=localhost"
+            echo "EMAIL_SSL=medicao@exemplo.com.br"
+            echo "PAINEL_ATIVO=1"
+            echo "COPILOTO_ATIVO=1"
+            echo "AGENTE_CODIGO=claude_code"
+            # Chave falsa: quem responde é medicao/provedor_falso.py.
+            echo "OPENAI_API_KEY=chave-falsa-da-medicao"
+            echo "LOG_NIVEL=INFO"
+          } >.env
+          mkdir -p prompts && sudo chown -R 1000:1000 prompts
+
+      - name: Sobe a stack completa
+        run: |
+          $COMPOSE up -d --wait postgres redis
+          $COMPOSE run --rm api alembic upgrade head
+          $COMPOSE up -d --no-build
+          $COMPOSE ps
+
+      - name: Mede
+        run: |
+          set -a; . ./.env; set +a
+          python3 medicao/mede.py
+        env:
+          OCIOSO_S: ${{ inputs.ocioso_s || '300' }}
+          CARGA_S: ${{ inputs.carga_s || '1800' }}
+          PICO: ${{ inputs.pico || '10' }}
+          SAIDA: medicao/saida
+
+      - name: Relatório no resumo
+        if: always()
+        run: |
+          [ -f medicao/saida/relatorio.md ] && cat medicao/saida/relatorio.md >>"$GITHUB_STEP_SUMMARY" || true
+
+      - name: Logs, se falhou
+        if: failure()
+        run: $COMPOSE logs --tail 80 api worker copiloto waha caddy mock
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: medicao-${{ matrix.arquitetura.nome }}
+          path: medicao/saida/
+          if-no-files-found: warn

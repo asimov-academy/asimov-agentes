@@ -2,6 +2,21 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-19: medição de recursos no GitHub Actions
+
+Para recomendar VPS na trilha com número medido, e não estimado: `.github/workflows/medicao.yml`
+sobe a stack completa (postgres, redis, api, worker, caddy, copiloto e WAHA) em runner amd64 e
+arm64, cria 1 agente nativo falando com `medicao/provedor_falso.py` (responde em 1 s, sem chave nem
+token) e amostra `docker stats` em três fases: ocioso, carga de 1 agente e pico. `medicao/mede.py`
+conduz e escreve o relatório. Roda à mão ou quando `medicao/` muda, porque leva uns 45 minutos.
+
+Única mudança em código de produção: a transcrição (`midia/extracao.py`) passa a respeitar
+`OPENAI_BASE_URL`, a variável que o SDK da OpenAI já respeitava em conversa e visão. Sem isso o
+áudio era a única chamada que escapava do provedor falso. Limites conhecidos da medição: a WAHA é
+medida com a sessão iniciada e sem número pareado, e o copiloto parado, sem conta vinculada.
+
+Arquivos atualizados: `spec/decisoes.md`.
+
 ## 2026-09-19: imagens prontas no GHCR (distribuição em dois repositórios, fase 1)
 
 O aluno deixa de receber o código da aplicação: este repositório vai ficar privado e a instalação
