@@ -113,11 +113,10 @@ services:
       # O Claude Code guarda o estado do primeiro uso fora da pasta da credencial, num arquivo só.
       - ${CONFIG_IA_HOST:-../modelos/AGENTS.md.tmpl}:${CONFIG_IA_CONTAINER:-/tmp/sem-config-ia}:rw
 
-  # WhatsApp pela WAHA. Sobe só quando o primeiro agente WAHA é criado (setup/lib/waha.sh liga
-  # WAHA_ATIVA=1 no .env e o `dc` passa a mandar --profile waha). Sem porta publicada: quem fala
-  # com ela é a API, pela rede do Compose. O volume guarda o pareamento do número.
+  # WhatsApp pela WAHA. Sobe com o resto da plataforma, na instalação: sem isso, ligar o WhatsApp
+  # pelo painel esbarrava num contêiner que só o terminal sabia subir. Sem porta publicada: quem
+  # fala com ela é a API, pela rede do Compose. O volume guarda o pareamento do número.
   waha:
-    profiles: ["waha"]
     # Imagem só com a engine GOWS (menor). setup/lib/waha.sh grava a tag arm quando a VPS é arm.
     image: devlikeapro/waha:${VERSAO_WAHA:-gows-2026.8.2}
     environment:

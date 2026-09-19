@@ -3,14 +3,11 @@
 
 RAIZ_PROJETO="${RAIZ_PROJETO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
-# Dois contêineres entram no Compose só quando o operador escolhe (perfis). A WAHA, depois do
-# primeiro agente dela; o copiloto, depois de vincular a conta de IA. Sem os perfis, `dc up`
-# derrubaria o que setup/lib/waha.sh e setup/lib/vinculo.sh subiram.
+# O copiloto entra no Compose só depois de vincular a conta de IA (perfil). Sem o perfil, `dc up`
+# derrubaria o que setup/lib/vinculo.sh subiu. A WAHA não tem perfil: ela é instalada com o resto
+# da plataforma, senão ligar o WhatsApp pelo painel esbarra num contêiner que ninguém subiu.
 dc() {
   local perfis=()
-  if grep -q '^WAHA_ATIVA=1$' "$RAIZ_PROJETO/.env" 2>/dev/null; then
-    perfis=(--profile waha)
-  fi
   if grep -q '^COPILOTO_ATIVO=1$' "$RAIZ_PROJETO/.env" 2>/dev/null; then
     perfis+=(--profile copiloto)
   fi

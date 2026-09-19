@@ -2,9 +2,9 @@
 # shellcheck disable=SC2034  # PASSO_*, AGENTE_* e WAHA_* são lidas por passo() e pelas telas
 # WhatsApp pela WAHA: contêiner sob demanda, pareamento do número por QR code e destino do handoff.
 #
-# A WAHA não sobe na instalação: quem nunca usa WhatsApp direto não carrega o contêiner. Ela entra
-# quando o operador cria o primeiro agente WAHA (`garante_waha`), e a partir daí `dc` a inclui
-# sempre (WAHA_ATIVA=1 no .env, lido por deploy/compose.sh).
+# A WAHA sobe na instalação, junto com o resto da plataforma (`instala_waha`). Antes ela só subia
+# no primeiro agente WAHA do terminal, e quem ligava o WhatsApp pelo painel caía num contêiner que
+# ninguém tinha subido: o painel não fala com o Docker e nunca teria como subi-lo.
 
 WAHA_ESPERA_STATUS=3
 # Versão da WAHA que esta versão do setup instala. O timer semanal troca por uma mais nova.
@@ -38,10 +38,23 @@ avisa_manutencao() { api POST /admin/canais/waha/manutencao '{}' || true; }
 sobe_waha() { avisa_manutencao; dc up -d --wait waha; }
 sobe_api() { dc up -d api worker; }
 
-# garante_waha: deixa o contêiner da WAHA no ar. Chamado antes de criar ou ligar um agente WAHA.
-# Idempotente: com a WAHA já rodando, sai na hora.
+# instala_waha: deixa a WAHA pronta na instalação, junto dos outros serviços. Roda dentro de
+# `tela_instalacao`, que já desenha o passo e manda a saída para o log.
+instala_waha() {
+  env_set_se_vazio WAHA_API_KEY "$(openssl rand -hex 32)"
+  env_set VERSAO_WAHA "$(versao_waha)"
+  command -v qrencode >/dev/null 2>&1 || apt_instala qrencode
+  sobe_waha || return 1
+  # A imagem envelhece rápido (o WhatsApp muda o protocolo). O timer é conforto: falhar aqui não
+  # pode derrubar a instalação, e o menu religa em WhatsApp (WAHA).
+  instala_timer_waha || true
+}
+
+# garante_waha: deixa o contêiner da WAHA no ar antes de parear um número. A instalação já o subiu;
+# isto cobre o contêiner removido à mão e a VPS instalada por uma versão anterior, que nunca o teve.
+# Idempotente: com a WAHA já rodando, sai na hora, calado.
 garante_waha() {
-  if [ "$(env_get WAHA_ATIVA)" = 1 ] && [ -n "$(dc ps -q waha 2>/dev/null || true)" ]; then
+  if [ -n "$(dc ps -q waha 2>/dev/null || true)" ]; then
     return 0
   fi
   secao "WhatsApp na VPS"
@@ -49,8 +62,7 @@ garante_waha() {
   dica "Na primeira vez a imagem é baixada: pode levar alguns minutos."
   echo
   env_set_se_vazio WAHA_API_KEY "$(openssl rand -hex 32)"
-  env_set VERSAO_WAHA "$(versao_waha)"
-  env_set WAHA_ATIVA 1
+  env_set_se_vazio VERSAO_WAHA "$(versao_waha)"
 
   PASSO_ATUAL=0
   PASSO_TOTAL=2
@@ -250,7 +262,6 @@ aviso_nao_oficial() {
 # joinha que devolve a conversa ao agente.
 reconfigura_sessoes_waha() {
   local linha
-  [ "$(env_get WAHA_ATIVA)" = 1 ] || return 0
   api GET /admin/agentes
   [ "$API_STATUS" = 200 ] || return 0
   while IFS= read -r linha; do
@@ -264,7 +275,6 @@ reconfigura_sessoes_waha() {
 # precisa ler o QR code de novo.
 avisa_numeros_fora_do_ar() {
   AVISO_WAHA=""
-  [ "$(env_get WAHA_ATIVA)" = 1 ] || return 0
   local linha nome
   api GET /admin/agentes
   [ "$API_STATUS" = 200 ] || return 0

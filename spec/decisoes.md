@@ -2,6 +2,27 @@
 
 Log de mudanças na spec. Cada entrada: data, o que mudou, por quê e quais arquivos de `spec/` foram atualizados. Entrada mais nova no topo.
 
+## 2026-09-19: a WAHA passa a subir na instalação
+
+Numa VPS nova, com a plataforma instalada e o painel no ar, ligar o canal WhatsApp (WAHA) pelo
+navegador falhava sempre com "não consegui criar a sessão na WAHA". Causa: o contêiner da WAHA
+tinha perfil no Compose e só subia por `garante_waha`, que roda no menu do terminal. O painel chama
+`POST /painel/api/agentes/{id}/canal`, que só fala HTTP com a WAHA, e a API roda num contêiner sem
+socket do Docker (e nunca vai ter um): não existia caminho pelo navegador que subisse o serviço.
+
+A decisão de 2026-09-17, de não subir a WAHA na instalação, valia quando o terminal era o único
+cliente da API. Com o painel, ela deixou de valer: a WAHA entra na instalação, junto das outras
+dependências (`instala_waha`, passo "WhatsApp na VPS (WAHA)" em `tela_instalacao`). Some o perfil
+`waha` do Compose e some a variável `WAHA_ATIVA`; `VERSAO_WAHA` e `WAHA_API_KEY` nascem na
+instalação. `garante_waha` continua, agora só para cobrir contêiner removido à mão e VPS instalada
+por uma versão anterior, e `asimov atualizar` o chama sempre. O menu de WhatsApp (WAHA) e a linha
+da WAHA no `asimov diagnostico` deixam de ser condicionais: antes, a instalação em que a WAHA
+faltava era justamente a que ficava sem a linha que mostraria isso.
+
+Custo aceito pelo operador: quem só usa Chatwoot passa a carregar o contêiner da WAHA.
+
+Arquivos atualizados: `spec/arquitetura.md`, `spec/decisoes.md`.
+
 ## 2026-09-19: uma branch só, e versão antes da homologação em VPS
 
 O operador pediu para manter `main` como a única branch do repositório. O fluxo de publicação de

@@ -10,7 +10,6 @@ RAIZ_PROJETO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 source "$RAIZ_PROJETO/setup/lib/base.sh"
 
 estado_iniciar
-[ "$(env_get WAHA_ATIVA)" = 1 ] || exit 0
 
 printf '\n===== conferindo a versão da WAHA em %s =====\n' "$(date -Is)" >>"$LOG"
 atualiza_waha --silencioso
