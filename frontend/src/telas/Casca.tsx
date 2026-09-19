@@ -7,8 +7,9 @@ import type { ICONES } from "../design/icones";
 /** O menu, em dois grupos.
  *
  *  Os seis itens eram uma lista corrida, e o operador tinha de ler todos para achar o que queria.
- *  Agora "Operação" é o que se acompanha todo dia e "Atendimento" é onde se lê conversa. O grupo
- *  some quando o menu está recolhido, que é quando o ícone já é a única pista.
+ *  "Operação" é o que se administra (o que está no ar e quem atende) e "Atendimento" é o que sai das
+ *  conversas: as conversas, quem falou e o funil que nasce delas. O grupo some quando o menu está
+ *  recolhido, que é quando o ícone já é a única pista.
  *
  *  **Conhecimento não é item de menu.** A base é de cada agente, e mora na aba Treinamento da ficha
  *  dele: uma tela geral de conhecimento prometia uma base da instalação, que não existe.
@@ -22,7 +23,6 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
       { para: "/", texto: "Visão geral", icone: "nav-dashboard", fim: true },
       { para: "/agentes", texto: "Agentes", icone: "nav-team" },
       { para: "/canais", texto: "Canais", icone: "cont-link" },
-      { para: "/oportunidades", texto: "Oportunidades", icone: "nav-reports" },
     ],
   },
   {
@@ -30,6 +30,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     itens: [
       { para: "/chat", texto: "Conversas", icone: "comm-chat" },
       { para: "/contatos", texto: "Contatos", icone: "nav-user" },
+      { para: "/oportunidades", texto: "Oportunidades", icone: "nav-reports" },
     ],
   },
 ];
