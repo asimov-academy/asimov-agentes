@@ -7,6 +7,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Chamado por imagens.yml antes de publicar uma versão.
+  workflow_call:
 
 jobs:
   backend:

@@ -1,0 +1,25 @@
+# Por cima de deploy/docker-compose.yml, só na medição de recursos (.github/workflows/medicao.yml).
+# Caminhos relativos contam a partir de deploy/, a pasta do primeiro arquivo do Compose.
+
+x-provedor-falso: &provedor_falso
+  # O SDK da OpenAI e a transcrição (midia/extracao.py) respeitam esta variável.
+  OPENAI_BASE_URL: http://mock:9000/v1
+
+services:
+  mock:
+    image: python:3.12-slim
+    command: ["python", "/provedor_falso.py"]
+    volumes:
+      - ../medicao/provedor_falso.py:/provedor_falso.py:ro
+
+  api:
+    environment: *provedor_falso
+  worker:
+    environment: *provedor_falso
+  copiloto:
+    environment: *provedor_falso
+
+  waha:
+    # Só para o roteiro iniciar a sessão pelo host. Em produção a WAHA não publica porta.
+    ports:
+      - "127.0.0.1:3000:3000"

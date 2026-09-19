@@ -149,8 +149,6 @@ tela_instalacao() {
   PASSO_TOTAL=13
   local sub
   sub=$(env_get SUBDOMINIO_BOT)
-  # A IA é escolha de cada agente, feita depois: a imagem leva o SDK dos quatro provedores.
-  env_set PROVEDORES "openai anthropic gemini groq"
 
   confere_maquina
   confere_proxy_do_dns

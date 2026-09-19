@@ -25,3 +25,6 @@ setup/testes/
 # O build do front acontece dentro da imagem; o que estiver na máquina não entra.
 frontend/node_modules/
 frontend/dist/
+
+# Medição de recursos: roda no host da CI, nunca dentro da imagem.
+medicao/

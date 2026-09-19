@@ -25,6 +25,16 @@ Auditoria de 2026-09-18: [relatório e plano de correção](../docs/auditoria-20
 
 **Os seis P1 foram corrigidos** (spec/decisoes.md, 2026-09-18): reentrega recupera turno perdido (A01), envio que não saiu não conta como respondido (A02), prazo do token de buffer não descarta resposta (A03), humano que assume cala o agente na hora (A04), prompt não passa de uma empresa para outra (A05) e o lock passa a durar mais que o job (A06). Viraram 16 regressões em `backend/testes/test_auditoria_p1.py`; a suíte está em 311 testes. **Nada disso rodou em VPS**: precisa de validação real antes de virar versão. Seguem abertos os 14 P2 e 2 P3, com três sondas em `backend/testes/auditoria_2026_09_18.py`.
 
+## Distribuição em dois repositórios (em andamento)
+
+O aluno passa a receber só o instalador, de um repositório público (`asimov-agentes-setup`), que
+puxa imagens prontas do GHCR; este repositório fica privado (spec/decisoes.md, 2026-09-19).
+
+- Fase 1, imagens no GHCR: **feita, sem publicar nada**. `.github/workflows/imagens.yml` constrói
+  em pull request e publica em tag `v*`. Falta ver o build passar no pull request.
+- Fase 2, repositório de setup. Fase 3, imagens públicas ou privadas. Fase 4, licença e README
+  deste repositório. Todas pendentes.
+
 ## Versão publicada
 
 - `v0.30.0`: **rodada de onboarding no CLI**, com o operador na frente da tela de uma VPS zerada.

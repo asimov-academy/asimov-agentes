@@ -9,8 +9,6 @@ x-backend: &backend
     context: ..
     dockerfile: backend/Dockerfile
     target: producao
-    args:
-      PROVEDORES: ${PROVEDORES}
   image: asimov-backend:local
   env_file: ../.env
   environment:
@@ -96,7 +94,6 @@ services:
       dockerfile: backend/Dockerfile
       target: copiloto
       args:
-        PROVEDORES: ${PROVEDORES}
         AGENTE_CODIGO: ${AGENTE_CODIGO:-claude_code}
     image: asimov-copiloto:local
     command: ["arq", "app.copiloto.worker.Configuracao"]
